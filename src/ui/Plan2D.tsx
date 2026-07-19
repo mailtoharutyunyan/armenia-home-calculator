@@ -21,7 +21,7 @@ const TYPE_LABEL: Record<RoomType, { ru: string; hy: string; en: string }> = {
 export function Plan2D() {
   const { house, lang, editRooms, setEditRooms, updateRoom, addRoom, removeRoom } = useProject()
   const [floor, setFloor] = useState(0)
-  const activeFloor = Math.min(floor, house.floors - 1)
+  const activeFloor = Math.max(0, Math.min(floor, house.floors - 1))
 
   if (house.length <= 0 || house.width <= 0) {
     return (

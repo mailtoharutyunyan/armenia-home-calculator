@@ -209,8 +209,10 @@ function layoutFloor(rect: Rect, specs: Spec[], out: Room[], suite: { wardrobe: 
   const living = bigs.find((s) => s.type === 'living' || s.type === 'living_kitchen' || s.type === 'kitchen') ?? null
   const beds = bigs.filter((s) => s !== living)
 
-  // right service column width; service rooms sit side-by-side in a top band
-  const Wc = Math.max(3.6, Math.min(5, rect.w * 0.34))
+  // right service column width; service rooms sit side-by-side in a top band.
+  // capped at 42% of the rect so the living column stays positive even on a
+  // narrow layout (tiny house, or upper floor after a large hall void is carved).
+  const Wc = Math.min(rect.w * 0.42, Math.max(2.6, rect.w * 0.34))
   const leftW = rect.w - Wc
   const rx = rect.x + leftW
   const hBand = Math.min(2.9, rect.h * 0.3)

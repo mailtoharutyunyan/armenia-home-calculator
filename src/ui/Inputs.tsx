@@ -141,7 +141,7 @@ export function Inputs() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
           <Num label={t(lang, 'length')} value={house.length} step={0.5} onChange={(n) => set({ length: n })} />
           <Num label={t(lang, 'width')} value={house.width} step={0.5} onChange={(n) => set({ width: n })} />
-          <Num label={t(lang, 'floors')} value={house.floors} onChange={(n) => set({ floors: n })} />
+          <Num label={t(lang, 'floors')} value={house.floors} min={1} onChange={(n) => set({ floors: n })} />
           <Num label={t(lang, 'floorHeight')} value={house.floorHeight} step={0.1} onChange={(n) => set({ floorHeight: n })} />
         </div>
         <Num label={t(lang, 'plotArea')} value={house.plotArea} step={50} onChange={(n) => set({ plotArea: n })} />
