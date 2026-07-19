@@ -7,9 +7,19 @@ export function NormsRef() {
   return (
     <section className="panel" id="norms">
       <div className="panel-head">
-        <span>{t(lang, 'nav_norms')} · ՀՀՇՆ</span>
+        <span>{t(lang, 'nav_norms')}</span>
+        <span className="sub">
+          {lang === 'ru'
+            ? 'ՀՀՇՆ — строительные нормы Республики Армения'
+            : 'ՀՀՇՆ — Հայաստանի Հանրապետության շինարարական նորմեր'}
+        </span>
       </div>
       <div style={{ padding: '0.5rem 1rem 1rem' }}>
+        <p style={{ margin: '0 0 0.6rem', fontSize: '0.8rem', color: 'var(--color-ink-soft)' }}>
+          {lang === 'ru'
+            ? 'ՀՀՇՆ — официальное обозначение стандарта (как ГОСТ или СНиП); цифры после — номер документа.'
+            : 'ՀՀՇՆ-ը ստանդարտի պաշտոնական նշանակումն է (ինչպես ГОСТ կամ СНиП); թվերը՝ փաստաթղթի համարն են։'}
+        </p>
         {NORMS_REFERENCE.map((n) => (
           <div key={n.code} style={{ padding: '0.6rem 0', borderBottom: '1px dotted var(--color-border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
