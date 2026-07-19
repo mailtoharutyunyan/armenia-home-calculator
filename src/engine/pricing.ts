@@ -115,8 +115,12 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
     }
   }
 
-  // builders' brigade labour for the shell (act), by editable ֏/m² rate
-  const brigade = p.excludedSections.includes('walls') ? 0 : Math.max(0, p.laborPerM2) * q.geometry.totalFloorArea
+  // builders' brigade labour for the shell (act), by editable ֏/m² rate;
+  // scaled by floor height (taller walls/formwork = more work, base 3 m)
+  const heightFactor = p.floorHeight > 0 ? p.floorHeight / 3 : 1
+  const brigade = p.excludedSections.includes('walls')
+    ? 0
+    : Math.max(0, p.laborPerM2) * q.geometry.totalFloorArea * heightFactor
   if (brigade > 0) {
     lines.push({
       key: 'brigade',

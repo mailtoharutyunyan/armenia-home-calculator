@@ -149,6 +149,24 @@ describe('permit & hall', () => {
     expect(a400.lines.some((l) => l.key === 'rebar_a500')).toBe(false)
   })
 
+  it('more rooms per floor raises the turnkey total (partitions/doors)', () => {
+    const few = computeEstimate(computeQuantities(house({ roomsPerFloor: 3 })), SEED_PRICES, house({ roomsPerFloor: 3 }), 'typical').turnkey.total
+    const many = computeEstimate(computeQuantities(house({ roomsPerFloor: 7 })), SEED_PRICES, house({ roomsPerFloor: 7 }), 'typical').turnkey.total
+    expect(many).toBeGreaterThan(few)
+  })
+
+  it('taller floors raise the shell (act) total', () => {
+    const low = computeEstimate(computeQuantities(house({ floorHeight: 2.8 })), SEED_PRICES, house({ floorHeight: 2.8 }), 'typical').act.total
+    const tall = computeEstimate(computeQuantities(house({ floorHeight: 3.6 })), SEED_PRICES, house({ floorHeight: 3.6 }), 'typical').act.total
+    expect(tall).toBeGreaterThan(low)
+  })
+
+  it('separate kitchen/living costs more than combined (extra partition)', () => {
+    const combined = computeEstimate(computeQuantities(house({ kitchenLivingCombined: true })), SEED_PRICES, house({ kitchenLivingCombined: true }), 'typical').turnkey.total
+    const separate = computeEstimate(computeQuantities(house({ kitchenLivingCombined: false })), SEED_PRICES, house({ kitchenLivingCombined: false }), 'typical').turnkey.total
+    expect(separate).toBeGreaterThan(combined)
+  })
+
   it('roof pitch 90° does not blow up the estimate', () => {
     const q = computeQuantities(house({ roof: 'pitched', roofPitchDeg: 90 }))
     const est = computeEstimate(q, SEED_PRICES, house({ roof: 'pitched', roofPitchDeg: 90 }), 'typical')

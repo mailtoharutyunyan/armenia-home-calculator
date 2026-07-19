@@ -226,12 +226,14 @@ export function computeQuantities(p: HouseParams): Quantities {
   add('window_vitrage', 'openings', 'turnkey', p.windowAreaTotal * p.vitrageShare)
   // Doors
   add('door_exterior', 'openings', 'turnkey', p.exteriorDoors)
-  const interiorDoors =
-    p.interiorDoors ?? Math.round(p.floors * (A / 20))
+  // interior doors ≈ one per room (tied to the room count)
+  const interiorDoors = p.interiorDoors ?? p.roomsPerFloor * p.floors
   add('door_interior', 'openings', 'turnkey', interiorDoors)
 
-  // Partitions (aerated block) + plaster
-  const partitionArea = C.partitionFactor * P * H
+  // Partitions (aerated block) + plaster — length tied to number of rooms and
+  // whether kitchen/living are separate; also scales with area, floors, height.
+  const partitionWalls = Math.max(0, p.roomsPerFloor - 1) + (p.kitchenLivingCombined ? 0 : 1)
+  const partitionArea = partitionWalls * Math.sqrt(A) * p.floorHeight * p.floors
   add('aerated_block', 'partitions', 'turnkey', partitionArea * C.partitionThickness)
 
   // Plaster: interior bearing-wall face + partitions both sides + ceilings (minus hall void)

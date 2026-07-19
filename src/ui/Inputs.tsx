@@ -174,7 +174,7 @@ export function Inputs() {
           <Num label={t(lang, 'extDoors')} value={house.exteriorDoors} onChange={(n) => set({ exteriorDoors: n })} />
           <Num
             label={t(lang, 'intDoors')}
-            value={house.interiorDoors ?? Math.round(house.floors * ((house.length * house.width) / 20))}
+            value={house.interiorDoors ?? house.roomsPerFloor * house.floors}
             onChange={(n) => set({ interiorDoors: n })}
           />
         </div>
