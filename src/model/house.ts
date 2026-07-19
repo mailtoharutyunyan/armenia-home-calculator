@@ -65,6 +65,7 @@ export interface HouseParams {
   optHeatPump: boolean // тепловой насос воздух-вода (компл.)
   optSolarKw: number // солнечные панели, кВт (0 = нет)
   optFinishPremium: boolean // финишная отделка «под ключ» (֏/м²)
+  optPanelCeiling: boolean // панельный (реечный) потолок (֏/м²)
   eng: EngOverrides // "Расширенные параметры (для инженера)"
 }
 
@@ -127,6 +128,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   optHeatPump: false,
   optSolarKw: 0,
   optFinishPremium: false,
+  optPanelCeiling: false,
   eng: {},
 }
 

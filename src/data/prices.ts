@@ -110,6 +110,7 @@ const items: PriceItem[] = [
   item('opt_heat_pump', 'Тепловой насос (воздух-вода)', 'Ջերմային պոմպ (օդ-ջուր)', 'компл', 2500000, 0, S.market),
   item('opt_solar', 'Солнечные панели (фотовольтаика)', 'Արևային վահանակներ (ֆոտովոլտ.)', 'кВт', 350000, 0, S.market),
   item('opt_finish_premium', 'Финишная отделка «под ключ»', 'Ֆինիշ հարդարում «բանալի հանձնում»', 'м²', 20000, 0, S.market),
+  item('opt_panel_ceiling', 'Панельный (реечный) потолок', 'Վահանակային առաստաղ', 'м²', 6000, 0, S.market),
 
   // --- Stair ---
   item('stair', 'Лестница монолитная', 'Աստիճան մոնոլիտ', 'м³', 40000, 30000, S.market),
@@ -163,6 +164,7 @@ const EN_LABELS: Record<string, string> = {
   opt_heat_pump: 'Heat pump (air-water)',
   opt_solar: 'Solar panels (photovoltaic)',
   opt_finish_premium: 'Turnkey finishing',
+  opt_panel_ceiling: 'Panel ceiling',
   stair: 'Monolithic staircase',
   permit_apz: 'APZ (municipality)',
   permit_design: 'Design (per m²)',

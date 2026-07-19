@@ -269,6 +269,7 @@ export function computeQuantities(p: HouseParams): Quantities {
   if (p.optHeatPump) add('opt_heat_pump', 'options', 'turnkey', 1)
   if (p.optSolarKw > 0) add('opt_solar', 'options', 'turnkey', p.optSolarKw)
   if (p.optFinishPremium) add('opt_finish_premium', 'options', 'turnkey', finishedArea)
+  if (p.optPanelCeiling) add('opt_panel_ceiling', 'options', 'turnkey', finishedArea)
 
   // ---- Documents / permit (act) ----
   if (p.includePermitCost) {

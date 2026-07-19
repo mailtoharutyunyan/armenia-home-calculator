@@ -276,6 +276,12 @@ export function Inputs() {
             {lang === 'hy' ? 'Ֆինիշ հարդարում «բանալի հանձնում»' : lang === 'en' ? 'Turnkey finishing' : 'Финишная отделка «под ключ»'}
           </span>
         </label>
+        <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input type="checkbox" checked={house.optPanelCeiling} onChange={(e) => set({ optPanelCeiling: e.target.checked })} />
+          <span style={{ marginBottom: 0 }}>
+            {lang === 'hy' ? 'Վահանակային առաստաղ' : lang === 'en' ? 'Panel ceiling' : 'Панельный (реечный) потолок'}
+          </span>
+        </label>
         <Num
           label={lang === 'hy' ? 'Արևային վահանակներ, կՎտ' : lang === 'en' ? 'Solar panels, kW' : 'Солнечные панели, кВт'}
           value={house.optSolarKw}
