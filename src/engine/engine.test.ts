@@ -92,10 +92,10 @@ describe('norms', () => {
     expect(gradeFromKey('concrete_b15')).toBe(15)
   })
 
-  it('flags bearing aerated block as error', () => {
+  it('flags bearing aerated block as a warning (allowed with seismic check)', () => {
     const q = computeQuantities(house({ system: 'aerated' }))
     const w = checkNorms(house({ system: 'aerated' }), q)
-    expect(w.some((x) => x.level === 'error' && x.code === 'ՀՀՇՆ II-6.02')).toBe(true)
+    expect(w.some((x) => x.level === 'warning' && x.ru.includes('газоблок'))).toBe(true)
   })
 
   it('flags concrete below B25 in seismic zone', () => {
@@ -201,11 +201,11 @@ describe('permit & hall', () => {
 })
 
 describe('compare', () => {
-  it('returns 4 systems, aerated banned', () => {
+  it('returns 4 systems, aerated flagged with caution', () => {
     const rows = compareSystems(house(), SEED_PRICES, 'typical')
     expect(rows).toHaveLength(4)
     const aerated = rows.find((r) => r.system === 'aerated')!
-    expect(aerated.banned).toBe(true)
+    expect(aerated.caution).toBe(true)
     expect(rows.every((r) => r.turnkeyTotal > 0)).toBe(true)
   })
 })

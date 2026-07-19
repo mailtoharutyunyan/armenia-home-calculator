@@ -9,7 +9,7 @@ export interface CompareRow {
   actTotal: number
   turnkeyTotal: number
   perM2: number
-  banned: boolean // не допускается как несущий в РА (сейсмика)
+  caution: boolean // несущий газоблок: допустим по расчёту, но в сейсмозоне рискованнее
 }
 
 const SYSTEMS: ConstructionSystem[] = ['tuff', 'aerated', 'frame', 'brick']
@@ -20,15 +20,15 @@ export function compareSystems(
   priceMode: PriceMode = 'typical',
 ): CompareRow[] {
   return SYSTEMS.map((system) => {
-    const banned = system === 'aerated' // несущий газоблок запрещён
-    // для запрещённого варианта считаем корректную схему: каркас + газоблок-заполнение
-    const effectiveSystem: ConstructionSystem = banned ? 'frame' : system
-    const infillMaterial = banned ? 'aerated' : base.infillMaterial
+    // bearing aerated block is allowed (GOST 31360-2024) but needs seismic
+    // verification — compute it honestly and flag it with a caution.
+    const caution = system === 'aerated'
+    const infillMaterial = system === 'frame' ? base.infillMaterial : (system as HouseParams['infillMaterial'])
     const variant: HouseParams = {
       ...base,
-      system: effectiveSystem,
-      infillMaterial,
-      wallThickness: defaultWallThickness({ system: effectiveSystem, infillMaterial }),
+      system,
+      infillMaterial: base.infillMaterial,
+      wallThickness: defaultWallThickness({ system, infillMaterial }),
     }
     const q = computeQuantities(variant)
     const est = computeEstimate(q, catalog, variant, priceMode)
@@ -37,7 +37,7 @@ export function compareSystems(
       actTotal: est.act.total,
       turnkeyTotal: est.turnkey.total,
       perM2: est.perM2,
-      banned,
+      caution,
     }
   })
 }

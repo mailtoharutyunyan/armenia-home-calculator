@@ -29,7 +29,8 @@ const PROS_CONS: Record<string, { pros: { ru: string; hy: string }[]; cons: { ru
       { ru: 'Лёгкий, тёплый', hy: 'Թեթև, ջերմ' },
     ],
     cons: [
-      { ru: 'Не несущий в сейсмозоне РА', hy: 'Ոչ կրող ՀՀ սեյսմիկ գոտում' },
+      { ru: 'Несущий — только по сейсморасчёту', hy: 'Կրող՝ միայն սեյսմիկ հաշվարկով' },
+      { ru: 'Хрупкий при горизонтальных нагрузках', hy: 'Փխրուն հորիզոնական բեռների դեպքում' },
       { ru: 'Боится влаги без отделки', hy: 'Վախենում է խոնավությունից' },
     ],
   },
@@ -59,7 +60,7 @@ export function Compare() {
   const { house, prices, lang, priceMode, amdPerUsd } = useProject()
   const rows = useMemo(() => compareSystems(house, prices, priceMode), [house, prices, priceMode])
   const m = (v: number) => money(v, house.currency, amdPerUsd)
-  const allowed = rows.filter((r) => !r.banned)
+  const allowed = rows.filter((r) => !r.caution)
   const cheapest = allowed.length ? Math.min(...allowed.map((r) => r.turnkeyTotal)) : Infinity
 
   return (
@@ -79,11 +80,11 @@ export function Compare() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.system} style={{ background: !r.banned && r.turnkeyTotal === cheapest ? 'rgba(47,125,87,0.08)' : undefined }}>
+              <tr key={r.system} style={{ background: !r.caution && r.turnkeyTotal === cheapest ? 'rgba(47,125,87,0.08)' : undefined }}>
                 <td style={cell}>
                   {t(lang, SYS_KEY[r.system])}
-                  {r.banned && (
-                    <span className="badge lvl-error" style={{ marginLeft: '0.5rem' }}>
+                  {r.caution && (
+                    <span className="badge lvl-warning" style={{ marginLeft: '0.5rem' }}>
                       {t(lang, 'banned')}
                     </span>
                   )}
