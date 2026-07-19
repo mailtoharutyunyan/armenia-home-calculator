@@ -59,6 +59,11 @@ export interface HouseParams {
   kitchenLivingCombined: boolean // зал и кухня вместе (студия) или раздельно
   laborPerM2: number // работа бригады на стадии «коробка», ֏/м² (default 11000)
   beamsOverHall: boolean // балки над залом заложены
+  // optional premium systems (opt-in extras)
+  optHeating: boolean // отопление: котёл + тёплый пол (֏/м²)
+  optHeatPump: boolean // тепловой насос воздух-вода (компл.)
+  optSolarKw: number // солнечные панели, кВт (0 = нет)
+  optFinishPremium: boolean // финишная отделка «под ключ» (֏/м²)
   eng: EngOverrides // "Расширенные параметры (для инженера)"
 }
 
@@ -116,6 +121,10 @@ export const DEFAULT_HOUSE: HouseParams = {
   kitchenLivingCombined: true,
   laborPerM2: 11000,
   beamsOverHall: true,
+  optHeating: false,
+  optHeatPump: false,
+  optSolarKw: 0,
+  optFinishPremium: false,
   eng: {},
 }
 

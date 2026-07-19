@@ -221,6 +221,35 @@ export function Inputs() {
         </label>
         <Num label={t(lang, 'laborPerM2')} value={house.laborPerM2} step={500} onChange={(n) => set({ laborPerM2: n })} />
 
+        {/* Step 08 — optional premium systems */}
+        <div className="eyebrow" style={{ marginTop: '0.8rem' }}>
+          08 · {lang === 'hy' ? 'Լրացուցիչ համակարգեր' : lang === 'en' ? 'Optional systems' : 'Дополнительные системы'}
+        </div>
+        <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input type="checkbox" checked={house.optHeating} onChange={(e) => set({ optHeating: e.target.checked })} />
+          <span style={{ marginBottom: 0 }}>
+            {lang === 'hy' ? 'Ջեռուցում՝ կաթսա + տաք հատակ' : lang === 'en' ? 'Heating: boiler + warm floor' : 'Отопление: котёл + тёплый пол'}
+          </span>
+        </label>
+        <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input type="checkbox" checked={house.optHeatPump} onChange={(e) => set({ optHeatPump: e.target.checked })} />
+          <span style={{ marginBottom: 0 }}>
+            {lang === 'hy' ? 'Ջերմային պոմպ (օդ-ջուր)' : lang === 'en' ? 'Heat pump (air-water)' : 'Тепловой насос (воздух-вода)'}
+          </span>
+        </label>
+        <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input type="checkbox" checked={house.optFinishPremium} onChange={(e) => set({ optFinishPremium: e.target.checked })} />
+          <span style={{ marginBottom: 0 }}>
+            {lang === 'hy' ? 'Ֆինիշ հարդարում «բանալի հանձնում»' : lang === 'en' ? 'Turnkey finishing' : 'Финишная отделка «под ключ»'}
+          </span>
+        </label>
+        <Num
+          label={lang === 'hy' ? 'Արևային վահանակներ, կՎտ' : lang === 'en' ? 'Solar panels, kW' : 'Солнечные панели, кВт'}
+          value={house.optSolarKw}
+          step={1}
+          onChange={(n) => set({ optSolarKw: n })}
+        />
+
         {/* Advanced */}
         <details style={{ marginTop: '0.6rem' }}>
           <summary className="mono" style={{ cursor: 'pointer', fontSize: '0.76rem', color: 'var(--color-copper)' }}>

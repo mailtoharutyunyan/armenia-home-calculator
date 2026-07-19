@@ -17,6 +17,7 @@ export type SectionId =
   | 'finishing'
   | 'facade'
   | 'engineering'
+  | 'options'
   | 'permit'
 
 export interface QuantityLine {
@@ -82,6 +83,12 @@ export function computeQuantities(p: HouseParams): Quantities {
   // double-height hall: void in the 2nd-floor slab (perimeter walls already
   // span the full height H, so no extra wall volume is added here).
   const hallVoid = p.doubleHeightHall && p.floors >= 2 ? Math.max(0, Math.min(p.hallArea, A)) : 0
+
+  // нормативная общая площадь по внутренним поверхностям наружных стен (Прил.2 п.4)
+  const netArea = Math.max(
+    0,
+    Math.max(0, p.length - 2 * wallT) * Math.max(0, p.width - 2 * wallT) * p.floors - hallVoid,
+  )
 
   // structural concrete + rebar accumulators, per estimate section
   const concreteBySection: Partial<Record<SectionId, number>> = {}
@@ -254,6 +261,12 @@ export function computeQuantities(p: HouseParams): Quantities {
   add('plumbing', 'engineering', 'turnkey', totalFloorArea)
   add('heating', 'engineering', 'turnkey', totalFloorArea)
 
+  // ---- Optional premium systems (opt-in extras) ----
+  if (p.optHeating) add('opt_boiler_heating', 'options', 'turnkey', netArea)
+  if (p.optHeatPump) add('opt_heat_pump', 'options', 'turnkey', 1)
+  if (p.optSolarKw > 0) add('opt_solar', 'options', 'turnkey', p.optSolarKw)
+  if (p.optFinishPremium) add('opt_finish_premium', 'options', 'turnkey', netArea)
+
   // ---- Documents / permit (act) ----
   if (p.includePermitCost) {
     add('permit_apz', 'permit', 'act', 1)
@@ -286,7 +299,7 @@ export function computeQuantities(p: HouseParams): Quantities {
     wallHeight: H,
     totalFloorArea,
     // нормативная общая площадь — по внутренним поверхностям наружных стен (Прил.2 п.4)
-    netFloorArea: Math.max(0, Math.max(0, p.length - 2 * wallT) * Math.max(0, p.width - 2 * wallT) * p.floors - hallVoid),
+    netFloorArea: netArea,
     internalPerFloor: Math.max(0, p.length - 2 * wallT) * Math.max(0, p.width - 2 * wallT),
     hallVoid,
     wallGross,

@@ -70,7 +70,12 @@ export function Plan2D() {
       </div>
 
       <div style={{ padding: '1rem' }}>
-        <FloorPlanSvg house={house} floorIndex={activeFloor} custom={custom} />
+        <FloorPlanSvg
+          house={house}
+          floorIndex={activeFloor}
+          custom={custom}
+          voidLabel={lang === 'hy' ? 'Բաց սրահ · երկրորդ լույս' : lang === 'en' ? 'Open to below · double height' : 'Второй свет · открыто вниз'}
+        />
 
         {/* room editor (ground floor) */}
         {activeFloor === 0 && (

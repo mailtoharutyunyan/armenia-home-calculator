@@ -9,6 +9,7 @@ export interface Room {
   h: number
   type: RoomType
   label: string
+  open?: boolean // open to below (двусветный зал) — no floor on this level
 }
 
 export interface Door {
@@ -57,7 +58,7 @@ export function autoProgram(p: HouseParams, floorIndex = 0): Spec[] {
 }
 
 // Build a furnished layout. If `custom` specs are provided (editor), use them.
-export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[]): FloorPlan {
+export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], voidLabel = 'Второй свет'): FloorPlan {
   const L = Math.max(1, p.length)
   const W = Math.max(1, p.width)
   const wall = 0.2
@@ -66,19 +67,40 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[]):
 
   const specs: Spec[] = custom && custom.length > 0 ? custom : autoProgram(p, floorIndex)
 
+  // On upper floors the double-height hall is open to below — carve it out as a void
+  // and lay the rooms into the remaining floor area only.
+  let sliceRect = inner
+  let openVoid: Room | null = null
+  if (floorIndex > 0 && p.doubleHeightHall && p.hallArea > 0) {
+    const frac = Math.min(0.6, Math.max(0.12, p.hallArea / (inner.w * inner.h)))
+    if (inner.w >= inner.h) {
+      const vw = inner.w * frac
+      openVoid = { x: inner.x, y: inner.y, w: vw, h: inner.h, type: 'living_kitchen', label: voidLabel, open: true }
+      sliceRect = { x: inner.x + vw, y: inner.y, w: inner.w - vw, h: inner.h }
+    } else {
+      const vh = inner.h * frac
+      openVoid = { x: inner.x, y: inner.y + inner.h - vh, w: inner.w, h: vh, type: 'living_kitchen', label: voidLabel, open: true }
+      sliceRect = { x: inner.x, y: inner.y, w: inner.w, h: inner.h - vh }
+    }
+  }
+
   const rooms: Room[] = []
-  slice(inner, specs, rooms)
+  slice(sliceRect, specs, rooms)
 
   // windows on exterior walls, roughly centered per exterior-facing room edge
   const windows: FloorPlan['windows'] = []
-  for (const r of rooms) {
+  for (const r of openVoid ? [...rooms, openVoid] : rooms) {
     if (Math.abs(r.y - inset) < 1e-6) windows.push({ x: r.x + r.w / 2 - 0.6, y: 0, len: 1.2, side: 'top' })
     if (Math.abs(r.y + r.h - (W - inset)) < 1e-6) windows.push({ x: r.x + r.w / 2 - 0.6, y: W, len: 1.2, side: 'bottom' })
     if (Math.abs(r.x - inset) < 1e-6) windows.push({ x: 0, y: r.y + r.h / 2 - 0.6, len: 1.2, side: 'left' })
     if (Math.abs(r.x + r.w - (L - inset)) < 1e-6) windows.push({ x: L, y: r.y + r.h / 2 - 0.6, len: 1.2, side: 'right' })
   }
 
-  const doors = buildDoors(rooms, inset, L, W)
+  // doors connect the real rooms only; the void has no door (it is open) and the
+  // exterior entrance belongs to the ground floor.
+  const doors = buildDoors(rooms, inset, L, W, floorIndex === 0)
+
+  if (openVoid) rooms.push(openVoid)
 
   return { L, W, wall, rooms, windows, doors }
 }
@@ -86,7 +108,7 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[]):
 const DOOR_W = 0.9
 
 // Connect rooms with a spanning tree of interior doors + one entrance door.
-function buildDoors(rooms: Room[], inset: number, L: number, W: number): Door[] {
+function buildDoors(rooms: Room[], inset: number, L: number, W: number, withEntrance = true): Door[] {
   const doors: Door[] = []
   if (rooms.length === 0) return doors
   const eps = 0.02
@@ -133,7 +155,8 @@ function buildDoors(rooms: Room[], inset: number, L: number, W: number): Door[] 
     if (!added) break
   }
 
-  // entrance door on the exterior wall of the first room (living)
+  // entrance door on the exterior wall of the first room (living) — ground floor only
+  if (!withEntrance) return doors
   const r0 = rooms[0]
   if (Math.abs(r0.y + r0.h - (W - inset)) < eps || r0.y + r0.h >= W - inset - 0.5) {
     doors.push({ orient: 'h', pos: W, start: r0.x + r0.w / 2 - 0.5, w: 1.0, swing: -1, kind: 'entrance' })

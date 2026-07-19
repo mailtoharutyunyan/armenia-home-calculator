@@ -7,8 +7,8 @@ const ROOM = '#eef0f2'
 const FURN = '#9aa0a6'
 const TXT = '#3f454c'
 
-export function FloorPlanSvg({ house, floorIndex, custom }: { house: HouseParams; floorIndex: number; custom?: Spec[] }) {
-  const plan = buildFloorPlan(house, floorIndex, custom)
+export function FloorPlanSvg({ house, floorIndex, custom, voidLabel }: { house: HouseParams; floorIndex: number; custom?: Spec[]; voidLabel?: string }) {
+  const plan = buildFloorPlan(house, floorIndex, custom, voidLabel)
   const { L, W, wall, rooms, windows, doors } = plan
   const pad = 1.6
   const wc = wall * 1.15 // opening cover width
@@ -26,23 +26,37 @@ export function FloorPlanSvg({ house, floorIndex, custom }: { house: HouseParams
         <pattern id="grid" width="0.5" height="0.5" patternUnits="userSpaceOnUse">
           <path d="M0.5 0 L0 0 0 0.5" fill="none" stroke="#e2e6ea" strokeWidth="0.012" />
         </pattern>
+        <pattern id="voidhatch" width="0.7" height="0.7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="0.7" stroke="#c2c9d0" strokeWidth="0.05" />
+        </pattern>
       </defs>
 
       {/* room fills + partitions + furniture + labels */}
-      {rooms.map((r, i) => (
-        <g key={i}>
-          <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={ROOM} />
-          <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="url(#grid)" />
-          <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={WALL} strokeWidth={0.09} />
-          <Furniture room={r} />
-          <text x={r.x + r.w / 2} y={r.y + r.h / 2 - 0.1} textAnchor="middle" fontSize={Math.min(0.52, r.w / 7)} fill={TXT} fontFamily="Inter, sans-serif" fontWeight={600}>
-            {r.label}
-          </text>
-          <text x={r.x + r.w / 2} y={r.y + r.h / 2 + 0.5} textAnchor="middle" fontSize={0.34} fill={TXT} opacity={0.65} fontFamily="Inter, sans-serif">
-            {r.w.toFixed(1)}×{r.h.toFixed(1)} м
-          </text>
-        </g>
-      ))}
+      {rooms.map((r, i) =>
+        r.open ? (
+          <g key={i}>
+            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="#f6f8fa" />
+            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="url(#voidhatch)" />
+            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={WALL} strokeWidth={0.09} strokeDasharray="0.35 0.22" />
+            <text x={r.x + r.w / 2} y={r.y + r.h / 2} textAnchor="middle" fontSize={Math.min(0.5, r.w / 9)} fill={TXT} fontFamily="Inter, sans-serif" fontWeight={600}>
+              {r.label}
+            </text>
+          </g>
+        ) : (
+          <g key={i}>
+            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={ROOM} />
+            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="url(#grid)" />
+            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={WALL} strokeWidth={0.09} />
+            <Furniture room={r} />
+            <text x={r.x + r.w / 2} y={r.y + r.h / 2 - 0.1} textAnchor="middle" fontSize={Math.min(0.52, r.w / 7)} fill={TXT} fontFamily="Inter, sans-serif" fontWeight={600}>
+              {r.label}
+            </text>
+            <text x={r.x + r.w / 2} y={r.y + r.h / 2 + 0.5} textAnchor="middle" fontSize={0.34} fill={TXT} opacity={0.65} fontFamily="Inter, sans-serif">
+              {r.w.toFixed(1)}×{r.h.toFixed(1)} м
+            </text>
+          </g>
+        ),
+      )}
 
       {/* outer wall */}
       <rect x={0} y={0} width={L} height={W} fill="none" stroke={WALL} strokeWidth={wall * 2} />

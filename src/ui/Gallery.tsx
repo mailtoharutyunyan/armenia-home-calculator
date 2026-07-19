@@ -8,22 +8,28 @@ const modules = import.meta.glob('../assets/gallery/*.{jpg,jpeg,png,webp,JPG,JPE
   import: 'default',
 })
 
-const CAPTIONS: Record<string, string> = {
-  exterior: 'Экстерьер',
-  facade: 'Фасад',
-  'living-room': 'Гостиная',
-  kitchen: 'Кухня',
-  construction: 'Строительство',
-  bedroom: 'Спальня',
+// Caption + display order per file base name (без расширения).
+const CAPTIONS: Record<string, { ru: string; hy: string; en: string; order: number }> = {
+  exterior: { ru: 'Экстерьер · вид на Арарат', hy: 'Էքստերիեր · Արարատի տեսարան', en: 'Exterior · Ararat view', order: 1 },
+  'exterior-dusk': { ru: 'Вечерняя подсветка', hy: 'Երեկոյան լուսավորում', en: 'Evening lighting', order: 2 },
+  facade: { ru: 'Фасад', hy: 'Ֆասադ', en: 'Facade', order: 3 },
+  'facade-day': { ru: 'Фасад днём', hy: 'Ֆասադ ցերեկը', en: 'Facade by day', order: 4 },
+  'living-room': { ru: 'Гостиная', hy: 'Հյուրասենյակ', en: 'Living room', order: 5 },
+  'high-ceiling': { ru: 'Двусветный зал', hy: 'Երկլույս սրահ', en: 'Double-height hall', order: 6 },
+  studio: { ru: 'Кухня-гостиная (студия)', hy: 'Խոհանոց-հյուրասենյակ', en: 'Kitchen-living studio', order: 7 },
+  kitchen: { ru: 'Кухня', hy: 'Խոհանոց', en: 'Kitchen', order: 8 },
+  mezzanine: { ru: 'Второй свет и антресоль', hy: 'Երկրորդ լույս և միջհարկ', en: 'Mezzanine', order: 9 },
+  staircase: { ru: 'Лестница', hy: 'Աստիճան', en: 'Staircase', order: 10 },
+  bedroom: { ru: 'Спальня', hy: 'Ննջասենյակ', en: 'Bedroom', order: 11 },
+  construction: { ru: 'Строительство · каркас', hy: 'Շինարարություն · կմախք', en: 'Construction · frame', order: 12 },
 }
 
-const images = Object.entries(modules).map(([path, url]) => {
-  const base = (path.split('/').pop() ?? '').replace(/\.[^.]+$/, '')
-  return {
-    url: url as string,
-    name: CAPTIONS[base] ?? base.replace(/[-_]/g, ' '),
-  }
-})
+const images = Object.entries(modules)
+  .map(([path, url]) => {
+    const base = (path.split('/').pop() ?? '').replace(/\.[^.]+$/, '')
+    return { url: url as string, base, cap: CAPTIONS[base] }
+  })
+  .sort((a, b) => (a.cap?.order ?? 99) - (b.cap?.order ?? 99))
 
 // Illustrative placeholders shown until the user adds their own photos.
 const PLACEHOLDERS = [
@@ -50,17 +56,26 @@ export function Gallery() {
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
           {hasImages
-            ? images.map((img) => (
-                <figure key={img.url} style={{ margin: 0 }}>
-                  <img
-                    src={img.url}
-                    alt={img.name}
-                    loading="lazy"
-                    style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', borderRadius: 12, border: '1px solid var(--color-border)', display: 'block' }}
-                  />
-                  <figcaption style={{ marginTop: '0.4rem', fontSize: '0.8rem', color: 'var(--color-ink-soft)' }}>{img.name}</figcaption>
-                </figure>
-              ))
+            ? images.map((img) => {
+                const label = img.cap
+                  ? lang === 'hy'
+                    ? img.cap.hy
+                    : lang === 'en'
+                    ? img.cap.en
+                    : img.cap.ru
+                  : img.base.replace(/[-_]/g, ' ')
+                return (
+                  <figure key={img.url} style={{ margin: 0 }}>
+                    <img
+                      src={img.url}
+                      alt={label}
+                      loading="lazy"
+                      style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', borderRadius: 12, border: '1px solid var(--color-border)', display: 'block' }}
+                    />
+                    <figcaption style={{ marginTop: '0.4rem', fontSize: '0.8rem', color: 'var(--color-ink-soft)' }}>{label}</figcaption>
+                  </figure>
+                )
+              })
             : PLACEHOLDERS.map((p, i) => (
                 <figure key={i} style={{ margin: 0 }}>
                   <div

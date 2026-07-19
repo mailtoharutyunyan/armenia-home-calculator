@@ -19,6 +19,7 @@ const SECTION_LABEL: Record<SectionId, { ru: string; hy: string }> = {
   finishing: { ru: 'Отделка', hy: 'Հարդարում' },
   facade: { ru: 'Фасад', hy: 'Ֆասադ' },
   engineering: { ru: 'Инженерные сети', hy: 'Ինժեներական ցանցեր' },
+  options: { ru: 'Дополнительные системы', hy: 'Լրացուցիչ համակարգեր' },
   permit: { ru: 'Документы и разрешение', hy: 'Փաստաթղթեր և թույլտվություն' },
 }
 
