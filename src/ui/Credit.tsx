@@ -18,9 +18,10 @@ export function Credit() {
 
   const m = (v: number) => money(v, house.currency, amdPerUsd)
 
-  const principal = Math.max(0, total * (1 - down / 100))
-  const n = Math.max(1, years * 12)
-  const i = rate / 100 / 12
+  const downPct = Math.min(100, Math.max(0, down))
+  const principal = Math.max(0, total * (1 - downPct / 100))
+  const n = Math.max(1, Math.round(Math.max(1, years) * 12))
+  const i = Math.max(0, rate) / 100 / 12
   const monthly = i === 0 ? principal / n : (principal * i) / (1 - Math.pow(1 + i, -n))
   const overpay = monthly * n - principal
 

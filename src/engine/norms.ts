@@ -95,7 +95,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
       hy: `Հարկի բարձրությունը ${p.floorHeight} մ բարձր է սովորականից։`,
     })
   }
-  if (p.floors > n.simplifiedMaxFloors || q.geometry.footprint > n.simplifiedMaxArea) {
+  if (p.floors > n.simplifiedMaxFloors || q.geometry.totalFloorArea > n.simplifiedMaxArea) {
     w.push({
       level: 'info',
       code: 'ՀՀՇՆ 31-01-2014',
@@ -103,7 +103,8 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
       hy: `Տունը դուրս է պարզեցված ընթացակարգից (≤ ${n.simplifiedMaxFloors} հարկ և ≤ ${n.simplifiedMaxArea} մ²)։`,
     })
   }
-  const lightRatio = q.geometry.totalFloorArea > 0 ? p.windowAreaTotal / q.geometry.totalFloorArea : 0
+  const usableArea = q.geometry.totalFloorArea * n.usableRatio
+  const lightRatio = usableArea > 0 ? p.windowAreaTotal / usableArea : 0
   if (lightRatio < n.minLightRatio) {
     w.push({
       level: 'warning',
@@ -133,7 +134,8 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   }
 
   // ---- foundation depth vs frost ----
-  if (!p.basement && p.foundation !== 'slab' && region.frostDepth > C.stripHeight) {
+  const stripHeightM = p.eng.stripHeight && p.eng.stripHeight > 0 ? p.eng.stripHeight / 100 : C.stripHeight
+  if (!p.basement && p.foundation !== 'slab' && region.frostDepth > stripHeightM) {
     w.push({
       level: 'warning',
       code: 'ՀՀՇՆ 31-01-2014',
@@ -143,7 +145,16 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   }
 
   // ---- glazing ----
-  const glazingPct = q.geometry.wallGross > 0 ? (p.windowAreaTotal / q.geometry.wallGross) * 100 : 0
+  const outerWallArea = q.geometry.perimeter * q.geometry.wallHeight
+  if (p.windowAreaTotal + p.exteriorDoors * 2 > outerWallArea && outerWallArea > 0) {
+    w.push({
+      level: 'error',
+      code: 'input',
+      ru: `Площадь окон и дверей больше площади наружных стен (${Math.round(outerWallArea)} м²) — уменьшите.`,
+      hy: `Պատուհանների և դռների մակերեսը մեծ է արտաքին պատերի մակերեսից (${Math.round(outerWallArea)} մ²) — նվազեցրեք։`,
+    })
+  }
+  const glazingPct = outerWallArea > 0 ? (p.windowAreaTotal / outerWallArea) * 100 : 0
   if (glazingPct > n.maxGlazingPct) {
     w.push({
       level: 'warning',

@@ -149,6 +149,25 @@ describe('permit & hall', () => {
     expect(a400.lines.some((l) => l.key === 'rebar_a500')).toBe(false)
   })
 
+  it('roof pitch 90° does not blow up the estimate', () => {
+    const q = computeQuantities(house({ roof: 'pitched', roofPitchDeg: 90 }))
+    const est = computeEstimate(q, SEED_PRICES, house({ roof: 'pitched', roofPitchDeg: 90 }), 'typical')
+    expect(Number.isFinite(est.turnkey.total)).toBe(true)
+    expect(est.turnkey.total).toBeLessThan(1e12)
+  })
+
+  it('cleared foundation strip length falls back (concrete stays > 0)', () => {
+    const p = house({ eng: { stripLen: 0 } })
+    const concrete = computeQuantities(p).lines.find((l) => l.key === p.concreteGrade && l.section === 'foundation')
+    expect(concrete && concrete.quantity).toBeGreaterThan(0)
+  })
+
+  it('windows larger than the outer walls raise an error', () => {
+    const p = house({ windowAreaTotal: 1000 })
+    const w = checkNorms(p, computeQuantities(p))
+    expect(w.some((x) => x.level === 'error')).toBe(true)
+  })
+
   it('builders labour rate scales the estimate', () => {
     const q = computeQuantities(house())
     const low = computeEstimate(q, SEED_PRICES, house({ laborPerM2: 5000 }), 'typical').act.total

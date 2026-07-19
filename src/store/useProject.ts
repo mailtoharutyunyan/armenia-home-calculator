@@ -24,8 +24,9 @@ function loadHouse(): HouseParams {
   try {
     const raw = localStorage.getItem(HOUSE_KEY)
     if (!raw) return { ...DEFAULT_HOUSE }
+    const saved = JSON.parse(raw) as Partial<HouseParams>
     // merge onto defaults so new fields always exist
-    return { ...DEFAULT_HOUSE, ...(JSON.parse(raw) as Partial<HouseParams>), eng: { ...(JSON.parse(raw).eng ?? {}) } }
+    return { ...DEFAULT_HOUSE, ...saved, eng: { ...(saved.eng ?? {}) } }
   } catch {
     return { ...DEFAULT_HOUSE }
   }
@@ -35,9 +36,14 @@ function loadPrices(): Catalog {
   try {
     const raw = localStorage.getItem(PRICE_KEY)
     if (!raw) return structuredClone(SEED_PRICES)
-    const parsed = JSON.parse(raw) as Catalog
-    // merge onto seed so new seed keys always exist
-    return { ...structuredClone(SEED_PRICES), ...parsed }
+    const parsed = JSON.parse(raw) as Partial<Catalog>
+    // per-field merge onto seed so new seed fields/keys always exist (no NaN from old schema)
+    const merged = structuredClone(SEED_PRICES)
+    for (const key of Object.keys(merged)) {
+      const saved = parsed[key]
+      if (saved) merged[key] = { ...merged[key], ...saved }
+    }
+    return merged
   } catch {
     return structuredClone(SEED_PRICES)
   }
@@ -136,5 +142,6 @@ export const useProject = create<ProjectState>((set, get) => ({
   },
 
   setPriceMode: (priceMode) => set({ priceMode }),
-  setAmdPerUsd: (amdPerUsd) => set({ amdPerUsd: amdPerUsd || 1 }),
+  // keep the last valid rate: ignore empty / 0 / negative input
+  setAmdPerUsd: (n) => set((s) => ({ amdPerUsd: n > 0 ? n : s.amdPerUsd })),
 }))

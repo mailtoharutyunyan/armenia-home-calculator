@@ -20,7 +20,7 @@ export function buildPlan(p: HouseParams): Plan {
   const t = p.wallThickness
   const openings: Opening[] = []
 
-  const windowCount = Math.max(1, Math.round(p.windowAreaTotal / 2.25))
+  const windowCount = Math.max(0, Math.round(p.windowAreaTotal / 2.25))
   const winW = 1.5
   // windows split between top and bottom walls
   const topN = Math.ceil(windowCount / 2)

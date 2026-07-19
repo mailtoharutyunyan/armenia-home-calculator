@@ -60,9 +60,11 @@ export function computeQuantities(p: HouseParams): Quantities {
   const region = REGIONS[p.region]
 
   // ---- effective engineering values (engineer overrides win) ----
-  const cm = (v?: number) => (v != null ? v / 100 : undefined)
+  // empty/0/negative override => treated as "not set" (falls back to default)
+  const ov = (v?: number) => (v != null && v > 0 ? v : undefined)
+  const cm = (v?: number) => (v != null && v > 0 ? v / 100 : undefined)
   const e = p.eng
-  const stripLen = e.stripLen ?? Lb
+  const stripLen = ov(e.stripLen) ?? Lb
   const stripW = cm(e.stripWidth) ?? C.stripWidth
   const stripH = cm(e.stripHeight) ?? C.stripHeight
   const blindingT = cm(e.blinding) ?? C.blindingThickness
@@ -76,7 +78,7 @@ export function computeQuantities(p: HouseParams): Quantities {
 
   // double-height hall: void in the 2nd-floor slab (perimeter walls already
   // span the full height H, so no extra wall volume is added here).
-  const hallVoid = p.doubleHeightHall && p.floors >= 2 ? Math.min(p.hallArea, A) : 0
+  const hallVoid = p.doubleHeightHall && p.floors >= 2 ? Math.max(0, Math.min(p.hallArea, A)) : 0
 
   // structural concrete + rebar accumulators, per estimate section
   const concreteBySection: Partial<Record<SectionId, number>> = {}
@@ -160,9 +162,9 @@ export function computeQuantities(p: HouseParams): Quantities {
     // frame: columns + beams + infill
     const nx = Math.floor(p.length / C.columnGridStep) + 1
     const ny = Math.floor(p.width / C.columnGridStep) + 1
-    const nCol = e.columns ?? nx * ny
+    const nCol = ov(e.columns) ?? nx * ny
     addStruct('frame', nCol * colSize * colSize * H, C.rebar.column)
-    const beamsLen = e.beamsLen ?? Lb * p.floors
+    const beamsLen = ov(e.beamsLen) ?? Lb * p.floors
     addStruct('frame', beamsLen * beamSectionArea, C.rebar.ringBeam)
     const infillVol = Math.max(0, wallNet * wallT) * waste
     add(masonryKey(wallMat), 'walls', 'act', infillVol)
@@ -182,6 +184,12 @@ export function computeQuantities(p: HouseParams): Quantities {
   } else {
     const count = Math.ceil(slabArea / C.precastSlabArea)
     add('precast_slab', 'floors', 'act', count)
+  }
+
+  // ---- Beams over the double-height hall ----
+  if (hallVoid > 0 && p.beamsOverHall) {
+    const beamLen = Math.sqrt(hallVoid) * 2 // пара балок через проём
+    addStruct('floors', beamLen * 0.3 * 0.4, C.rebar.floor)
   }
 
   // ---- Stair ----
@@ -207,8 +215,7 @@ export function computeQuantities(p: HouseParams): Quantities {
     // gable walls: full for a gable/pitched roof, half for mansard, none for hip
     const gableMult = p.roof === 'pitched' ? 1 : p.roof === 'mansard' ? 0.5 : 0
     if (gableMult > 0) {
-      const gableVol =
-        ((p.width ** 2 * Math.tan((p.roofPitchDeg * Math.PI) / 180)) / 4) * 2 * (wallT / 2) * gableMult
+      const gableVol = ((p.width ** 2 * Math.tan(rad)) / 4) * 2 * (wallT / 2) * gableMult
       add(masonryKey(wallMat), 'roof', 'act', Math.max(0, gableVol))
     }
   }
@@ -227,8 +234,8 @@ export function computeQuantities(p: HouseParams): Quantities {
   const partitionArea = C.partitionFactor * P * H
   add('aerated_block', 'partitions', 'turnkey', partitionArea * C.partitionThickness)
 
-  // Plaster: interior bearing-wall face + partitions both sides + ceilings
-  const plasterArea = wallNet + partitionArea * 2 + totalFloorArea
+  // Plaster: interior bearing-wall face + partitions both sides + ceilings (minus hall void)
+  const plasterArea = wallNet + partitionArea * 2 + Math.max(0, totalFloorArea - hallVoid)
   add('plaster', 'finishing', 'turnkey', plasterArea)
   add('floor_finish', 'finishing', 'turnkey', Math.max(0, totalFloorArea - hallVoid))
 

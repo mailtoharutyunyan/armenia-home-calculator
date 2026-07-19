@@ -6,6 +6,8 @@ import { REGIONS } from '../data/regions'
 import type { Quantities, SectionId, Stage } from './quantities'
 
 const FINISH_SECTIONS = new Set<SectionId>(['finishing', 'facade', 'openings', 'partitions'])
+// shell sections whose labour is covered by the builders' brigade rate (֏/m²)
+const BRIGADE_SECTIONS = new Set<SectionId>(['foundation', 'walls', 'frame', 'floors'])
 
 export interface EstimateLine {
   key: string
@@ -84,9 +86,9 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
     const delivery = isPermit ? 0 : region.deliverySurcharge
     const unitMat = materialPrice(item, mode) * (1 + delivery)
     const material = ql.quantity * unitMat * mult
-    // shell/act labour is covered by the builders' brigade rate (added below);
-    // per-item labour only applies to turnkey finishing/engineering work.
-    const labor = ql.stage === 'act' ? 0 : ql.quantity * item.labor * mult
+    // shell labour (foundation/walls/frame/floors) is covered by the brigade rate
+    // (added below); earthworks/roof/stair and all turnkey work keep per-item labour.
+    const labor = BRIGADE_SECTIONS.has(ql.section) ? 0 : ql.quantity * item.labor * mult
     const total = material + labor
     if (isPermit) permitAmt += total
 

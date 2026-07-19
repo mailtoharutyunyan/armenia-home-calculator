@@ -59,7 +59,8 @@ export function Compare() {
   const { house, prices, lang, priceMode, amdPerUsd } = useProject()
   const rows = useMemo(() => compareSystems(house, prices, priceMode), [house, prices, priceMode])
   const m = (v: number) => money(v, house.currency, amdPerUsd)
-  const cheapest = Math.min(...rows.map((r) => r.turnkeyTotal))
+  const allowed = rows.filter((r) => !r.banned)
+  const cheapest = allowed.length ? Math.min(...allowed.map((r) => r.turnkeyTotal)) : Infinity
 
   return (
     <section className="panel" id="compare">
@@ -78,7 +79,7 @@ export function Compare() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.system} style={{ background: r.turnkeyTotal === cheapest ? 'rgba(47,125,87,0.08)' : undefined }}>
+              <tr key={r.system} style={{ background: !r.banned && r.turnkeyTotal === cheapest ? 'rgba(47,125,87,0.08)' : undefined }}>
                 <td style={cell}>
                   {t(lang, SYS_KEY[r.system])}
                   {r.banned && (
