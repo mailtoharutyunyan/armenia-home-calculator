@@ -24,6 +24,9 @@ export const COEFF = {
   internalBearingFactor: 0.5, // internal bearing wall length = factor * perimeter
   partitionFactor: 0.8, // partition length = factor * perimeter
   pitchedRoofFactor: 1.3,
+  roofFactor: { flat: 1.0, pitched: 1.3, hip: 1.4, mansard: 1.55 } as Record<string, number>,
+  // рост армирования несущих конструкций с этажностью (сейсмика/нагрузки)
+  rebarFloorFactor: 0.07, // +7% арматуры на каждый этаж свыше первого
   wasteFactor: 1.05, // +5% cut/waste on piece/linear materials
 
   // rebar (kg/m3) per element

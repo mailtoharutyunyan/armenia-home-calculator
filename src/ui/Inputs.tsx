@@ -142,18 +142,17 @@ export function Inputs() {
 
         {/* Step 4 — roof */}
         <div className="eyebrow" style={{ marginTop: '0.8rem' }}>04 · {t(lang, 'step_roof')}</div>
-        <div className="seg" role="group">
-          <button aria-pressed={house.roof === 'flat'} onClick={() => set({ roof: 'flat' })}>
-            {t(lang, 'roof_flat')}
-          </button>
-          <button aria-pressed={house.roof === 'pitched'} onClick={() => set({ roof: 'pitched' })}>
-            {t(lang, 'roof_pitched')}
-          </button>
-        </div>
-        {house.roof === 'pitched' && (
-          <div style={{ marginTop: '0.6rem' }}>
-            <Num label={t(lang, 'roofPitch')} value={house.roofPitchDeg} onChange={(n) => set({ roofPitchDeg: n })} />
-          </div>
+        <label className="field">
+          <span>{t(lang, 'roof')}</span>
+          <select className="input" value={house.roof} onChange={(e) => set({ roof: e.target.value as HouseParams['roof'] })}>
+            <option value="flat">{t(lang, 'roof_flat')}</option>
+            <option value="pitched">{t(lang, 'roof_pitched')}</option>
+            <option value="hip">{t(lang, 'roof_hip')}</option>
+            <option value="mansard">{t(lang, 'roof_mansard')}</option>
+          </select>
+        </label>
+        {house.roof !== 'flat' && (
+          <Num label={t(lang, 'roofPitch')} value={house.roofPitchDeg} onChange={(n) => set({ roofPitchDeg: n })} />
         )}
 
         {/* Step 5 — openings */}

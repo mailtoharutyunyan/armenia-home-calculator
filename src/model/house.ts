@@ -8,7 +8,7 @@ export type ConstructionSystem = 'frame' | 'tuff' | 'aerated' | 'brick'
 
 export type InfillMaterial = 'tuff' | 'aerated' | 'brick'
 export type FoundationType = 'strip' | 'slab' | 'pile' | 'column'
-export type RoofType = 'flat' | 'pitched'
+export type RoofType = 'flat' | 'pitched' | 'hip' | 'mansard'
 export type FinishLevel = 'economy' | 'standard' | 'premium'
 export type Currency = 'AMD' | 'USD'
 export type PriceMode = 'min' | 'typical' | 'max'

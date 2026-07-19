@@ -189,19 +189,22 @@ export function computeQuantities(p: HouseParams): Quantities {
   // ---- Rough screed (act) ----
   add('screed', 'floors', 'act', Math.max(0, totalFloorArea - hallVoid))
 
-  // ---- Roof ----
+  // ---- Roof (flat / pitched / hip / mansard) ----
   if (p.roof === 'flat') {
     add('roof_flat', 'roof', 'act', A)
     add('waterproofing', 'roof', 'act', A)
     add('insulation', 'roof', 'act', A)
   } else {
-    const roofArea = A * C.pitchedRoofFactor
+    const roofArea = A * (C.roofFactor[p.roof] ?? C.pitchedRoofFactor)
     add('roof_pitched', 'roof', 'act', roofArea)
     add('insulation', 'roof', 'act', roofArea)
-    // gables (frontony) as wall material
-    const gableVol =
-      (p.width ** 2 * Math.tan((p.roofPitchDeg * Math.PI) / 180)) / 4 * 2 * (p.wallThickness / 2)
-    add(masonryKey(wallMat), 'roof', 'act', Math.max(0, gableVol))
+    // gable walls: full for a gable/pitched roof, half for mansard, none for hip
+    const gableMult = p.roof === 'pitched' ? 1 : p.roof === 'mansard' ? 0.5 : 0
+    if (gableMult > 0) {
+      const gableVol =
+        ((p.width ** 2 * Math.tan((p.roofPitchDeg * Math.PI) / 180)) / 4) * 2 * (wallT / 2) * gableMult
+      add(masonryKey(wallMat), 'roof', 'act', Math.max(0, gableVol))
+    }
   }
 
   // ================= TURNKEY =================
@@ -243,6 +246,9 @@ export function computeQuantities(p: HouseParams): Quantities {
     add('permit_address', 'permit', 'act', 1)
     add('permit_supervision', 'permit', 'act', totalFloorArea)
   }
+
+  // ---- reinforcement grows with number of floors (seismic/loads) ----
+  rebarKg *= 1 + C.rebarFloorFactor * Math.max(0, p.floors - 1)
 
   // ---- Aggregate structural concrete + rebar ----
   if (structConcrete > 0) {
