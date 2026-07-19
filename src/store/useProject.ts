@@ -18,7 +18,7 @@ export const newRoomId = () => `r${++roomCounter}`
 
 const PRICE_KEY = 'ahc_prices_v1'
 const LANG_KEY = 'ahc_lang_v1'
-const HOUSE_KEY = 'ahc_house_v1'
+const HOUSE_KEY = 'ahc_house_v2'
 
 function loadHouse(): HouseParams {
   try {

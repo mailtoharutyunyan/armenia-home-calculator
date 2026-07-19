@@ -82,20 +82,20 @@ export interface EngOverrides {
 }
 
 export const DEFAULT_HOUSE: HouseParams = {
-  system: 'frame',
+  system: 'frame', // ж/б каркас + газоблок-заполнение (безопасно для сейсмики)
   infillMaterial: 'aerated',
-  length: 12,
-  width: 10,
+  length: 13,
+  width: 14,
   floors: 2,
-  floorHeight: 3,
+  floorHeight: 3, // двусветный зал = 2 × 3 = 6 м
   wallThickness: 0.3,
   foundation: 'strip',
   basement: false,
   basementDepth: 2.4,
   roof: 'pitched',
   roofPitchDeg: 30,
-  windowAreaTotal: 24,
-  vitrageShare: 0.1,
+  windowAreaTotal: 40, // панорамные окна студии
+  vitrageShare: 0.25,
   exteriorDoors: 2,
   interiorDoors: null,
   finishLevel: 'standard',
@@ -107,10 +107,10 @@ export const DEFAULT_HOUSE: HouseParams = {
   excludedSections: [],
   floorSlab: 'monolith',
   seismicReinforcementDisabled: false,
-  doubleHeightHall: false,
-  hallArea: 24,
+  doubleHeightHall: true, // двусветный зал 6 м
+  hallArea: 45,
   includePermitCost: true,
-  roomsPerFloor: 3,
+  roomsPerFloor: 3, // студия (зал+кухня) + гостевой санузел + мастер-комната
   kitchenLivingCombined: true,
   laborPerM2: 11000,
   beamsOverHall: true,
