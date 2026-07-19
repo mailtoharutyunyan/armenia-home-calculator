@@ -9,9 +9,9 @@ const DARK: Pal = { sheet: '#191b20', wall: '#d8d5cb', room: '#23262e', furn: '#
 let PAL: Pal = LIGHT
 
 
-export function FloorPlanSvg({ house, floorIndex, custom, voidLabel, corridorLabel }: { house: HouseParams; floorIndex: number; custom?: Spec[]; voidLabel?: string; corridorLabel?: string }) {
+export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: HouseParams; floorIndex: number; custom?: Spec[]; labels?: import('../engine/floorplan').PlanLabels }) {
   PAL = useProject((st) => st.theme) === 'dark' ? DARK : LIGHT
-  const plan = buildFloorPlan(house, floorIndex, custom, voidLabel, corridorLabel)
+  const plan = buildFloorPlan(house, floorIndex, custom, labels)
   const { L, W, wall, rooms, windows, doors } = plan
   const pad = 1.6
   const wc = wall * 1.15 // opening cover width
@@ -55,18 +55,29 @@ export function FloorPlanSvg({ house, floorIndex, custom, voidLabel, corridorLab
             </text>
           </g>
         ) : (
-          <g key={i}>
-            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={PAL.room} />
-            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="url(#grid)" />
-            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={PAL.wall} strokeWidth={0.09} />
-            <Furniture room={r} />
-            <text x={r.x + r.w / 2} y={r.y + r.h / 2 - 0.1} textAnchor="middle" fontSize={Math.min(0.52, r.w / 7)} fill={PAL.txt} fontFamily="Inter, sans-serif" fontWeight={600}>
-              {r.label}
-            </text>
-            <text x={r.x + r.w / 2} y={r.y + r.h / 2 + 0.5} textAnchor="middle" fontSize={0.34} fill={PAL.txt} opacity={0.65} fontFamily="Inter, sans-serif">
-              {r.w.toFixed(1)}×{r.h.toFixed(1)} м
-            </text>
-          </g>
+          (() => {
+            // fit the label to the room width; show dimensions only when there is room
+            const fs = Math.max(0.15, Math.min(0.48, (r.w - 0.35) / Math.max(5, r.label.length * 0.62), r.h / 3.2))
+            const showDims = r.w > 2.8 && r.h > 2.6
+            const cx = r.x + r.w / 2
+            const cy = r.y + r.h / 2
+            return (
+              <g key={i}>
+                <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={PAL.room} />
+                <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="url(#grid)" />
+                <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={PAL.wall} strokeWidth={0.09} />
+                <Furniture room={r} />
+                <text x={cx} y={cy - (showDims ? 0.12 : -0.06)} textAnchor="middle" fontSize={fs} fill={PAL.txt} fontFamily="Inter, sans-serif" fontWeight={600}>
+                  {r.label}
+                </text>
+                {showDims && (
+                  <text x={cx} y={cy + 0.48} textAnchor="middle" fontSize={Math.min(0.32, fs * 0.72)} fill={PAL.txt} opacity={0.62} fontFamily="Inter, sans-serif">
+                    {r.w.toFixed(1)}×{r.h.toFixed(1)} = {(r.w * r.h).toFixed(1)} м²
+                  </text>
+                )}
+              </g>
+            )
+          })()
         ),
       )}
 
@@ -229,6 +240,18 @@ function Furniture({ room }: { room: Room }) {
           {Array.from({ length: n - 1 }, (_, k) => (
             <line key={k} x1={x + m} y1={y + m + (k + 1) * gap} x2={x + w - m} y2={y + m + (k + 1) * gap} {...s} />
           ))}
+        </g>
+      )
+    }
+    case 'wardrobe': {
+      const ry = y + m + 0.35
+      return (
+        <g>
+          <line x1={x + m} y1={ry} x2={x + w - m} y2={ry} {...s} />
+          {Array.from({ length: 4 }, (_, k) => {
+            const hx = x + m + 0.35 + (k * (w - 2 * m - 0.7)) / 3
+            return <path key={k} d={`M ${hx} ${ry} q -0.16 0.22 0 0.34 q 0.16 -0.12 0 -0.34`} {...s} />
+          })}
         </g>
       )
     }

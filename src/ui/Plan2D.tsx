@@ -15,6 +15,7 @@ const TYPE_LABEL: Record<RoomType, { ru: string; hy: string; en: string }> = {
   bedroom: { ru: 'Комната', hy: 'Սենյակ', en: 'Room' },
   bath: { ru: 'Санузел', hy: 'Սանհանգույց', en: 'Bathroom' },
   stair: { ru: 'Лестница', hy: 'Աստիճան', en: 'Staircase' },
+  wardrobe: { ru: 'Гардеробная', hy: 'Հանդերձարան', en: 'Walk-in closet' },
 }
 
 export function Plan2D() {
@@ -43,7 +44,7 @@ export function Plan2D() {
             lang === 'hy' ? o.hy : lang === 'en' ? o.en : o.ru
           let label = pick(TYPE_LABEL[s.type])
           if (s.type === 'bath' && ground)
-            label = lang === 'hy' ? 'Հյուրերի սանհանգույց' : lang === 'en' ? 'Guest bathroom' : 'Гостевой санузел'
+            label = lang === 'hy' ? 'Հյուրերի ս/հ' : lang === 'en' ? 'Guest WC' : 'Гостевой с/у'
           else if (s.type === 'bedroom') {
             bed++
             const master = lang === 'hy' ? 'Գլխավոր ննջասենյակ' : lang === 'en' ? 'Master bedroom' : 'Мастер-спальня'
@@ -56,10 +57,14 @@ export function Plan2D() {
   const startEditing = () =>
     setEditRooms(autoProgram(house, 0).map((s) => ({ id: newRoomId(), label: s.label, type: s.type, weight: s.weight })))
 
-  const voidLabel = lang === 'hy' ? 'Բաց սրահ · երկրորդ լույս' : lang === 'en' ? 'Open to below · double height' : 'Второй свет · открыто вниз'
-  const corridorLabel = lang === 'hy' ? 'Միջանցք' : lang === 'en' ? 'Corridor' : 'Коридор'
+  const planLabels = {
+    voidLabel: lang === 'hy' ? 'Բաց սրահ · երկրորդ լույս' : lang === 'en' ? 'Open to below · double height' : 'Второй свет · открыто вниз',
+    corridorLabel: lang === 'hy' ? 'Միջանցք' : lang === 'en' ? 'Corridor' : 'Коридор',
+    wardrobeLabel: lang === 'hy' ? 'Հանդերձ.' : lang === 'en' ? 'Closet' : 'Гардероб',
+    ensuiteLabel: lang === 'hy' ? 'Անձնական ս/հ' : lang === 'en' ? 'Ensuite' : 'Мастер с/у',
+  }
   // room-by-room areas for the active floor (same layout the plan renders)
-  const planRooms = buildFloorPlan(house, activeFloor, custom, voidLabel, corridorLabel).rooms
+  const planRooms = buildFloorPlan(house, activeFloor, custom, planLabels).rooms
   const usableFloorArea = planRooms.filter((r) => !r.open).reduce((a, r) => a + r.w * r.h, 0)
 
   return (
@@ -80,7 +85,7 @@ export function Plan2D() {
       </div>
 
       <div style={{ padding: '1rem' }}>
-        <FloorPlanSvg house={house} floorIndex={activeFloor} custom={custom} voidLabel={voidLabel} corridorLabel={corridorLabel} />
+        <FloorPlanSvg house={house} floorIndex={activeFloor} custom={custom} labels={planLabels} />
 
         {/* room-by-room areas */}
         <div style={{ marginTop: '0.9rem' }}>

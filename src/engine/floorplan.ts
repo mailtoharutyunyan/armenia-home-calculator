@@ -1,6 +1,6 @@
 import type { HouseParams } from '../model/house'
 
-export type RoomType = 'living' | 'living_kitchen' | 'kitchen' | 'bedroom' | 'bath' | 'stair'
+export type RoomType = 'living' | 'living_kitchen' | 'kitchen' | 'bedroom' | 'bath' | 'stair' | 'wardrobe'
 
 export interface Room {
   x: number
@@ -61,7 +61,17 @@ export function autoProgram(p: HouseParams, floorIndex = 0): Spec[] {
 }
 
 // Build a furnished layout. If `custom` specs are provided (editor), use them.
-export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], voidLabel = 'Второй свет', corridorLabel = 'Коридор'): FloorPlan {
+export interface PlanLabels {
+  voidLabel?: string
+  corridorLabel?: string
+  wardrobeLabel?: string
+  ensuiteLabel?: string
+}
+
+export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], labels: PlanLabels = {}): FloorPlan {
+  const voidLabel = labels.voidLabel ?? 'Второй свет'
+  const corridorLabel = labels.corridorLabel ?? 'Коридор'
+  const suite = { wardrobe: labels.wardrobeLabel ?? 'Гардеробная', ensuite: labels.ensuiteLabel ?? 'Мастер-санузел' }
   const L = Math.max(1, p.length)
   const W = Math.max(1, p.width)
   const wall = 0.2
@@ -97,7 +107,7 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
   }
 
   const rooms: Room[] = []
-  layoutFloor(sliceRect, specs, rooms)
+  layoutFloor(sliceRect, specs, rooms, suite)
   if (corridor) rooms.push(corridor)
 
   // windows on exterior walls, roughly centered per exterior-facing room edge
@@ -187,7 +197,7 @@ type Rect = { x: number; y: number; w: number; h: number }
 // Realistic layout: bath/stair go into a compact service band (real size ~5–7 m²),
 // the living/kitchen keeps the large area, bedrooms are proper rooms.
 // Falls back to the weighted slicer when the program has no service rooms.
-function layoutFloor(rect: Rect, specs: Spec[], out: Room[]) {
+function layoutFloor(rect: Rect, specs: Spec[], out: Room[], suite: { wardrobe: string; ensuite: string } = { wardrobe: 'Гардеробная', ensuite: 'Мастер-санузел' }) {
   const isSmall = (t: RoomType) => t === 'bath' || t === 'stair'
   const smalls = specs.filter((s) => isSmall(s.type))
   const bigs = specs.filter((s) => !isSmall(s.type))
@@ -215,6 +225,14 @@ function layoutFloor(rect: Rect, specs: Spec[], out: Room[]) {
     if (beds.length === 0) {
       // no bedrooms — extend the studio into the right column (no second label)
       if (restH > 0.6) out.push({ x: rx, y: belowY, w: Wc, h: restH, type: living.type, label: '' })
+    } else if (beds.length === 1) {
+      // master suite: wardrobe + ensuite carved at the top (entered from the bedroom),
+      // bedroom below fills the rest of the column
+      const ht = Math.min(2.7, restH * 0.32)
+      const half = Wc / 2
+      out.push({ x: rx, y: belowY, w: half, h: ht, type: 'wardrobe', label: suite.wardrobe })
+      out.push({ x: rx + half, y: belowY, w: half, h: ht, type: 'bath', label: suite.ensuite })
+      out.push({ x: rx, y: belowY + ht, w: Wc, h: restH - ht, type: beds[0].type, label: beds[0].label })
     } else {
       // bedrooms stack below the service band and fill the right column (no gaps → no duplicate room)
       const bh = restH / beds.length
