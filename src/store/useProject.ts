@@ -58,6 +58,8 @@ interface ProjectState {
   lang: Lang
   priceMode: PriceMode
   amdPerUsd: number
+  tab: string
+  setTab: (t: string) => void
   editRooms: EditRoom[] | null // null => auto layout from params
   setEditRooms: (rooms: EditRoom[] | null) => void
   updateRoom: (id: string, patch: Partial<EditRoom>) => void
@@ -77,6 +79,8 @@ export const useProject = create<ProjectState>((set, get) => ({
   lang: loadLang(),
   priceMode: 'typical',
   amdPerUsd: AMD_PER_USD_DEFAULT,
+  tab: 'calc',
+  setTab: (tab) => set({ tab }),
   editRooms: null,
 
   setEditRooms: (editRooms) => set({ editRooms }),

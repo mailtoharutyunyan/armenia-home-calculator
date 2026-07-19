@@ -104,7 +104,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   doubleHeightHall: false,
   hallArea: 24,
   includePermitCost: true,
-  roomsPerFloor: 4,
+  roomsPerFloor: 3,
   kitchenLivingCombined: true,
   eng: {},
 }

@@ -16,6 +16,19 @@ const PERMIT_ITEMS: { key: string; perArea?: boolean }[] = [
   { key: 'permit_supervision', perArea: true },
 ]
 
+// cost of each of the 8 procedural steps (aligned to PERMIT_STEPS order)
+type StepCost = { fixed?: number; key?: string; perArea?: boolean; inProject?: boolean }
+const STEP_COST: StepCost[] = [
+  { fixed: 5000 }, // 1. документы на землю (кадастровая справка)
+  { key: 'permit_apz' }, // 2. АПЗ
+  { inProject: true }, // 3. эскизный проект — в составе проекта
+  { key: 'permit_design', perArea: true }, // 4. рабочий проект
+  { key: 'permit_geology' }, // 5. геология
+  { key: 'permit_expertise' }, // 6. экспертиза
+  { key: 'permit_fee' }, // 7. разрешение
+  { key: 'permit_supervision', perArea: true }, // 8. технадзор + акт
+]
+
 export function Permit() {
   const { house, prices, lang, priceMode, amdPerUsd } = useProject()
   const area = useMemo(() => computeQuantities(house).geometry.totalFloorArea, [house])
@@ -77,10 +90,15 @@ export function Permit() {
             >
               {i + 1}
             </span>
-            <div>
-              <strong style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem' }}>
-                {lang === 'ru' ? s.ru : s.hy}
-              </strong>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.8rem', alignItems: 'baseline' }}>
+                <strong style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem' }}>
+                  {lang === 'ru' ? s.ru : s.hy}
+                </strong>
+                <span className="num" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  {stepCost(STEP_COST[i], prices, priceMode, area, m, lang)}
+                </span>
+              </div>
               <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--color-ink-soft)', lineHeight: 1.45 }}>
                 {lang === 'ru' ? s.descRu : s.descHy}
               </p>
@@ -95,4 +113,21 @@ export function Permit() {
       </p>
     </section>
   )
+}
+
+function stepCost(
+  sc: StepCost,
+  prices: ReturnType<typeof useProject.getState>['prices'],
+  priceMode: ReturnType<typeof useProject.getState>['priceMode'],
+  area: number,
+  m: (v: number) => string,
+  lang: 'ru' | 'hy',
+): string {
+  if (sc.inProject) return lang === 'ru' ? 'в составе проекта' : 'նախագծի կազմում'
+  if (sc.fixed != null) return m(sc.fixed)
+  if (sc.key) {
+    const it = prices[sc.key]
+    if (it) return m(materialPrice(it, priceMode) * (sc.perArea ? area : 1))
+  }
+  return '—'
 }

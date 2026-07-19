@@ -14,8 +14,16 @@ import { IsoHouse } from './ui/IsoHouse'
 import { useProject } from './store/useProject'
 import { t } from './i18n'
 
+const TABS = [
+  { id: 'calc', key: 'nav_calc' as const },
+  { id: 'gallery', key: 'nav_gallery' as const },
+  { id: 'analysis', key: 'tab_analysis' as const },
+  { id: 'docs', key: 'tab_docs' as const },
+  { id: 'prices', key: 'nav_prices' as const },
+]
+
 export default function App() {
-  const { house, lang } = useProject()
+  const { house, lang, tab, setTab } = useProject()
 
   const chips =
     lang === 'ru'
@@ -42,8 +50,8 @@ export default function App() {
                 : 'Նյութեր, արժեք և ժամկետներ՝ կմախքից մինչև հարդարում։'}
             </p>
             <div style={{ marginTop: '2rem', display: 'flex', gap: '1.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <a href="#calc" className="btn btn-accent">{t(lang, 'start')}</a>
-              <a href="#gallery" className="btn btn-ghost">{t(lang, 'nav_gallery')}</a>
+              <button className="btn btn-accent" onClick={() => setTab('calc')}>{t(lang, 'start')}</button>
+              <button className="btn btn-ghost" onClick={() => setTab('gallery')}>{t(lang, 'nav_gallery')}</button>
             </div>
             <div style={{ marginTop: '2rem', borderTop: '1px solid var(--color-border)', paddingTop: '1rem', display: 'flex', gap: '1.4rem', flexWrap: 'wrap' }}>
               {chips.map((c, i) => (
@@ -60,28 +68,65 @@ export default function App() {
         </div>
       </section>
 
-      {/* Workspace */}
-      <main id="calc" style={{ maxWidth: 1200, margin: '0 auto', padding: '2.6rem 2rem 2.4rem' }}>
-        <div className="workspace">
-          <div style={{ position: 'sticky', top: 76, alignSelf: 'start' }}>
-            <Inputs />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.6rem' }}>
-            <Plan2D />
-            <Warnings />
-            <Results />
-          </div>
-        </div>
+      {/* Tab bar */}
+      <div
+        className="no-print"
+        style={{ position: 'sticky', top: 0, zIndex: 15, background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}
+      >
+        <nav style={{ maxWidth: 1200, margin: '0 auto', padding: '0 2rem', display: 'flex', gap: '2rem', overflowX: 'auto' }}>
+          {TABS.map((tb) => (
+            <button
+              key={tb.id}
+              onClick={() => setTab(tb.id)}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                padding: '1rem 0',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+                color: tab === tb.id ? 'var(--color-ink)' : 'var(--color-ink-soft)',
+                borderBottom: `2px solid ${tab === tb.id ? 'var(--color-copper)' : 'transparent'}`,
+              }}
+            >
+              {t(lang, tb.key)}
+            </button>
+          ))}
+        </nav>
+      </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.6rem', marginTop: '1.6rem' }}>
-          <Gallery />
-          <Compare />
-          <Timeline />
-          <Credit />
-          <NormsRef />
-          <Permit />
-          <PriceEditor />
-        </div>
+      {/* Active tab content */}
+      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '2.4rem 2rem' }}>
+        {tab === 'calc' && (
+          <div className="workspace">
+            <div style={{ position: 'sticky', top: 70, alignSelf: 'start' }}>
+              <Inputs />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.6rem' }}>
+              <Plan2D />
+              <Warnings />
+              <Results />
+            </div>
+          </div>
+        )}
+        {tab === 'gallery' && <Gallery />}
+        {tab === 'analysis' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.6rem' }}>
+            <Compare />
+            <Timeline />
+            <Credit />
+          </div>
+        )}
+        {tab === 'docs' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.6rem' }}>
+            <NormsRef />
+            <Permit />
+          </div>
+        )}
+        {tab === 'prices' && <PriceEditor />}
       </main>
 
       <footer style={{ background: 'var(--color-ink)', color: 'var(--color-bg)', marginTop: '3rem' }}>
