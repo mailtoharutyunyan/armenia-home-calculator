@@ -4,24 +4,28 @@ import { t } from '../i18n'
 import { computeQuantities } from '../engine/quantities'
 import { computeEstimate } from '../engine/pricing'
 import type { SectionId } from '../engine/quantities'
+import { labelFor } from '../model/catalog'
 import { money, num } from './format'
 
-const SECTION_LABEL: Record<SectionId, { ru: string; hy: string }> = {
-  earthworks: { ru: 'Земляные работы', hy: 'Հողային աշխատանքներ' },
-  foundation: { ru: 'Фундамент и бетон', hy: 'Հիմք և բետոն' },
-  walls: { ru: 'Стены и кладка', hy: 'Պատեր և շարվածք' },
-  frame: { ru: 'Каркас', hy: 'Կմախք' },
-  floors: { ru: 'Перекрытия и стяжка', hy: 'Ծածկեր և շաղախ' },
-  stair: { ru: 'Лестница', hy: 'Աստիճան' },
-  roof: { ru: 'Кровля', hy: 'Տանիք' },
-  openings: { ru: 'Окна и двери', hy: 'Պատուհաններ և դռներ' },
-  partitions: { ru: 'Перегородки', hy: 'Միջնապատեր' },
-  finishing: { ru: 'Отделка', hy: 'Հարդարում' },
-  facade: { ru: 'Фасад', hy: 'Ֆասադ' },
-  engineering: { ru: 'Инженерные сети', hy: 'Ինժեներական ցանցեր' },
-  options: { ru: 'Дополнительные системы', hy: 'Լրացուցիչ համակարգեր' },
-  permit: { ru: 'Документы и разрешение', hy: 'Փաստաթղթեր և թույլտվություն' },
+const SECTION_LABEL: Record<SectionId, { ru: string; hy: string; en: string }> = {
+  earthworks: { ru: 'Земляные работы', hy: 'Հողային աշխատանքներ', en: 'Earthworks' },
+  foundation: { ru: 'Фундамент и бетон', hy: 'Հիմք և բետոն', en: 'Foundation & concrete' },
+  walls: { ru: 'Стены и кладка', hy: 'Պատեր և շարվածք', en: 'Walls & masonry' },
+  frame: { ru: 'Каркас', hy: 'Կմախք', en: 'Frame' },
+  floors: { ru: 'Перекрытия и стяжка', hy: 'Ծածկեր և շաղախ', en: 'Slabs & screed' },
+  stair: { ru: 'Лестница', hy: 'Աստիճան', en: 'Staircase' },
+  roof: { ru: 'Кровля', hy: 'Տանիք', en: 'Roof' },
+  openings: { ru: 'Окна и двери', hy: 'Պատուհաններ և դռներ', en: 'Windows & doors' },
+  partitions: { ru: 'Перегородки', hy: 'Միջնապատեր', en: 'Partitions' },
+  finishing: { ru: 'Отделка', hy: 'Հարդարում', en: 'Finishing' },
+  facade: { ru: 'Фасад', hy: 'Ֆասադ', en: 'Facade' },
+  engineering: { ru: 'Инженерные сети', hy: 'Ինժեներական ցանցեր', en: 'Engineering networks' },
+  options: { ru: 'Дополнительные системы', hy: 'Լրացուցիչ համակարգեր', en: 'Optional systems' },
+  permit: { ru: 'Документы и разрешение', hy: 'Փաստաթղթեր և թույլտվություն', en: 'Documents & permit' },
 }
+
+const secLabel = (sec: SectionId, lang: string) =>
+  lang === 'hy' ? SECTION_LABEL[sec].hy : lang === 'en' ? SECTION_LABEL[sec].en : SECTION_LABEL[sec].ru
 
 const TOGGLEABLE: SectionId[] = ['stair', 'roof', 'openings', 'partitions', 'finishing', 'facade', 'engineering', 'permit']
 
@@ -108,13 +112,13 @@ export function Results() {
         {/* include / exclude sections */}
         <div style={{ marginBottom: '1rem' }}>
           <div className="eyebrow" style={{ marginBottom: '0.6rem' }}>
-            {lang !== 'hy' ? 'Включить в смету' : 'Ներառել նախահաշվում'}
+            {lang === 'hy' ? 'Ներառել նախահաշվում' : lang === 'en' ? 'Include in estimate' : 'Включить в смету'}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem' }}>
             {TOGGLEABLE.map((sec) => (
               <label key={sec} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', cursor: 'pointer' }}>
                 <input type="checkbox" checked={!excluded.includes(sec)} onChange={() => toggle(sec)} />
-                {lang !== 'hy' ? SECTION_LABEL[sec].ru : SECTION_LABEL[sec].hy}
+                {secLabel(sec, lang)}
               </label>
             ))}
           </div>
@@ -178,14 +182,14 @@ export function Results() {
                     padding: '0.3rem 0',
                   }}
                 >
-                  <span>{lang !== 'hy' ? SECTION_LABEL[sec].ru : SECTION_LABEL[sec].hy}</span>
+                  <span>{secLabel(sec, lang)}</span>
                   <span className="mono">{m(secTotal)}</span>
                 </summary>
                 <div style={{ paddingLeft: '0.4rem' }}>
                   {lines.map((l, i) => (
                     <div className="spec-row" key={i}>
                       <span>
-                        {lang !== 'hy' ? l.labelRu : l.labelHy}
+                        {labelFor(l, lang)}
                         <span className="mono" style={{ color: 'var(--color-ink-soft)', marginLeft: '0.4rem', fontSize: '0.72rem' }}>
                           {l.quantity.toFixed(l.unit === 'шт' ? 0 : 1)} {l.unit}
                         </span>

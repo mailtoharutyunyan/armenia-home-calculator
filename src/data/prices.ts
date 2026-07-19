@@ -56,7 +56,7 @@ const items: PriceItem[] = [
   item('concrete_b225', 'Бетон B22.5 / М300', 'Բետոն B22.5 / М300', 'м³', 32000, 18000, S.concrete),
   item('concrete_b25', 'Бетон B25 / М350', 'Բետոն B25 / М350', 'м³', 34000, 18000, S.concrete),
   item('concrete_b30', 'Бетон B30 / М400', 'Բետոն B30 / М400', 'м³', 36000, 18000, S.concrete),
-  item('concrete_blinding', 'Подбетонка М100', 'Ենթաբետոն М100', 'м³', 30000, 8000, S.concrete),
+  item('concrete_blinding', 'Подбетонка М100', 'Ենթաբетон М100', 'м³', 25000, 8000, S.concrete),
 
   // --- Rebar (AMD/т) ---
   item('rebar_a500', 'Арматура А500С', 'Արմատուր А500С', 'т', 350000, 60000, S.rebar),
@@ -124,6 +124,57 @@ const items: PriceItem[] = [
   permit('permit_supervision', 'Технадзор (за м²)', 'Տեխ. հսկողություն (մ²)', 'м²', 1500),
 ]
 
-export const SEED_PRICES: Catalog = Object.fromEntries(items.map((it) => [it.key, it]))
+// English labels (keyed by item key). Missing keys fall back to the Russian label.
+const EN_LABELS: Record<string, string> = {
+  concrete_b15: 'Concrete B15 / M200',
+  concrete_b20: 'Concrete B20 / M250',
+  concrete_b225: 'Concrete B22.5 / M300',
+  concrete_b25: 'Concrete B25 / M350',
+  concrete_b30: 'Concrete B30 / M400',
+  concrete_blinding: 'Blinding concrete M100',
+  rebar_a500: 'Rebar A500C',
+  rebar_a400: 'Rebar A400 (A-III)',
+  tuff_block: 'Tuff (masonry)',
+  aerated_block: 'Aerated block',
+  brick: 'Brick (masonry)',
+  mortar: 'Masonry mortar',
+  glue_aerated: 'Aerated-block glue',
+  precast_slab: 'Precast floor slab',
+  sand_gravel: 'Sand / gravel bedding',
+  excavation: 'Excavation',
+  backfill: 'Backfill',
+  apron: 'Blind area',
+  waterproofing: 'Waterproofing',
+  insulation: 'Insulation',
+  screed: 'Floor screed',
+  window_regular: 'Window (standard)',
+  window_vitrage: 'Window (curtain wall)',
+  door_exterior: 'Entrance door',
+  door_interior: 'Interior door',
+  plaster: 'Plaster / putty / paint',
+  floor_finish: 'Floor covering',
+  facade: 'Facade finish',
+  roof_flat: 'Flat roof',
+  roof_pitched: 'Pitched roof',
+  electrical: 'Electrical',
+  plumbing: 'Plumbing / sewerage',
+  heating: 'Heating',
+  opt_boiler_heating: 'Heating: boiler + warm floor',
+  opt_heat_pump: 'Heat pump (air-water)',
+  opt_solar: 'Solar panels (photovoltaic)',
+  opt_finish_premium: 'Turnkey finishing',
+  stair: 'Monolithic staircase',
+  permit_apz: 'APZ (municipality)',
+  permit_design: 'Design (per m²)',
+  permit_geology: 'Geological survey',
+  permit_expertise: 'Design expertise',
+  permit_fee: 'Building permit',
+  permit_address: 'Address assignment',
+  permit_supervision: 'Technical supervision (per m²)',
+}
+
+export const SEED_PRICES: Catalog = Object.fromEntries(
+  items.map((it) => [it.key, { ...it, labelEn: EN_LABELS[it.key] }]),
+)
 
 export const AMD_PER_USD_DEFAULT = 385

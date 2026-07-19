@@ -354,8 +354,8 @@ export const DICT: Dict = {
     hy: 'Տեխնոլոգիաների համեմատություն',
   },
   banned: {
-    ru: 'несущий — по сейсморасчёту',
-    hy: 'կրող՝ սեյսմիկ հաշվարկով',
+    ru: 'по сейсморасчёту',
+    hy: 'ըստ սեյսմ. հաշվարկի',
   },
   weeks: {
     ru: 'недели',
@@ -624,7 +624,7 @@ const EN: Record<string, string> = {
   precast: 'Precast RC slabs',
   noSeismic: 'No seismic reinforcement (violation!)',
   compareTitle: 'Technology comparison',
-  banned: 'load-bearing — needs seismic check',
+  banned: 'per seismic calc',
   weeks: 'weeks',
   totalTerm: 'Total term',
   creditTitle: 'Mortgage calculator',

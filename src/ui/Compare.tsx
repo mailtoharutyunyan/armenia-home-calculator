@@ -11,47 +11,47 @@ const SYS_KEY = {
   brick: 'sys_brick',
 } as const
 
-const PROS_CONS: Record<string, { pros: { ru: string; hy: string }[]; cons: { ru: string; hy: string }[] }> = {
+const PROS_CONS: Record<string, { pros: { ru: string; hy: string; en: string }[]; cons: { ru: string; hy: string; en: string }[] }> = {
   tuff: {
     pros: [
-      { ru: 'Местный камень, традиция', hy: 'Տեղական քար, ավանդույթ' },
-      { ru: 'Дышащие стены, тепло', hy: 'Շնչող պատեր, ջերմ' },
-      { ru: 'Хорош для сейсмики с поясами', hy: 'Լավ սեյսմիկայի համար գոտիներով' },
+      { ru: 'Местный камень, традиция', hy: 'Տեղական քար, ավանդույթ', en: 'Local stone, tradition' },
+      { ru: 'Дышащие стены, тепло', hy: 'Շնչող պատեր, ջերմ', en: 'Breathable, warm walls' },
+      { ru: 'Хорош для сейсмики с поясами', hy: 'Լավ սեյսմիկայի համար գոտիներով', en: 'Good for seismic with ring beams' },
     ],
     cons: [
-      { ru: 'Тяжелее, дороже работа', hy: 'Ծանր, թանկ աշխատանք' },
-      { ru: 'Нужны сейсмосердечники', hy: 'Պահանջվում են սեյսմ. միջուկներ' },
+      { ru: 'Тяжелее, дороже работа', hy: 'Ծանր, թանկ աշխատանք', en: 'Heavier, costlier labour' },
+      { ru: 'Нужны сейсмосердечники', hy: 'Պահանջվում են սեյսմ. միջուկներ', en: 'Needs seismic cores' },
     ],
   },
   aerated: {
     pros: [
-      { ru: 'Быстрый монтаж, ровно', hy: 'Արագ մոնտաժ, հարթ' },
-      { ru: 'Лёгкий, тёплый', hy: 'Թեթև, ջերմ' },
+      { ru: 'Быстрый монтаж, ровно', hy: 'Արագ մոնտաժ, հարթ', en: 'Fast, even installation' },
+      { ru: 'Лёгкий, тёплый', hy: 'Թեթև, ջերմ', en: 'Light, warm' },
     ],
     cons: [
-      { ru: 'Несущий — только по сейсморасчёту', hy: 'Կրող՝ միայն սեյսմիկ հաշվարկով' },
-      { ru: 'Хрупкий при горизонтальных нагрузках', hy: 'Փխրուն հորիզոնական բեռների դեպքում' },
-      { ru: 'Боится влаги без отделки', hy: 'Վախենում է խոնավությունից' },
+      { ru: 'Несущий — только по сейсморасчёту', hy: 'Կրող՝ միայն սեյսմիկ հաշվարկով', en: 'Load-bearing only per seismic calc' },
+      { ru: 'Хрупкий при горизонтальных нагрузках', hy: 'Փխրուն հորիզոնական բեռների դեպքում', en: 'Brittle under horizontal loads' },
+      { ru: 'Боится влаги без отделки', hy: 'Վախենում է խոնավությունից', en: 'Vulnerable to moisture if unfinished' },
     ],
   },
   frame: {
     pros: [
-      { ru: 'Лучшая сейсмостойкость', hy: 'Լավագույն սեյսմակայունություն' },
-      { ru: 'Гибкие планировки, этажность', hy: 'Ճկուն հատակագիծ, հարկայնություն' },
+      { ru: 'Лучшая сейсмостойкость', hy: 'Լավագույն սեյսմակայունություն', en: 'Best seismic resistance' },
+      { ru: 'Гибкие планировки, этажность', hy: 'Ճկուն հատակագիծ, հարկայնություն', en: 'Flexible layouts, more floors' },
     ],
     cons: [
-      { ru: 'Больше бетона и арматуры', hy: 'Ավելի շատ բետոն և արմատուր' },
-      { ru: 'Нужна опалубка и расчёт', hy: 'Պահանջվում է կաղապար և հաշվարկ' },
+      { ru: 'Больше бетона и арматуры', hy: 'Ավելի շատ բետոն և արմատուր', en: 'More concrete and rebar' },
+      { ru: 'Нужна опалубка и расчёт', hy: 'Պահանջվում է կաղապար և հաշվարկ', en: 'Needs formwork and design' },
     ],
   },
   brick: {
     pros: [
-      { ru: 'Прочный, долговечный', hy: 'Ամուր, երկարակյաց' },
-      { ru: 'Хорошая звукоизоляция', hy: 'Լավ ձայնամեկուսացում' },
+      { ru: 'Прочный, долговечный', hy: 'Ամուր, երկարակյաց', en: 'Strong, durable' },
+      { ru: 'Хорошая звукоизоляция', hy: 'Լավ ձայնամեկուսացում', en: 'Good sound insulation' },
     ],
     cons: [
-      { ru: 'Дорогая кладка, дольше', hy: 'Թանկ շարվածք, երկար' },
-      { ru: 'Толстые несущие стены', hy: 'Հաստ կրող պատեր' },
+      { ru: 'Дорогая кладка, дольше', hy: 'Թանկ շարվածք, երկար', en: 'Costly masonry, slower' },
+      { ru: 'Толстые несущие стены', hy: 'Հաստ կրող պատեր', en: 'Thick load-bearing walls' },
     ],
   },
 }
@@ -108,10 +108,10 @@ export function Compare() {
                 <strong style={{ fontFamily: 'var(--font-display)', fontSize: '0.86rem' }}>{t(lang, SYS_KEY[r.system])}</strong>
                 <ul style={{ listStyle: 'none', margin: '0.5rem 0 0', padding: 0, fontSize: '0.8rem' }}>
                   {pc.pros.map((x, i) => (
-                    <li key={`p${i}`} style={{ color: 'var(--color-ok)', padding: '0.12rem 0' }}>+ {lang !== 'hy' ? x.ru : x.hy}</li>
+                    <li key={`p${i}`} style={{ color: 'var(--color-ok)', padding: '0.12rem 0' }}>+ {lang === 'hy' ? x.hy : lang === 'en' ? x.en : x.ru}</li>
                   ))}
                   {pc.cons.map((x, i) => (
-                    <li key={`c${i}`} style={{ color: 'var(--color-err)', padding: '0.12rem 0' }}>− {lang !== 'hy' ? x.ru : x.hy}</li>
+                    <li key={`c${i}`} style={{ color: 'var(--color-err)', padding: '0.12rem 0' }}>− {lang === 'hy' ? x.hy : lang === 'en' ? x.en : x.ru}</li>
                   ))}
                 </ul>
               </div>

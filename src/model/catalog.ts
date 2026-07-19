@@ -6,6 +6,7 @@ export interface PriceItem {
   key: string
   labelRu: string
   labelHy: string
+  labelEn?: string // English label; falls back to Russian when absent
   unit: string // 'м³', 'т', 'шт', 'м²', 'кг', 'компл', 'м'
   materialMin: number // AMD, without VAT
   materialTypical: number
@@ -26,4 +27,11 @@ export function materialPrice(item: PriceItem, mode: PriceMode): number {
     default:
       return item.materialTypical
   }
+}
+
+// Pick a label for the active language, falling back RU → HY as needed.
+export function labelFor(l: { labelRu: string; labelHy: string; labelEn?: string }, lang: string): string {
+  if (lang === 'hy') return l.labelHy
+  if (lang === 'en') return l.labelEn ?? l.labelRu
+  return l.labelRu
 }

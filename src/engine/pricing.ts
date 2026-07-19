@@ -13,6 +13,7 @@ export interface EstimateLine {
   key: string
   labelRu: string
   labelHy: string
+  labelEn?: string
   section: SectionId
   stage: Stage
   unit: string
@@ -96,6 +97,7 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
       key: ql.key,
       labelRu: item.labelRu,
       labelHy: item.labelHy,
+      labelEn: item.labelEn,
       section: ql.section,
       stage: ql.stage,
       unit: item.unit,
@@ -126,6 +128,7 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
       key: 'brigade',
       labelRu: 'Работа строителей (коробка)',
       labelHy: 'Բրիգադի աշխատանք (կմախք)',
+      labelEn: 'Builders’ labour (shell)',
       section: 'walls',
       stage: 'act',
       unit: 'м²',

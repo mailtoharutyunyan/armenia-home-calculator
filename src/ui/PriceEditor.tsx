@@ -1,5 +1,6 @@
 import { useProject } from '../store/useProject'
 import { t } from '../i18n'
+import { labelFor } from '../model/catalog'
 
 const SUPPLIER_LINKS: { label: string; url: string }[] = [
   { label: 'MM Leader (бетон)', url: 'https://mmlider.am/betoni-artadrowtyown' },
@@ -57,7 +58,7 @@ export function PriceEditor() {
             {items.map((it) => (
               <tr key={it.key}>
                 <td style={c}>
-                  {lang !== 'hy' ? it.labelRu : it.labelHy}
+                  {labelFor(it, lang)}
                   {it.note && <div className="mono" style={{ fontSize: '0.64rem', color: 'var(--color-warn)' }}>{it.note}</div>}
                 </td>
                 <td style={c} className="mono">{it.unit}</td>

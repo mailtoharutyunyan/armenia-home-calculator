@@ -8,12 +8,12 @@ import { autoProgram } from '../engine/floorplan'
 import type { RoomType } from '../engine/floorplan'
 import { FloorPlanSvg } from './FloorPlan'
 
-const TYPE_LABEL: Record<RoomType, { ru: string; hy: string }> = {
-  living_kitchen: { ru: 'Гостиная-кухня', hy: 'Հյուրասենյակ-խոհանոց' },
-  living: { ru: 'Гостиная', hy: 'Հյուրասենյակ' },
-  kitchen: { ru: 'Кухня', hy: 'Խոհանոց' },
-  bedroom: { ru: 'Комната', hy: 'Սենյակ' },
-  bath: { ru: 'Санузел', hy: 'Սանհանգույց' },
+const TYPE_LABEL: Record<RoomType, { ru: string; hy: string; en: string }> = {
+  living_kitchen: { ru: 'Гостиная-кухня', hy: 'Հյուրասենյակ-խոհանոց', en: 'Living-kitchen' },
+  living: { ru: 'Гостиная', hy: 'Հյուրասենյակ', en: 'Living room' },
+  kitchen: { ru: 'Кухня', hy: 'Խոհանոց', en: 'Kitchen' },
+  bedroom: { ru: 'Комната', hy: 'Սենյակ', en: 'Room' },
+  bath: { ru: 'Санузел', hy: 'Սանհանգույց', en: 'Bathroom' },
 }
 
 export function Plan2D() {
@@ -38,12 +38,15 @@ export function Plan2D() {
         let bed = 0
         const ground = activeFloor === 0
         return autoProgram(house, activeFloor).map((s) => {
-          const ru = lang !== 'hy'
-          let label = TYPE_LABEL[s.type][ru ? 'ru' : 'hy']
-          if (s.type === 'bath' && ground) label = ru ? 'Гостевой санузел' : 'Հյուրերի սանհանգույց'
+          const pick = (o: { ru: string; hy: string; en: string }) =>
+            lang === 'hy' ? o.hy : lang === 'en' ? o.en : o.ru
+          let label = pick(TYPE_LABEL[s.type])
+          if (s.type === 'bath' && ground)
+            label = lang === 'hy' ? 'Հյուրերի սանհանգույց' : lang === 'en' ? 'Guest bathroom' : 'Гостевой санузел'
           else if (s.type === 'bedroom') {
             bed++
-            label = ground && bed === 1 ? (ru ? 'Мастер-спальня' : 'Գլխավոր ննջասենյակ') : `${TYPE_LABEL.bedroom[ru ? 'ru' : 'hy']} ${bed}`
+            const master = lang === 'hy' ? 'Գլխավոր ննջասենյակ' : lang === 'en' ? 'Master bedroom' : 'Мастер-спальня'
+            label = ground && bed === 1 ? master : `${pick(TYPE_LABEL.bedroom)} ${bed}`
           }
           return { type: s.type, label, weight: s.weight }
         })
@@ -124,7 +127,7 @@ function RoomRow({ room, lang, onChange, onRemove }: { room: EditRoom; lang: str
       <input className="input" style={{ padding: '0.35rem 0.5rem' }} value={room.label} onChange={(e) => onChange({ label: e.target.value })} />
       <select className="input" style={{ padding: '0.35rem 0.5rem' }} value={room.type} onChange={(e) => onChange({ type: e.target.value as RoomType })}>
         {(Object.keys(TYPE_LABEL) as RoomType[]).map((k) => (
-          <option key={k} value={k}>{lang !== 'hy' ? TYPE_LABEL[k].ru : TYPE_LABEL[k].hy}</option>
+          <option key={k} value={k}>{lang === 'hy' ? TYPE_LABEL[k].hy : lang === 'en' ? TYPE_LABEL[k].en : TYPE_LABEL[k].ru}</option>
         ))}
       </select>
       <input type="range" min={0.6} max={3} step={0.1} value={room.weight} onChange={(e) => onChange({ weight: Number(e.target.value) })} />

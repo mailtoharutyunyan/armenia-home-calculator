@@ -262,10 +262,13 @@ export function computeQuantities(p: HouseParams): Quantities {
   add('heating', 'engineering', 'turnkey', totalFloorArea)
 
   // ---- Optional premium systems (opt-in extras) ----
-  if (p.optHeating) add('opt_boiler_heating', 'options', 'turnkey', netArea)
+  // per-m² options use the finished floor area (gross minus the hall void) — same
+  // base as screed/plaster/floor_finish above, so numbers stay consistent.
+  const finishedArea = Math.max(0, totalFloorArea - hallVoid)
+  if (p.optHeating) add('opt_boiler_heating', 'options', 'turnkey', finishedArea)
   if (p.optHeatPump) add('opt_heat_pump', 'options', 'turnkey', 1)
   if (p.optSolarKw > 0) add('opt_solar', 'options', 'turnkey', p.optSolarKw)
-  if (p.optFinishPremium) add('opt_finish_premium', 'options', 'turnkey', netArea)
+  if (p.optFinishPremium) add('opt_finish_premium', 'options', 'turnkey', finishedArea)
 
   // ---- Documents / permit (act) ----
   if (p.includePermitCost) {

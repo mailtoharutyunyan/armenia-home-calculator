@@ -67,11 +67,12 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
 
   const specs: Spec[] = custom && custom.length > 0 ? custom : autoProgram(p, floorIndex)
 
-  // On upper floors the double-height hall is open to below — carve it out as a void
-  // and lay the rooms into the remaining floor area only.
+  // The double-height hall opens between the ground floor and the floor directly
+  // above it (index 1) only — carve that one void; higher floors are normal.
+  // This matches the engine, which subtracts the hall void from the slab exactly once.
   let sliceRect = inner
   let openVoid: Room | null = null
-  if (floorIndex > 0 && p.doubleHeightHall && p.hallArea > 0) {
+  if (floorIndex === 1 && p.doubleHeightHall && p.hallArea > 0) {
     const frac = Math.min(0.6, Math.max(0.12, p.hallArea / (inner.w * inner.h)))
     if (inner.w >= inner.h) {
       const vw = inner.w * frac
