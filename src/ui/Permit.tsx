@@ -51,7 +51,7 @@ export function Permit() {
       <div style={{ padding: '0.6rem 1rem 0.2rem' }}>
         {costs.map((c) => (
           <div className="spec-row" key={c.it.key}>
-            <span>{lang === 'ru' ? c.it.labelRu : c.it.labelHy}</span>
+            <span>{lang !== 'hy' ? c.it.labelRu : c.it.labelHy}</span>
             <span className="num">{m(c.total)}</span>
           </div>
         ))}
@@ -93,14 +93,14 @@ export function Permit() {
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.8rem', alignItems: 'baseline' }}>
                 <strong style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem' }}>
-                  {lang === 'ru' ? s.ru : s.hy}
+                  {lang !== 'hy' ? s.ru : s.hy}
                 </strong>
                 <span className="num" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
                   {stepCost(STEP_COST[i], prices, priceMode, area, m, lang)}
                 </span>
               </div>
               <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--color-ink-soft)', lineHeight: 1.45 }}>
-                {lang === 'ru' ? s.descRu : s.descHy}
+                {lang !== 'hy' ? s.descRu : s.descHy}
               </p>
             </div>
           </li>
@@ -121,9 +121,9 @@ function stepCost(
   priceMode: ReturnType<typeof useProject.getState>['priceMode'],
   area: number,
   m: (v: number) => string,
-  lang: 'ru' | 'hy',
+  lang: string,
 ): string {
-  if (sc.inProject) return lang === 'ru' ? 'в составе проекта' : 'նախագծի կազմում'
+  if (sc.inProject) return lang !== 'hy' ? 'в составе проекта' : 'նախագծի կազմում'
   if (sc.fixed != null) return m(sc.fixed)
   if (sc.key) {
     const it = prices[sc.key]

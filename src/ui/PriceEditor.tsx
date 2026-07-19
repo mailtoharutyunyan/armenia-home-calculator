@@ -57,7 +57,7 @@ export function PriceEditor() {
             {items.map((it) => (
               <tr key={it.key}>
                 <td style={c}>
-                  {lang === 'ru' ? it.labelRu : it.labelHy}
+                  {lang !== 'hy' ? it.labelRu : it.labelHy}
                   {it.note && <div className="mono" style={{ fontSize: '0.64rem', color: 'var(--color-warn)' }}>{it.note}</div>}
                 </td>
                 <td style={c} className="mono">{it.unit}</td>

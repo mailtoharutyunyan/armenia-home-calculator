@@ -189,6 +189,41 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
     }
   }
 
+  // ---- Инженерные параметры (ручной ввод) — проверка по нормам ----
+  const eng = p.eng
+  const push = (level: NormLevel, ru: string, hy: string) => w.push({ level, code: 'ՀՀՇՆ II-6.02', ru, hy })
+
+  if (eng.stripWidth != null && eng.stripWidth < 30)
+    push('error', `Ширина ленты ${eng.stripWidth} см < 30 см — увеличьте.`, `Ժապավենի լայնությունը ${eng.stripWidth} սմ < 30 սմ — ավելացրեք։`)
+  if (eng.stripHeight != null && eng.stripHeight < 40)
+    push('error', `Высота ленты ${eng.stripHeight} см < 40 см — увеличьте.`, `Ժապավենի բարձրությունը ${eng.stripHeight} սմ < 40 սմ — ավելացրեք։`)
+  if (eng.slab != null && eng.slab < 12)
+    push('error', `Перекрытие ${eng.slab} см < 12 см — недостаточно, увеличьте.`, `Ծածկը ${eng.slab} սմ < 12 սմ — անբավարար, ավելացրեք։`)
+  if (eng.slab != null && eng.slab > 30)
+    push('info', `Перекрытие ${eng.slab} см — избыточно, можно уменьшить.`, `Ծածկը ${eng.slab} սմ — ավելորդ է, կարելի է նվազեցնել։`)
+  if (eng.columnSize != null && eng.columnSize < 25)
+    push('error', `Сечение колонны ${eng.columnSize} см < 25 см — не соответствует сейсмонормам РА, увеличьте.`, `Սյան կտրվածքը ${eng.columnSize} սմ < 25 սմ — չի համապատասխանում ՀՀ սեյսմ. նորմերին, ավելացրեք։`)
+  if (eng.columns != null) {
+    const need = Math.max(4, Math.ceil(q.geometry.footprint / 20))
+    if (eng.columns < need)
+      push('warning', `Колонн ${eng.columns} шт — мало для площади (нужно ≈ ${need}), добавьте.`, `Սյուներ ${eng.columns} հատ — քիչ է (պետք է ≈ ${need}), ավելացրեք։`)
+  }
+  if (eng.beamSection != null && eng.beamSection < 0.08)
+    push('warning', `Сечение ригеля ${eng.beamSection} м² мало (< 0.08 м²), увеличьте.`, `Հեծանի կտրվածքը ${eng.beamSection} մ² փոքր է (< 0.08 մ²), ավելացրեք։`)
+  if (eng.extWall != null) {
+    const minW = wallMat === 'tuff' ? 40 : wallMat === 'brick' ? 38 : 20
+    if (eng.extWall < minW)
+      push('warning', `Наружная стена ${eng.extWall} см < ${minW} см для выбранного материала — увеличьте.`, `Արտաքին պատը ${eng.extWall} սմ < ${minW} սմ — ավելացրեք։`)
+  }
+  if (eng.basementWall != null && eng.basementWall < 20)
+    push('warning', `Стена подвала ${eng.basementWall} см < 20 см — увеличьте.`, `Նկուղի պատը ${eng.basementWall} սմ < 20 սմ — ավելացրեք։`)
+  if (eng.blinding != null && eng.blinding < 3)
+    push('info', `Подбетонка ${eng.blinding} см тонкая (< 3 см).`, `Ենթաբետոնը ${eng.blinding} սմ բարակ է (< 3 սմ)։`)
+  if (eng.openingsPct != null && eng.openingsPct > n.maxGlazingPct)
+    push('warning', `Проёмы ${eng.openingsPct}% > ${n.maxGlazingPct}% — теплопотери/жёсткость, уменьшите.`, `Բացվածքներ ${eng.openingsPct}% > ${n.maxGlazingPct}% — նվազեցրեք։`)
+  if (eng.wastePct != null && eng.wastePct < 3)
+    push('info', `Запас ${eng.wastePct}% мал — рекомендуется 5–10%.`, `Պահուստ ${eng.wastePct}% քիչ է — խորհուրդ է 5–10%։`)
+
   // ---- urban planning reminder (ՀՀՇՆ 30-01-2014) ----
   w.push({
     level: 'info',

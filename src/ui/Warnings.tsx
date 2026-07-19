@@ -45,7 +45,7 @@ export function Warnings() {
               <span className={`badge lvl-${w.level}`} style={{ marginRight: '0.5rem' }}>
                 {w.code}
               </span>
-              <span style={{ fontSize: '0.86rem' }}>{lang === 'ru' ? w.ru : w.hy}</span>
+              <span style={{ fontSize: '0.86rem' }}>{lang !== 'hy' ? w.ru : w.hy}</span>
             </div>
           </div>
         ))}

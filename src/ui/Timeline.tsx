@@ -63,7 +63,7 @@ export function Timeline() {
               >
                 {i + 1}
               </span>
-              {lang === 'ru' ? s.ru : s.hy}
+              {lang !== 'hy' ? s.ru : s.hy}
             </span>
             <div>
               <div style={{ background: 'var(--color-surface-2)', height: 8, borderRadius: 4, overflow: 'hidden' }}>

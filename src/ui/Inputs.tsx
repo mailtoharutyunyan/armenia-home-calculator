@@ -71,7 +71,7 @@ export function Inputs() {
           >
             {Object.values(REGIONS).map((r) => (
               <option key={r.key} value={r.key}>
-                {lang === 'ru' ? r.nameRu : r.nameHy} · {r.seismic} {t(lang, 'points')}
+                {lang !== 'hy' ? r.nameRu : r.nameHy} · {r.seismic} {t(lang, 'points')}
               </option>
             ))}
           </select>
@@ -218,6 +218,7 @@ export function Inputs() {
           <input type="checkbox" checked={house.includePermitCost} onChange={(e) => set({ includePermitCost: e.target.checked })} />
           <span style={{ marginBottom: 0 }}>{t(lang, 'includePermit')}</span>
         </label>
+        <Num label={t(lang, 'laborPerM2')} value={house.laborPerM2} step={500} onChange={(n) => set({ laborPerM2: n })} />
 
         {/* Advanced */}
         <details style={{ marginTop: '0.6rem' }}>
@@ -262,11 +263,19 @@ export function Inputs() {
           </div>
         </details>
 
-        {/* Engineer overrides */}
-        <details style={{ marginTop: '0.5rem' }}>
-          <summary style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-navy)' }}>
-            ⚙ {t(lang, 'engTitle')}
+        {/* Engineer overrides — prominent, open by default */}
+        <details
+          open
+          style={{ marginTop: '1rem', border: '1px solid var(--color-ink)', borderRadius: 3, padding: '0.8rem 0.9rem' }}
+        >
+          <summary className="eyebrow" style={{ cursor: 'pointer' }}>
+            {t(lang, 'engTitle')}
           </summary>
+          <p style={{ fontSize: '0.74rem', color: 'var(--color-ink-soft)', margin: '0.5rem 0 0.2rem' }}>
+            {lang === 'ru'
+              ? 'Любое значение вне норм РА подсветится в «Предупреждениях».'
+              : 'ՀՀ նորմերից դուրս ցանկացած արժեք կնշվի «Նախազգուշացումներում»։'}
+          </p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginTop: '0.7rem' }}>
             <Num label={t(lang, 'eng_stripLen')} value={eng.stripLen ?? Math.round(Lb)} onChange={(n) => setEng({ stripLen: n })} />
             <Num label={t(lang, 'eng_stripWidth')} value={eng.stripWidth ?? 40} onChange={(n) => setEng({ stripWidth: n })} />
@@ -283,6 +292,10 @@ export function Inputs() {
             <Num label={t(lang, 'eng_wastePct')} value={eng.wastePct ?? 5} onChange={(n) => setEng({ wastePct: n })} />
             <Num label={t(lang, 'eng_basementWall')} value={eng.basementWall ?? 30} onChange={(n) => setEng({ basementWall: n })} />
           </div>
+          <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.6rem' }}>
+            <input type="checkbox" checked={house.beamsOverHall} onChange={(e) => set({ beamsOverHall: e.target.checked })} />
+            <span style={{ marginBottom: 0 }}>{t(lang, 'beamsOverHall')}</span>
+          </label>
           <button
             className="btn btn-ghost no-print"
             style={{ marginTop: '0.6rem', padding: '0.3rem 0.7rem', fontSize: '0.76rem' }}

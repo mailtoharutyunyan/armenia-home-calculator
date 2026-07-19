@@ -106,10 +106,10 @@ export function Compare() {
                 <strong style={{ fontFamily: 'var(--font-display)', fontSize: '0.86rem' }}>{t(lang, SYS_KEY[r.system])}</strong>
                 <ul style={{ listStyle: 'none', margin: '0.5rem 0 0', padding: 0, fontSize: '0.8rem' }}>
                   {pc.pros.map((x, i) => (
-                    <li key={`p${i}`} style={{ color: 'var(--color-ok)', padding: '0.12rem 0' }}>+ {lang === 'ru' ? x.ru : x.hy}</li>
+                    <li key={`p${i}`} style={{ color: 'var(--color-ok)', padding: '0.12rem 0' }}>+ {lang !== 'hy' ? x.ru : x.hy}</li>
                   ))}
                   {pc.cons.map((x, i) => (
-                    <li key={`c${i}`} style={{ color: 'var(--color-err)', padding: '0.12rem 0' }}>− {lang === 'ru' ? x.ru : x.hy}</li>
+                    <li key={`c${i}`} style={{ color: 'var(--color-err)', padding: '0.12rem 0' }}>− {lang !== 'hy' ? x.ru : x.hy}</li>
                   ))}
                 </ul>
               </div>

@@ -69,7 +69,7 @@ export function Gallery() {
                     </svg>
                   </div>
                   <figcaption style={{ marginTop: '0.4rem', fontSize: '0.8rem', color: 'var(--color-ink-soft)' }}>
-                    {lang === 'ru' ? p.ru : p.hy}
+                    {lang !== 'hy' ? p.ru : p.hy}
                   </figcaption>
                 </figure>
               ))}

@@ -109,14 +109,14 @@ export function Results() {
                     padding: '0.3rem 0',
                   }}
                 >
-                  <span>{lang === 'ru' ? SECTION_LABEL[sec].ru : SECTION_LABEL[sec].hy}</span>
+                  <span>{lang !== 'hy' ? SECTION_LABEL[sec].ru : SECTION_LABEL[sec].hy}</span>
                   <span className="mono">{m(secTotal)}</span>
                 </summary>
                 <div style={{ paddingLeft: '0.4rem' }}>
                   {lines.map((l, i) => (
                     <div className="spec-row" key={i}>
                       <span>
-                        {lang === 'ru' ? l.labelRu : l.labelHy}
+                        {lang !== 'hy' ? l.labelRu : l.labelHy}
                         <span className="mono" style={{ color: 'var(--color-ink-soft)', marginLeft: '0.4rem', fontSize: '0.72rem' }}>
                           {l.quantity.toFixed(l.unit === 'шт' ? 0 : 1)} {l.unit}
                         </span>

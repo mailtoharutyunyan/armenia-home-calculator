@@ -46,9 +46,10 @@ function loadPrices(): Catalog {
 function loadLang(): Lang {
   try {
     const v = localStorage.getItem(LANG_KEY)
-    return v === 'hy' ? 'hy' : 'ru'
+    if (v === 'ru' || v === 'en') return v
+    return 'hy' // Armenian is the default
   } catch {
-    return 'ru'
+    return 'hy'
   }
 }
 

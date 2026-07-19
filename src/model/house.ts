@@ -54,6 +54,8 @@ export interface HouseParams {
   includePermitCost: boolean // включать стоимость документов/разрешения в смету
   roomsPerFloor: number // комнат на этаже (для проверки «помещается ли»)
   kitchenLivingCombined: boolean // зал и кухня вместе (студия) или раздельно
+  laborPerM2: number // работа бригады на стадии «коробка», ֏/м² (default 11000)
+  beamsOverHall: boolean // балки над залом заложены
   eng: EngOverrides // "Расширенные параметры (для инженера)"
 }
 
@@ -106,6 +108,8 @@ export const DEFAULT_HOUSE: HouseParams = {
   includePermitCost: true,
   roomsPerFloor: 3,
   kitchenLivingCombined: true,
+  laborPerM2: 11000,
+  beamsOverHall: true,
   eng: {},
 }
 

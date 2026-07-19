@@ -83,7 +83,9 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
     const delivery = isPermit ? 0 : region.deliverySurcharge
     const unitMat = materialPrice(item, mode) * (1 + delivery)
     const material = ql.quantity * unitMat * mult
-    const labor = ql.quantity * item.labor * mult
+    // shell/act labour is covered by the builders' brigade rate (added below);
+    // per-item labour only applies to turnkey finishing/engineering work.
+    const labor = ql.stage === 'act' ? 0 : ql.quantity * item.labor * mult
     const total = material + labor
     if (isPermit) permitAmt += total
 
@@ -108,6 +110,25 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
       extraMat += material
       extraLabor += labor
     }
+  }
+
+  // builders' brigade labour for the shell (act), by editable ֏/m² rate
+  const brigade = Math.max(0, p.laborPerM2) * q.geometry.totalFloorArea
+  if (brigade > 0) {
+    lines.push({
+      key: 'brigade',
+      labelRu: 'Работа строителей (коробка)',
+      labelHy: 'Բրիգադի աշխատանք (կմախք)',
+      section: 'walls',
+      stage: 'act',
+      unit: 'м²',
+      quantity: q.geometry.totalFloorArea,
+      material: 0,
+      labor: brigade,
+      total: brigade,
+    })
+    sectionTotals['walls'] = (sectionTotals['walls'] ?? 0) + brigade
+    actLabor += brigade
   }
 
   return {

@@ -37,7 +37,7 @@ export function Plan2D() {
     : (() => {
         let bed = 0
         return autoProgram(house, activeFloor).map((s) => {
-          const base = TYPE_LABEL[s.type][lang]
+          const base = TYPE_LABEL[s.type][lang === 'hy' ? 'hy' : 'ru']
           const label = s.type === 'bedroom' ? `${base} ${++bed}` : base
           return { type: s.type, label, weight: s.weight }
         })
@@ -49,17 +49,17 @@ export function Plan2D() {
   return (
     <div className="panel">
       <div className="panel-head">
-        <span>{t(lang, 'plan2d')} · {house.length}×{house.width} {lang === 'ru' ? 'м' : 'մ'}</span>
+        <span>{t(lang, 'plan2d')} · {house.length}×{house.width} {lang !== 'hy' ? 'м' : 'մ'}</span>
         {house.floors > 1 ? (
           <div className="seg no-print">
             {Array.from({ length: house.floors }, (_, i) => (
               <button key={i} aria-pressed={activeFloor === i} onClick={() => setFloor(i)}>
-                {i + 1} {lang === 'ru' ? 'эт.' : 'հարկ'}
+                {i + 1} {lang !== 'hy' ? 'эт.' : 'հարկ'}
               </button>
             ))}
           </div>
         ) : (
-          <span className="sub">1 {lang === 'ru' ? 'этаж' : 'հարկ'}</span>
+          <span className="sub">1 {lang !== 'hy' ? 'этаж' : 'հարկ'}</span>
         )}
       </div>
 
@@ -71,23 +71,23 @@ export function Plan2D() {
           <div style={{ marginTop: '0.9rem' }} className="no-print">
             {!editing ? (
               <button className="btn btn-ghost" onClick={startEditing}>
-                {lang === 'ru' ? 'Редактировать комнаты' : 'Խմբագրել սենյակները'}
+                {lang !== 'hy' ? 'Редактировать комнаты' : 'Խմբագրել սենյակները'}
               </button>
             ) : (
               <div style={{ border: '1px solid var(--color-border)', borderRadius: 10, padding: '0.7rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <strong style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem' }}>
-                    {lang === 'ru' ? 'Комнаты' : 'Սենյակներ'}
+                    {lang !== 'hy' ? 'Комнаты' : 'Սենյակներ'}
                   </strong>
                   <button className="btn btn-ghost" style={{ padding: '0.25rem 0.6rem', fontSize: '0.74rem' }} onClick={() => setEditRooms(null)}>
-                    {lang === 'ru' ? 'Авто' : 'Ավտո'}
+                    {lang !== 'hy' ? 'Авто' : 'Ավտո'}
                   </button>
                 </div>
                 {editRooms!.map((r) => (
                   <RoomRow key={r.id} room={r} lang={lang} onChange={(p) => updateRoom(r.id, p)} onRemove={() => removeRoom(r.id)} />
                 ))}
                 <button className="btn btn-accent" style={{ marginTop: '0.5rem', padding: '0.4rem 0.9rem', fontSize: '0.8rem' }} onClick={addRoom}>
-                  + {lang === 'ru' ? 'Добавить комнату' : 'Ավելացնել սենյակ'}
+                  + {lang !== 'hy' ? 'Добавить комнату' : 'Ավելացնել սենյակ'}
                 </button>
               </div>
             )}
@@ -107,13 +107,13 @@ export function Plan2D() {
   )
 }
 
-function RoomRow({ room, lang, onChange, onRemove }: { room: EditRoom; lang: 'ru' | 'hy'; onChange: (p: Partial<EditRoom>) => void; onRemove: () => void }) {
+function RoomRow({ room, lang, onChange, onRemove }: { room: EditRoom; lang: string; onChange: (p: Partial<EditRoom>) => void; onRemove: () => void }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.2fr 1.3fr auto', gap: '0.4rem', alignItems: 'center', padding: '0.25rem 0' }}>
       <input className="input" style={{ padding: '0.35rem 0.5rem' }} value={room.label} onChange={(e) => onChange({ label: e.target.value })} />
       <select className="input" style={{ padding: '0.35rem 0.5rem' }} value={room.type} onChange={(e) => onChange({ type: e.target.value as RoomType })}>
         {(Object.keys(TYPE_LABEL) as RoomType[]).map((k) => (
-          <option key={k} value={k}>{lang === 'ru' ? TYPE_LABEL[k].ru : TYPE_LABEL[k].hy}</option>
+          <option key={k} value={k}>{lang !== 'hy' ? TYPE_LABEL[k].ru : TYPE_LABEL[k].hy}</option>
         ))}
       </select>
       <input type="range" min={0.6} max={3} step={0.1} value={room.weight} onChange={(e) => onChange({ weight: Number(e.target.value) })} />
