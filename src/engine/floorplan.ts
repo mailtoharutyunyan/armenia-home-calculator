@@ -11,33 +11,35 @@ export interface Room {
   label: string
 }
 
+export interface Door {
+  orient: 'v' | 'h' // v: wall is vertical (x=pos); h: wall is horizontal (y=pos)
+  pos: number // wall coordinate
+  start: number // opening start along the wall
+  w: number // opening width
+  swing: 1 | -1 // direction the leaf opens
+  kind: 'entrance' | 'interior'
+}
+
 export interface FloorPlan {
   L: number
   W: number
   wall: number
   rooms: Room[]
   windows: { x: number; y: number; len: number; side: 'top' | 'bottom' | 'left' | 'right' }[]
+  doors: Door[]
 }
 
-interface Spec {
+export interface Spec {
   type: RoomType
   weight: number
   label: string
 }
 
-// Build a deterministic furnished layout from the house params (one floor).
-export function buildFloorPlan(p: HouseParams, floorIndex = 0): FloorPlan {
-  const L = Math.max(1, p.length)
-  const W = Math.max(1, p.width)
-  const wall = 0.2
-  const inset = wall
-  const inner = { x: inset, y: inset, w: L - 2 * inset, h: W - 2 * inset }
-
-  // compose the room program
+// The default room program derived from house params (also seeds the editor).
+export function autoProgram(p: HouseParams, floorIndex = 0): Spec[] {
   const specs: Spec[] = []
   const isGround = floorIndex === 0
   const bedrooms = Math.max(1, p.roomsPerFloor - 1)
-
   if (isGround) {
     if (p.kitchenLivingCombined) {
       specs.push({ type: 'living_kitchen', weight: 2.2, label: 'Гостиная-кухня' })
@@ -51,6 +53,18 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0): FloorPlan {
     for (let i = 0; i < p.roomsPerFloor; i++) specs.push({ type: 'bedroom', weight: 1.2, label: `Спальня ${i + 1}` })
     specs.push({ type: 'bath', weight: 0.7, label: 'Санузел' })
   }
+  return specs
+}
+
+// Build a furnished layout. If `custom` specs are provided (editor), use them.
+export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[]): FloorPlan {
+  const L = Math.max(1, p.length)
+  const W = Math.max(1, p.width)
+  const wall = 0.2
+  const inset = wall
+  const inner = { x: inset, y: inset, w: L - 2 * inset, h: W - 2 * inset }
+
+  const specs: Spec[] = custom && custom.length > 0 ? custom : autoProgram(p, floorIndex)
 
   const rooms: Room[] = []
   slice(inner, specs, rooms)
@@ -64,7 +78,72 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0): FloorPlan {
     if (Math.abs(r.x + r.w - (L - inset)) < 1e-6) windows.push({ x: L, y: r.y + r.h / 2 - 0.6, len: 1.2, side: 'right' })
   }
 
-  return { L, W, wall, rooms, windows }
+  const doors = buildDoors(rooms, inset, L, W)
+
+  return { L, W, wall, rooms, windows, doors }
+}
+
+const DOOR_W = 0.9
+
+// Connect rooms with a spanning tree of interior doors + one entrance door.
+function buildDoors(rooms: Room[], inset: number, L: number, W: number): Door[] {
+  const doors: Door[] = []
+  if (rooms.length === 0) return doors
+  const eps = 0.02
+  const connected = new Set<number>([0])
+
+  const sharedWall = (a: Room, b: Room): Door | null => {
+    // vertical shared wall
+    if (Math.abs(a.x + a.w - b.x) < eps || Math.abs(b.x + b.w - a.x) < eps) {
+      const pos = Math.abs(a.x + a.w - b.x) < eps ? a.x + a.w : a.x
+      const y0 = Math.max(a.y, b.y)
+      const y1 = Math.min(a.y + a.h, b.y + b.h)
+      if (y1 - y0 >= DOOR_W + 0.3) {
+        return { orient: 'v', pos, start: (y0 + y1) / 2 - DOOR_W / 2, w: DOOR_W, swing: 1, kind: 'interior' }
+      }
+    }
+    // horizontal shared wall
+    if (Math.abs(a.y + a.h - b.y) < eps || Math.abs(b.y + b.h - a.y) < eps) {
+      const pos = Math.abs(a.y + a.h - b.y) < eps ? a.y + a.h : a.y
+      const x0 = Math.max(a.x, b.x)
+      const x1 = Math.min(a.x + a.w, b.x + b.w)
+      if (x1 - x0 >= DOOR_W + 0.3) {
+        return { orient: 'h', pos, start: (x0 + x1) / 2 - DOOR_W / 2, w: DOOR_W, swing: 1, kind: 'interior' }
+      }
+    }
+    return null
+  }
+
+  // grow spanning tree
+  let guard = 0
+  while (connected.size < rooms.length && guard++ < rooms.length * rooms.length) {
+    let added = false
+    for (let i = 0; i < rooms.length; i++) {
+      if (!connected.has(i)) continue
+      for (let j = 0; j < rooms.length; j++) {
+        if (connected.has(j)) continue
+        const d = sharedWall(rooms[i], rooms[j])
+        if (d) {
+          doors.push(d)
+          connected.add(j)
+          added = true
+        }
+      }
+    }
+    if (!added) break
+  }
+
+  // entrance door on the exterior wall of the first room (living)
+  const r0 = rooms[0]
+  if (Math.abs(r0.y + r0.h - (W - inset)) < eps || r0.y + r0.h >= W - inset - 0.5) {
+    doors.push({ orient: 'h', pos: W, start: r0.x + r0.w / 2 - 0.5, w: 1.0, swing: -1, kind: 'entrance' })
+  } else if (r0.x <= inset + 0.5) {
+    doors.push({ orient: 'v', pos: 0, start: r0.y + r0.h / 2 - 0.5, w: 1.0, swing: 1, kind: 'entrance' })
+  } else {
+    doors.push({ orient: 'h', pos: W, start: L / 2 - 0.5, w: 1.0, swing: -1, kind: 'entrance' })
+  }
+
+  return doors
 }
 
 // Recursive binary split of a rectangle by room weights (split along longer side).

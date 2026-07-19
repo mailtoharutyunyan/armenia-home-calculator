@@ -4,6 +4,17 @@ import type { HouseParams, PriceMode } from '../model/house'
 import { DEFAULT_HOUSE } from '../model/house'
 import { SEED_PRICES, AMD_PER_USD_DEFAULT } from '../data/prices'
 import type { Lang } from '../i18n'
+import type { RoomType } from '../engine/floorplan'
+
+export interface EditRoom {
+  id: string
+  label: string
+  type: RoomType
+  weight: number
+}
+
+let roomCounter = 0
+export const newRoomId = () => `r${++roomCounter}`
 
 const PRICE_KEY = 'ahc_prices_v1'
 const LANG_KEY = 'ahc_lang_v1'
@@ -35,6 +46,11 @@ interface ProjectState {
   lang: Lang
   priceMode: PriceMode
   amdPerUsd: number
+  editRooms: EditRoom[] | null // null => auto layout from params
+  setEditRooms: (rooms: EditRoom[] | null) => void
+  updateRoom: (id: string, patch: Partial<EditRoom>) => void
+  addRoom: () => void
+  removeRoom: (id: string) => void
   setHouse: (patch: Partial<HouseParams>) => void
   setPriceItem: (key: string, patch: Partial<PriceItem>) => void
   resetPrices: () => void
@@ -49,6 +65,19 @@ export const useProject = create<ProjectState>((set, get) => ({
   lang: loadLang(),
   priceMode: 'typical',
   amdPerUsd: AMD_PER_USD_DEFAULT,
+  editRooms: null,
+
+  setEditRooms: (editRooms) => set({ editRooms }),
+  updateRoom: (id, patch) =>
+    set({ editRooms: (get().editRooms ?? []).map((r) => (r.id === id ? { ...r, ...patch } : r)) }),
+  addRoom: () =>
+    set({
+      editRooms: [
+        ...(get().editRooms ?? []),
+        { id: newRoomId(), label: 'Комната', type: 'bedroom', weight: 1.2 },
+      ],
+    }),
+  removeRoom: (id) => set({ editRooms: (get().editRooms ?? []).filter((r) => r.id !== id) }),
 
   setHouse: (patch) => set({ house: { ...get().house, ...patch } }),
 
