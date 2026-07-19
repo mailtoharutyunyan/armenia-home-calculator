@@ -70,6 +70,15 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
       hy: `Կողմերի հարաբերությունը ${aspect.toFixed(1)} > ${n.maxAspectRatio} անբարենպաստ է սեյսմիկայի համար։`,
     })
   }
+  const maxMasonryH = region.seismic === 9 ? n.masonryMaxFloorHeight9 : n.masonryMaxFloorHeight8
+  if (isMasonry && p.floorHeight > maxMasonryH) {
+    w.push({
+      level: 'error',
+      code: 'ՀՀՇՆ II-6.02',
+      ru: `Высота этажа несущей кладки ${p.floorHeight} м > ${maxMasonryH} м (зона ${region.seismic} баллов) — уменьшите или перейдите на каркас.`,
+      hy: `Կրող շարվածքի հարկի բարձրությունը ${p.floorHeight} մ > ${maxMasonryH} մ (${region.seismic} բալ) — նվազեցրեք կամ անցեք կմախքի։`,
+    })
+  }
   if (isMasonry && p.seismicReinforcementDisabled) {
     w.push({
       level: 'error',

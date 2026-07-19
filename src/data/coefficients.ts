@@ -7,7 +7,7 @@ export const COEFF = {
   stripHeight: 0.8,
   slabThickness: 0.3,
   basementWallThickness: 0.3,
-  floorSlabThickness: 0.17,
+  floorSlabThickness: 0.18, // ≥180 мм (норма для монолитных перекрытий каркаса)
   screedThickness: 0.05,
   ringBeam: { w: 0.3, h: 0.2 },
   seismicCore: { w: 0.25, h: 0.25 },
@@ -79,6 +79,8 @@ export const COEFF = {
     simplifiedMaxArea: 300,
     maxMasonryFloorsSeismic8: 3,
     maxMasonryFloorsSeismic9: 2,
+    masonryMaxFloorHeight8: 5, // м, макс. высота этажа несущей кладки при 8 баллах
+    masonryMaxFloorHeight9: 4, // м, при 9 баллах
     minStructuralConcreteGrade: 25, // B25
     maxAspectRatio: 2,
     tuffMinThickness: 0.4,
