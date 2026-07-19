@@ -4,7 +4,7 @@ import type { EditRoom } from '../store/useProject'
 import { t } from '../i18n'
 import { buildPlan } from '../engine/plan'
 import { downloadDxf } from '../engine/dxf'
-import { autoProgram } from '../engine/floorplan'
+import { autoProgram, buildFloorPlan } from '../engine/floorplan'
 import type { RoomType } from '../engine/floorplan'
 import { FloorPlanSvg } from './FloorPlan'
 
@@ -14,6 +14,7 @@ const TYPE_LABEL: Record<RoomType, { ru: string; hy: string; en: string }> = {
   kitchen: { ru: 'Кухня', hy: 'Խոհանոց', en: 'Kitchen' },
   bedroom: { ru: 'Комната', hy: 'Սենյակ', en: 'Room' },
   bath: { ru: 'Санузел', hy: 'Սանհանգույց', en: 'Bathroom' },
+  stair: { ru: 'Лестница', hy: 'Աստիճան', en: 'Staircase' },
 }
 
 export function Plan2D() {
@@ -55,6 +56,12 @@ export function Plan2D() {
   const startEditing = () =>
     setEditRooms(autoProgram(house, 0).map((s) => ({ id: newRoomId(), label: s.label, type: s.type, weight: s.weight })))
 
+  const voidLabel = lang === 'hy' ? 'Բաց սրահ · երկրորդ լույս' : lang === 'en' ? 'Open to below · double height' : 'Второй свет · открыто вниз'
+  const corridorLabel = lang === 'hy' ? 'Միջանցք' : lang === 'en' ? 'Corridor' : 'Коридор'
+  // room-by-room areas for the active floor (same layout the plan renders)
+  const planRooms = buildFloorPlan(house, activeFloor, custom, voidLabel, corridorLabel).rooms
+  const usableFloorArea = planRooms.filter((r) => !r.open).reduce((a, r) => a + r.w * r.h, 0)
+
   return (
     <div className="panel">
       <div className="panel-head">
@@ -73,12 +80,27 @@ export function Plan2D() {
       </div>
 
       <div style={{ padding: '1rem' }}>
-        <FloorPlanSvg
-          house={house}
-          floorIndex={activeFloor}
-          custom={custom}
-          voidLabel={lang === 'hy' ? 'Բաց սրահ · երկրորդ լույս' : lang === 'en' ? 'Open to below · double height' : 'Второй свет · открыто вниз'}
-        />
+        <FloorPlanSvg house={house} floorIndex={activeFloor} custom={custom} voidLabel={voidLabel} corridorLabel={corridorLabel} />
+
+        {/* room-by-room areas */}
+        <div style={{ marginTop: '0.9rem' }}>
+          <div className="eyebrow" style={{ marginBottom: '0.5rem' }}>
+            {lang === 'hy' ? 'Սենյակների մակերեսներ' : lang === 'en' ? 'Room areas' : 'Площади комнат'} · {activeFloor + 1} {lang !== 'hy' ? 'эт.' : 'հարկ'}
+          </div>
+          {planRooms.map((r, i) => (
+            <div className="spec-row" key={i}>
+              <span style={{ color: r.open ? 'var(--color-ink-soft)' : undefined }}>
+                {r.label}
+                {r.open && <span style={{ fontSize: '0.72rem', color: 'var(--color-ink-soft)' }}> · {lang === 'hy' ? 'չի հաշվվում' : lang === 'en' ? 'not counted' : 'вне площади'}</span>}
+              </span>
+              <span className="num" style={{ color: r.open ? 'var(--color-ink-soft)' : undefined }}>{(r.w * r.h).toFixed(1)} м²</span>
+            </div>
+          ))}
+          <div className="spec-row" style={{ fontWeight: 700, borderBottom: 'none' }}>
+            <span>{lang === 'hy' ? 'Հարկի օգտակար մակերես' : lang === 'en' ? 'Usable floor area' : 'Полезная площадь этажа'}</span>
+            <span className="num" style={{ color: 'var(--color-copper)' }}>{usableFloorArea.toFixed(1)} м²</span>
+          </div>
+        </div>
 
         {/* room editor (ground floor) */}
         {activeFloor === 0 && (

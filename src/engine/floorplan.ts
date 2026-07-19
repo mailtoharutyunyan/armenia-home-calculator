@@ -1,6 +1,6 @@
 import type { HouseParams } from '../model/house'
 
-export type RoomType = 'living' | 'living_kitchen' | 'kitchen' | 'bedroom' | 'bath'
+export type RoomType = 'living' | 'living_kitchen' | 'kitchen' | 'bedroom' | 'bath' | 'stair'
 
 export interface Room {
   x: number
@@ -10,6 +10,7 @@ export interface Room {
   type: RoomType
   label: string
   open?: boolean // open to below (двусветный зал) — no floor on this level
+  gallery?: boolean // balcony walkway overlooking the hall (open railing on the void side)
 }
 
 export interface Door {
@@ -48,17 +49,19 @@ export function autoProgram(p: HouseParams, floorIndex = 0): Spec[] {
       specs.push({ type: 'living', weight: 1.7, label: 'Гостиная' })
       specs.push({ type: 'kitchen', weight: 1.1, label: 'Кухня' })
     }
+    if (p.floors >= 2) specs.push({ type: 'stair', weight: 0.5, label: 'Лестница' })
     specs.push({ type: 'bath', weight: 0.7, label: 'Санузел' })
     for (let i = 0; i < Math.max(1, bedrooms - 1); i++) specs.push({ type: 'bedroom', weight: 1.2, label: `Комната ${i + 1}` })
   } else {
     for (let i = 0; i < p.roomsPerFloor; i++) specs.push({ type: 'bedroom', weight: 1.2, label: `Спальня ${i + 1}` })
+    specs.push({ type: 'stair', weight: 0.5, label: 'Лестница' })
     specs.push({ type: 'bath', weight: 0.7, label: 'Санузел' })
   }
   return specs
 }
 
 // Build a furnished layout. If `custom` specs are provided (editor), use them.
-export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], voidLabel = 'Второй свет'): FloorPlan {
+export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], voidLabel = 'Второй свет', corridorLabel = 'Коридор'): FloorPlan {
   const L = Math.max(1, p.length)
   const W = Math.max(1, p.width)
   const wall = 0.2
@@ -72,21 +75,30 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
   // This matches the engine, which subtracts the hall void from the slab exactly once.
   let sliceRect = inner
   let openVoid: Room | null = null
+  let corridor: Room | null = null
   if (floorIndex === 1 && p.doubleHeightHall && p.hallArea > 0) {
     const frac = Math.min(0.6, Math.max(0.12, p.hallArea / (inner.w * inner.h)))
     if (inner.w >= inner.h) {
       const vw = inner.w * frac
       openVoid = { x: inner.x, y: inner.y, w: vw, h: inner.h, type: 'living_kitchen', label: voidLabel, open: true }
       sliceRect = { x: inner.x + vw, y: inner.y, w: inner.w - vw, h: inner.h }
+      // corridor along the void edge — walkway from the stair into the rooms
+      const cw = Math.min(1.4, sliceRect.w * 0.25)
+      corridor = { x: sliceRect.x, y: sliceRect.y, w: cw, h: sliceRect.h, type: 'living', label: corridorLabel, gallery: true }
+      sliceRect = { x: sliceRect.x + cw, y: sliceRect.y, w: sliceRect.w - cw, h: sliceRect.h }
     } else {
       const vh = inner.h * frac
       openVoid = { x: inner.x, y: inner.y + inner.h - vh, w: inner.w, h: vh, type: 'living_kitchen', label: voidLabel, open: true }
       sliceRect = { x: inner.x, y: inner.y, w: inner.w, h: inner.h - vh }
+      const ch = Math.min(1.4, sliceRect.h * 0.25)
+      corridor = { x: sliceRect.x, y: sliceRect.y + sliceRect.h - ch, w: sliceRect.w, h: ch, type: 'living', label: corridorLabel, gallery: true }
+      sliceRect = { x: sliceRect.x, y: sliceRect.y, w: sliceRect.w, h: sliceRect.h - ch }
     }
   }
 
   const rooms: Room[] = []
-  slice(sliceRect, specs, rooms)
+  layoutFloor(sliceRect, specs, rooms)
+  if (corridor) rooms.push(corridor)
 
   // windows on exterior walls, roughly centered per exterior-facing room edge
   const windows: FloorPlan['windows'] = []
@@ -168,6 +180,61 @@ function buildDoors(rooms: Room[], inset: number, L: number, W: number, withEntr
   }
 
   return doors
+}
+
+type Rect = { x: number; y: number; w: number; h: number }
+
+// Realistic layout: bath/stair go into a compact service band (real size ~5–7 m²),
+// the living/kitchen keeps the large area, bedrooms are proper rooms.
+// Falls back to the weighted slicer when the program has no service rooms.
+function layoutFloor(rect: Rect, specs: Spec[], out: Room[]) {
+  const isSmall = (t: RoomType) => t === 'bath' || t === 'stair'
+  const smalls = specs.filter((s) => isSmall(s.type))
+  const bigs = specs.filter((s) => !isSmall(s.type))
+  if (smalls.length === 0 || bigs.length === 0) {
+    slice(rect, specs, out)
+    return
+  }
+
+  const living = bigs.find((s) => s.type === 'living' || s.type === 'living_kitchen' || s.type === 'kitchen') ?? null
+  const beds = bigs.filter((s) => s !== living)
+
+  // right service column width; service rooms sit side-by-side in a top band
+  const Wc = Math.max(3.6, Math.min(5, rect.w * 0.34))
+  const leftW = rect.w - Wc
+  const rx = rect.x + leftW
+  const hBand = Math.min(2.9, rect.h * 0.3)
+  const sw = Wc / smalls.length
+  smalls.forEach((s, i) => out.push({ x: rx + i * sw, y: rect.y, w: sw, h: hBand, type: s.type, label: s.label }))
+  const belowY = rect.y + hBand
+  const restH = rect.h - hBand
+
+  if (living) {
+    // living/kitchen fills the whole left column (the big open studio)
+    out.push({ x: rect.x, y: rect.y, w: leftW, h: rect.h, type: living.type, label: living.label })
+    if (beds.length === 0) {
+      if (restH > 0.6) out.push({ x: rx, y: belowY, w: Wc, h: restH, type: living.type, label: living.label })
+    } else if (beds.length === 1) {
+      // one bedroom sits at the bottom-right at a realistic size; the gap above it
+      // (between service band and bedroom) belongs to the open studio
+      const bedH = Math.min(restH, Math.max(3.6, 22 / Wc))
+      const bedY = rect.y + rect.h - bedH
+      out.push({ x: rx, y: bedY, w: Wc, h: bedH, type: beds[0].type, label: beds[0].label })
+      const gapH = bedY - belowY
+      if (gapH > 0.6) out.push({ x: rx, y: belowY, w: Wc, h: gapH, type: living.type, label: living.label })
+    } else {
+      const bh = restH / beds.length
+      beds.forEach((b, i) => out.push({ x: rx, y: belowY + i * bh, w: Wc, h: bh, type: b.type, label: b.label }))
+    }
+  } else {
+    // no living (upper floor): one bedroom under the service band, the rest on the left
+    const rightBed = beds[0]
+    out.push({ x: rx, y: belowY, w: Wc, h: restH, type: rightBed.type, label: rightBed.label })
+    const leftBeds = beds.slice(1)
+    const leftRect: Rect = { x: rect.x, y: rect.y, w: leftW, h: rect.h }
+    if (leftBeds.length) slice(leftRect, leftBeds, out)
+    else out.push({ ...leftRect, type: rightBed.type, label: rightBed.label })
+  }
 }
 
 // Recursive binary split of a rectangle by room weights (split along longer side).

@@ -9,9 +9,9 @@ const DARK: Pal = { sheet: '#191b20', wall: '#d8d5cb', room: '#23262e', furn: '#
 let PAL: Pal = LIGHT
 
 
-export function FloorPlanSvg({ house, floorIndex, custom, voidLabel }: { house: HouseParams; floorIndex: number; custom?: Spec[]; voidLabel?: string }) {
+export function FloorPlanSvg({ house, floorIndex, custom, voidLabel, corridorLabel }: { house: HouseParams; floorIndex: number; custom?: Spec[]; voidLabel?: string; corridorLabel?: string }) {
   PAL = useProject((st) => st.theme) === 'dark' ? DARK : LIGHT
-  const plan = buildFloorPlan(house, floorIndex, custom, voidLabel)
+  const plan = buildFloorPlan(house, floorIndex, custom, voidLabel, corridorLabel)
   const { L, W, wall, rooms, windows, doors } = plan
   const pad = 1.6
   const wc = wall * 1.15 // opening cover width
@@ -36,7 +36,16 @@ export function FloorPlanSvg({ house, floorIndex, custom, voidLabel }: { house: 
 
       {/* room fills + partitions + furniture + labels */}
       {rooms.map((r, i) =>
-        r.open ? (
+        r.gallery ? (
+          <g key={i}>
+            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={PAL.room} />
+            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="url(#grid)" />
+            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={PAL.wall} strokeWidth={0.09} strokeDasharray="0.4 0.24" />
+            <text x={r.x + r.w / 2} y={r.y + r.h / 2 + 0.12} textAnchor="middle" fontSize={Math.min(0.42, r.h / 2.4)} fill={PAL.txt} fontFamily="Inter, sans-serif" fontWeight={600}>
+              {r.label}
+            </text>
+          </g>
+        ) : r.open ? (
           <g key={i}>
             <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={PAL.voidFill} />
             <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="url(#voidhatch)" />
@@ -208,6 +217,18 @@ function Furniture({ room }: { room: Room }) {
             </>
           )}
           <Sofa x={x + m} y={y + h - m - 0.9} w={sw} s={s} fill={fill} />
+        </g>
+      )
+    }
+    case 'stair': {
+      const n = 7
+      const gap = (h - 2 * m) / n
+      return (
+        <g>
+          <rect x={x + m} y={y + m} width={w - 2 * m} height={h - 2 * m} {...s} />
+          {Array.from({ length: n - 1 }, (_, k) => (
+            <line key={k} x1={x + m} y1={y + m + (k + 1) * gap} x2={x + w - m} y2={y + m + (k + 1) * gap} {...s} />
+          ))}
         </g>
       )
     }
