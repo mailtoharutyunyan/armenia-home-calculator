@@ -83,12 +83,12 @@ const items: PriceItem[] = [
   // --- Waterproofing / insulation / screed ---
   item('waterproofing', 'Гидроизоляция', 'Հիդրոմեկուսացում', 'м²', 2500, 1500, S.market),
   item('insulation', 'Утеплитель', 'Ջերմամեկուսիչ', 'м²', 4000, 2000, S.market),
-  item('screed', 'Стяжка пола', 'Հատակի շաղախ', 'м²', 3500, 2500, S.market),
+  item('screed', 'Стяжка пола', 'Հատակի շաղախ', 'м²', 3000, 2500, S.market),
 
   // --- Openings ---
-  item('window_regular', 'Окно обычное', 'Պատուհան սովորական', 'м²', 55000, 8000, S.market),
+  item('window_regular', 'Окно обычное', 'Պատուհան սովորական', 'м²', 50000, 8000, S.market),
   item('window_vitrage', 'Окно витражное', 'Վիտրաժ պատուհան', 'м²', 90000, 12000, S.market),
-  item('door_exterior', 'Дверь входная', 'Մուտքի դուռ', 'шт', 180000, 15000, S.market),
+  item('door_exterior', 'Дверь входная', 'Մուտքի դուռ', 'шт', 150000, 15000, S.market),
   item('door_interior', 'Дверь межкомнатная', 'Ներսի դուռ', 'шт', 60000, 10000, S.market),
 
   // --- Finishing ---
