@@ -31,7 +31,17 @@ export function Plan2D() {
   }
 
   const editing = activeFloor === 0 && editRooms !== null
-  const custom = editing ? editRooms!.map((r) => ({ type: r.type, label: r.label, weight: r.weight })) : undefined
+  // always feed the plan localized specs (labels follow the UI language)
+  const custom = editing
+    ? editRooms!.map((r) => ({ type: r.type, label: r.label, weight: r.weight }))
+    : (() => {
+        let bed = 0
+        return autoProgram(house, activeFloor).map((s) => {
+          const base = TYPE_LABEL[s.type][lang]
+          const label = s.type === 'bedroom' ? `${base} ${++bed}` : base
+          return { type: s.type, label, weight: s.weight }
+        })
+      })()
 
   const startEditing = () =>
     setEditRooms(autoProgram(house, 0).map((s) => ({ id: newRoomId(), label: s.label, type: s.type, weight: s.weight })))

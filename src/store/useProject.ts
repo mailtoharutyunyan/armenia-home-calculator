@@ -18,6 +18,18 @@ export const newRoomId = () => `r${++roomCounter}`
 
 const PRICE_KEY = 'ahc_prices_v1'
 const LANG_KEY = 'ahc_lang_v1'
+const HOUSE_KEY = 'ahc_house_v1'
+
+function loadHouse(): HouseParams {
+  try {
+    const raw = localStorage.getItem(HOUSE_KEY)
+    if (!raw) return { ...DEFAULT_HOUSE }
+    // merge onto defaults so new fields always exist
+    return { ...DEFAULT_HOUSE, ...(JSON.parse(raw) as Partial<HouseParams>), eng: { ...(JSON.parse(raw).eng ?? {}) } }
+  } catch {
+    return { ...DEFAULT_HOUSE }
+  }
+}
 
 function loadPrices(): Catalog {
   try {
@@ -60,7 +72,7 @@ interface ProjectState {
 }
 
 export const useProject = create<ProjectState>((set, get) => ({
-  house: DEFAULT_HOUSE,
+  house: loadHouse(),
   prices: loadPrices(),
   lang: loadLang(),
   priceMode: 'typical',
@@ -79,7 +91,15 @@ export const useProject = create<ProjectState>((set, get) => ({
     }),
   removeRoom: (id) => set({ editRooms: (get().editRooms ?? []).filter((r) => r.id !== id) }),
 
-  setHouse: (patch) => set({ house: { ...get().house, ...patch } }),
+  setHouse: (patch) => {
+    const house = { ...get().house, ...patch }
+    set({ house })
+    try {
+      localStorage.setItem(HOUSE_KEY, JSON.stringify(house))
+    } catch {
+      /* storage may be unavailable */
+    }
+  },
 
   setPriceItem: (key, patch) => {
     const prices = { ...get().prices, [key]: { ...get().prices[key], ...patch } }

@@ -126,66 +126,74 @@ function DimLine({ L, W, pad }: { L: number; W: number; pad: number }) {
 
 function Furniture({ room }: { room: Room }) {
   const { x, y, w, h, type } = room
-  const m = 0.5
+  if (w < 1.6 || h < 1.6) return null // too small to furnish cleanly
+  const m = 0.4
   const s = { stroke: FURN, strokeWidth: 0.05, fill: 'none' } as const
   const fill = { stroke: FURN, strokeWidth: 0.05, fill: '#f6f7f8' } as const
 
   switch (type) {
     case 'bedroom': {
-      const bw = Math.min(w * 0.55, 1.8)
-      const bh = Math.min(h * 0.5, 2.0)
+      const bw = Math.min(w * 0.5, 1.7)
+      const bh = Math.min(h * 0.45, 2.0)
       const bx = x + w - bw - m
       const by = y + m
       return (
         <g>
-          {/* bed */}
           <rect x={bx} y={by} width={bw} height={bh} rx={0.08} {...fill} />
-          <rect x={bx + 0.12} y={by + 0.12} width={bw - 0.24} height={bh * 0.24} rx={0.06} {...s} />
-          <line x1={bx} y1={by + bh * 0.32} x2={bx + bw} y2={by + bh * 0.32} {...s} />
-          {/* nightstand */}
-          <rect x={bx - 0.5} y={by} width={0.4} height={0.4} {...s} />
+          <rect x={bx + 0.12} y={by + 0.12} width={bw - 0.24} height={bh * 0.22} rx={0.06} {...s} />
+          <line x1={bx} y1={by + bh * 0.3} x2={bx + bw} y2={by + bh * 0.3} {...s} />
+          {bx - 0.5 > x + 0.1 && <rect x={bx - 0.5} y={by} width={0.4} height={0.4} {...s} />}
         </g>
       )
     }
     case 'bath': {
-      const tw = Math.min(w * 0.5, 1.7)
+      const tw = Math.min(w - 2 * m, 1.6)
+      const stack = h > 2.6
       return (
         <g>
-          {/* bathtub */}
-          <rect x={x + m} y={y + m} width={tw} height={0.75} rx={0.18} {...fill} />
-          <circle cx={x + m + 0.25} cy={y + m + 0.37} r={0.08} {...s} />
-          {/* sink */}
-          <rect x={x + m} y={y + m + 1.1} width={0.55} height={0.45} rx={0.08} {...fill} />
-          {/* toilet */}
-          <rect x={x + m + 0.85} y={y + m + 1.1} width={0.4} height={0.3} rx={0.06} {...s} />
-          <ellipse cx={x + m + 1.05} cy={y + m + 1.65} rx={0.26} ry={0.32} {...fill} />
+          <rect x={x + m} y={y + m} width={tw} height={0.7} rx={0.16} {...fill} />
+          <circle cx={x + m + 0.25} cy={y + m + 0.35} r={0.08} {...s} />
+          {stack && (
+            <>
+              <rect x={x + m} y={y + m + 1.0} width={0.5} height={0.42} rx={0.08} {...fill} />
+              <ellipse cx={x + m + 1.0} cy={y + m + 1.3} rx={0.24} ry={0.3} {...fill} />
+            </>
+          )}
         </g>
       )
     }
     case 'kitchen':
-      return <Kitchen x={x + m} y={y + m} w={Math.min(w - 2 * m, 2.8)} s={s} fill={fill} />
-    case 'living':
+      return <Kitchen x={x + m} y={y + m} w={Math.min(w - 2 * m, 2.6)} s={s} fill={fill} />
+    case 'living': {
+      const sw = Math.min(w - 2 * m, 2.4)
       return (
         <g>
-          <Sofa x={x + m} y={y + h - m - 0.95} w={Math.min(w - 2 * m, 2.6)} s={s} fill={fill} />
-          <rect x={x + m + 0.5} y={y + h - m - 2.0} width={1.2} height={0.6} rx={0.08} {...s} />
+          <Sofa x={x + m} y={y + h - m - 0.9} w={sw} s={s} fill={fill} />
+          {h > 3 && <rect x={x + m + 0.4} y={y + h - m - 1.9} width={Math.min(1.2, sw - 0.6)} height={0.55} rx={0.08} {...s} />}
         </g>
       )
-    case 'living_kitchen':
+    }
+    case 'living_kitchen': {
+      const kw = Math.min(w * 0.45, 2.4)
+      const sw = Math.min(w * 0.5, 2.4)
       return (
         <g>
-          <Kitchen x={x + w - 3.0} y={y + m} w={2.6} s={s} fill={fill} />
-          {/* dining */}
-          <rect x={x + w / 2 - 0.8} y={y + h / 2 - 0.55} width={1.6} height={1.1} rx={0.06} {...s} />
-          {[-0.5, 0.5].map((dx, k) => (
-            <g key={k}>
-              <rect x={x + w / 2 + dx - 0.2} y={y + h / 2 - 0.95} width={0.4} height={0.3} {...s} />
-              <rect x={x + w / 2 + dx - 0.2} y={y + h / 2 + 0.65} width={0.4} height={0.3} {...s} />
-            </g>
-          ))}
-          <Sofa x={x + m} y={y + h - m - 0.95} w={Math.min(w * 0.5, 2.6)} s={s} fill={fill} />
+          <Kitchen x={x + w - kw - m} y={y + m} w={kw} s={s} fill={fill} />
+          {w > 4 && h > 4 && (
+            <>
+              <rect x={x + w / 2 - 0.7} y={y + h / 2 - 0.5} width={1.4} height={1.0} rx={0.06} {...s} />
+              {[-0.45, 0.45].map((dx, k) => (
+                <g key={k}>
+                  <rect x={x + w / 2 + dx - 0.18} y={y + h / 2 - 0.85} width={0.36} height={0.28} {...s} />
+                  <rect x={x + w / 2 + dx - 0.18} y={y + h / 2 + 0.57} width={0.36} height={0.28} {...s} />
+                </g>
+              ))}
+            </>
+          )}
+          <Sofa x={x + m} y={y + h - m - 0.9} w={sw} s={s} fill={fill} />
         </g>
       )
+    }
     default:
       return null
   }

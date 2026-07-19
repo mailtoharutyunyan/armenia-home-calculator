@@ -71,7 +71,7 @@ export function Inputs() {
           >
             {Object.values(REGIONS).map((r) => (
               <option key={r.key} value={r.key}>
-                {lang === 'ru' ? r.nameRu : r.nameHy} · {r.seismic} баллов
+                {lang === 'ru' ? r.nameRu : r.nameHy} · {r.seismic} {t(lang, 'points')}
               </option>
             ))}
           </select>

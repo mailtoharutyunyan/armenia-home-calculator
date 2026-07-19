@@ -88,7 +88,7 @@ export function Results() {
 
         {est.missing.length > 0 && (
           <div className="mono lvl-warning" style={{ marginTop: '0.6rem', fontSize: '0.74rem' }}>
-            ⚠ нет цены: {est.missing.join(', ')}
+            ⚠ {t(lang, 'noPrice')}: {est.missing.join(', ')}
           </div>
         )}
 

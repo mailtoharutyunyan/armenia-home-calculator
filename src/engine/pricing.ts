@@ -48,11 +48,13 @@ interface ModeResult {
   missing: string[]
 }
 
-function finalize(material: number, labor: number, p: HouseParams): Totals {
+// permitAmt = fixed state fees (документы): no contingency reserve, no VAT.
+function finalize(material: number, labor: number, permitAmt: number, p: HouseParams): Totals {
   const base = material + labor
-  const reserve = base * C.contingency
+  const taxable = Math.max(0, base - permitAmt)
+  const reserve = taxable * C.contingency
   const withReserve = base + reserve
-  const vat = p.vatIncluded ? withReserve * C.vatRate : 0
+  const vat = p.vatIncluded ? taxable * (1 + C.contingency) * C.vatRate : 0
   return { material, labor, base, reserve, vat, total: withReserve + vat }
 }
 
@@ -67,6 +69,7 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
   let actLabor = 0
   let extraMat = 0
   let extraLabor = 0
+  let permitAmt = 0
 
   for (const ql of q.lines) {
     const item = catalog[ql.key]
@@ -74,11 +77,15 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
       if (!missing.includes(ql.key)) missing.push(ql.key)
       continue
     }
+    const isPermit = ql.section === 'permit'
     const mult = FINISH_SECTIONS.has(ql.section) ? finishMult : 1
-    const unitMat = materialPrice(item, mode) * (1 + region.deliverySurcharge)
+    // state fees (permit) are fixed — no delivery surcharge
+    const delivery = isPermit ? 0 : region.deliverySurcharge
+    const unitMat = materialPrice(item, mode) * (1 + delivery)
     const material = ql.quantity * unitMat * mult
     const labor = ql.quantity * item.labor * mult
     const total = material + labor
+    if (isPermit) permitAmt += total
 
     lines.push({
       key: ql.key,
@@ -105,8 +112,8 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
 
   return {
     lines,
-    act: finalize(actMat, actLabor, p),
-    turnkey: finalize(actMat + extraMat, actLabor + extraLabor, p),
+    act: finalize(actMat, actLabor, permitAmt, p),
+    turnkey: finalize(actMat + extraMat, actLabor + extraLabor, permitAmt, p),
     sectionTotals,
     missing,
   }

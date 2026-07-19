@@ -74,16 +74,17 @@ export function computeQuantities(p: HouseParams): Quantities {
   const waste = 1 + (e.wastePct != null ? e.wastePct / 100 : C.wasteFactor - 1)
   const floorOnGround = cm(e.floorOnGround) ?? 0
 
-  // double-height hall: void in the 2nd-floor slab + extra wall height
+  // double-height hall: void in the 2nd-floor slab (perimeter walls already
+  // span the full height H, so no extra wall volume is added here).
   const hallVoid = p.doubleHeightHall && p.floors >= 2 ? Math.min(p.hallArea, A) : 0
-  const extraHallWall = hallVoid > 0 ? 4 * Math.sqrt(hallVoid) * p.floorHeight : 0
 
-  // structural concrete + rebar accumulators
-  let structConcrete = 0 // m3, priced at p.concreteGrade
-  let rebarKg = 0
-  const addStruct = (vol: number, rebarPerM3: number) => {
-    structConcrete += vol
-    rebarKg += vol * rebarPerM3
+  // structural concrete + rebar accumulators, per estimate section
+  const concreteBySection: Partial<Record<SectionId, number>> = {}
+  const rebarBySection: Partial<Record<SectionId, number>> = {}
+  const addStruct = (section: SectionId, vol: number, rebarPerM3: number) => {
+    if (vol <= 0) return
+    concreteBySection[section] = (concreteBySection[section] ?? 0) + vol
+    rebarBySection[section] = (rebarBySection[section] ?? 0) + vol * rebarPerM3
   }
 
   const isMasonry = p.system !== 'frame'
@@ -105,32 +106,34 @@ export function computeQuantities(p: HouseParams): Quantities {
 
   // ---- Foundation ----
   if (p.foundation === 'strip') {
-    addStruct(stripLen * stripW * stripH, C.rebar.strip)
+    addStruct('foundation', stripLen * stripW * stripH, C.rebar.strip)
   } else if (p.foundation === 'slab') {
-    addStruct(A * C.slabThickness, C.rebar.slab)
+    addStruct('foundation', A * C.slabThickness, C.rebar.slab)
   } else if (p.foundation === 'pile') {
     const n = stripLen / C.foundationAxisStep
     const pileVol = n * (Math.PI / 4) * C.pile.d ** 2 * C.pile.length
     const grillage = stripLen * stripW * 0.4
-    addStruct(pileVol + grillage, C.rebar.pile)
+    addStruct('foundation', pileVol + grillage, C.rebar.pile)
   } else {
     // column
     const n = stripLen / C.foundationAxisStep
-    addStruct(n * colSize * colSize * C.columnFoundationHeight, C.rebar.pile)
+    addStruct('foundation', n * colSize * colSize * C.columnFoundationHeight, C.rebar.pile)
   }
 
-  // ---- Basement walls ----
+  // ---- Basement walls + floor slab ----
   if (p.basement) {
-    addStruct(P * basementWallT * p.basementDepth, C.rebar.basementWall)
+    addStruct('foundation', P * basementWallT * p.basementDepth, C.rebar.basementWall)
+    addStruct('foundation', A * C.slabThickness, C.rebar.slab) // пол подвала
+    add('waterproofing', 'foundation', 'act', A) // гидроизоляция пола подвала
   }
 
-  // ---- Foundation waterproofing + apron ----
+  // ---- Foundation waterproofing (plinth, exterior only) + apron ----
   const plinthHeight = p.basement ? p.basementDepth : 0.5
-  add('waterproofing', 'foundation', 'act', Lb * plinthHeight)
+  add('waterproofing', 'foundation', 'act', P * plinthHeight)
   add('apron', 'foundation', 'act', P * C.apronWidth)
 
   // ---- Walls / frame ----
-  const wallGross = Lb * H + extraHallWall
+  const wallGross = Lb * H
   const doorsArea = p.exteriorDoors * 2.0
   const openingsArea =
     e.openingsPct != null ? wallGross * (e.openingsPct / 100) : p.windowAreaTotal + doorsArea
@@ -144,8 +147,8 @@ export function computeQuantities(p: HouseParams): Quantities {
   const coreVol = coresActive ? coreCount * C.seismicCore.w * C.seismicCore.h * H : 0
 
   if (isMasonry) {
-    addStruct(ringBeamVol, C.rebar.ringBeam)
-    if (coreVol > 0) addStruct(coreVol, C.rebar.seismicCore)
+    addStruct('walls', ringBeamVol, C.rebar.ringBeam)
+    if (coreVol > 0) addStruct('walls', coreVol, C.rebar.seismicCore)
     // masonry volume minus embedded RC (avoid double count)
     let masonryVol = wallNet * wallT - ringBeamVol - coreVol
     masonryVol = Math.max(0, masonryVol) * waste
@@ -158,9 +161,9 @@ export function computeQuantities(p: HouseParams): Quantities {
     const nx = Math.floor(p.length / C.columnGridStep) + 1
     const ny = Math.floor(p.width / C.columnGridStep) + 1
     const nCol = e.columns ?? nx * ny
-    addStruct(nCol * colSize * colSize * H, C.rebar.column)
+    addStruct('frame', nCol * colSize * colSize * H, C.rebar.column)
     const beamsLen = e.beamsLen ?? Lb * p.floors
-    addStruct(beamsLen * beamSectionArea, C.rebar.ringBeam)
+    addStruct('frame', beamsLen * beamSectionArea, C.rebar.ringBeam)
     const infillVol = Math.max(0, wallNet * wallT) * waste
     add(masonryKey(wallMat), 'walls', 'act', infillVol)
     if (wallMat === 'aerated') add('glue_aerated', 'walls', 'act', infillVol * C.glueShare)
@@ -170,12 +173,12 @@ export function computeQuantities(p: HouseParams): Quantities {
   // ---- Lintels over openings ----
   const openingCount = Math.ceil(p.windowAreaTotal / 3) + p.exteriorDoors
   const lintelLen = openingCount * (1.5 + 0.5)
-  addStruct(lintelLen * C.lintel.w * C.lintel.h, C.rebar.lintel)
+  addStruct('walls', lintelLen * C.lintel.w * C.lintel.h, C.rebar.lintel)
 
   // ---- Floors / ceilings ----
   const slabArea = Math.max(0, A * p.floors - hallVoid)
   if (p.floorSlab === 'monolith') {
-    addStruct(slabArea * floorSlabT, C.rebar.floor)
+    addStruct('floors', slabArea * floorSlabT, C.rebar.floor)
   } else {
     const count = Math.ceil(slabArea / C.precastSlabArea)
     add('precast_slab', 'floors', 'act', count)
@@ -195,7 +198,10 @@ export function computeQuantities(p: HouseParams): Quantities {
     add('waterproofing', 'roof', 'act', A)
     add('insulation', 'roof', 'act', A)
   } else {
-    const roofArea = A * (C.roofFactor[p.roof] ?? C.pitchedRoofFactor)
+    // real slope: footprint / cos(angle) + eaves overhang, ×shape factor
+    const rad = (Math.min(Math.max(p.roofPitchDeg, 5), 75) * Math.PI) / 180
+    const shape = p.roof === 'mansard' ? 1.15 : p.roof === 'hip' ? 1.05 : 1
+    const roofArea = (A / Math.cos(rad) + P * 0.5) * shape
     add('roof_pitched', 'roof', 'act', roofArea)
     add('insulation', 'roof', 'act', roofArea)
     // gable walls: full for a gable/pitched roof, half for mansard, none for hip
@@ -247,15 +253,18 @@ export function computeQuantities(p: HouseParams): Quantities {
     add('permit_supervision', 'permit', 'act', totalFloorArea)
   }
 
-  // ---- reinforcement grows with number of floors (seismic/loads) ----
-  rebarKg *= 1 + C.rebarFloorFactor * Math.max(0, p.floors - 1)
-
-  // ---- Aggregate structural concrete + rebar ----
-  if (structConcrete > 0) {
-    lines.push({ key: p.concreteGrade, section: 'foundation', stage: 'act', quantity: structConcrete })
+  // ---- Aggregate structural concrete + rebar, per section ----
+  // reinforcement grows with number of floors (seismic/loads)
+  const rebarFloorK = 1 + C.rebarFloorFactor * Math.max(0, p.floors - 1)
+  let rebarKg = 0
+  for (const key of Object.keys(concreteBySection) as SectionId[]) {
+    const vol = concreteBySection[key] ?? 0
+    if (vol > 0) lines.push({ key: p.concreteGrade, section: key, stage: 'act', quantity: vol })
   }
-  if (rebarKg > 0) {
-    lines.push({ key: 'rebar_a500', section: 'foundation', stage: 'act', quantity: rebarKg / 1000 })
+  for (const key of Object.keys(rebarBySection) as SectionId[]) {
+    const kg = (rebarBySection[key] ?? 0) * rebarFloorK
+    rebarKg += kg
+    if (kg > 0) lines.push({ key: 'rebar_a500', section: key, stage: 'act', quantity: kg / 1000 })
   }
 
   const geometry: Geometry = {

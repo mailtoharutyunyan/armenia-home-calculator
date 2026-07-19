@@ -20,35 +20,36 @@ export function Header() {
         position: 'sticky',
         top: 0,
         zIndex: 20,
-        background: 'rgba(255,255,255,0.86)',
-        backdropFilter: 'saturate(1.4) blur(10px)',
-        borderBottom: '1px solid var(--color-border)',
+        background: 'var(--color-bg)',
+        borderBottom: '1px solid var(--color-ink)',
       }}
     >
       <div
         style={{
-          maxWidth: 1180,
+          maxWidth: 1200,
           margin: '0 auto',
-          padding: '0.8rem 1.4rem',
+          padding: '0.85rem 2rem',
           display: 'flex',
           alignItems: 'center',
-          gap: '1.4rem',
+          gap: '1.6rem',
           flexWrap: 'wrap',
         }}
       >
-        <a href="#top" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--color-ink)' }}>
-          <Logo />
-          <strong style={{ fontFamily: 'var(--font-display)', fontSize: '1.02rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
-            {t(lang, 'appTitle')}
-          </strong>
+        <a href="#top" style={{ display: 'flex', alignItems: 'baseline', gap: '0.55rem', color: 'var(--color-ink)' }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '1.3rem', letterSpacing: '-0.02em' }}>
+            Тун
+          </span>
+          <span style={{ fontSize: '0.66rem', fontWeight: 600, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--color-ink-soft)' }}>
+            Studio · РА
+          </span>
         </a>
 
-        <nav style={{ display: 'flex', gap: '1.3rem', marginLeft: 'auto', flexWrap: 'wrap' }}>
+        <nav style={{ display: 'flex', gap: '1.6rem', marginLeft: 'auto', flexWrap: 'wrap' }}>
           {NAV.map((n) => (
             <a
               key={n.id}
               href={`#${n.id}`}
-              style={{ color: 'var(--color-ink-soft)', fontSize: '0.86rem', fontWeight: 600 }}
+              style={{ color: 'var(--color-ink-soft)', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase' }}
               onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-copper)')}
               onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-ink-soft)')}
             >
@@ -62,32 +63,10 @@ export function Header() {
           <button aria-pressed={lang === 'hy'} onClick={() => setLang('hy')}>ՀՅ</button>
         </div>
         <div className="seg">
-          <button aria-pressed={house.currency === 'AMD'} onClick={() => setHouse({ currency: 'AMD' })}>֏ AMD</button>
-          <button aria-pressed={house.currency === 'USD'} onClick={() => setHouse({ currency: 'USD' })}>$ USD</button>
+          <button aria-pressed={house.currency === 'AMD'} onClick={() => setHouse({ currency: 'AMD' })}>֏</button>
+          <button aria-pressed={house.currency === 'USD'} onClick={() => setHouse({ currency: 'USD' })}>$</button>
         </div>
       </div>
     </header>
-  )
-}
-
-function Logo() {
-  return (
-    <span
-      style={{
-        width: 34,
-        height: 34,
-        borderRadius: 9,
-        background: 'var(--color-navy)',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-      }}
-    >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path d="M4 20 V10 L12 4 L20 10 V20" stroke="#fff" strokeWidth="1.8" strokeLinejoin="round" />
-        <rect x="9.5" y="13" width="5" height="7" fill="var(--color-copper)" />
-      </svg>
-    </span>
   )
 }
