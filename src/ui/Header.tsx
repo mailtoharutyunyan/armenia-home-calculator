@@ -10,7 +10,7 @@ const TABS = [
 ]
 
 export function Header() {
-  const { lang, setLang, house, setHouse, tab, setTab } = useProject()
+  const { lang, setLang, house, setHouse, tab, setTab, theme, setTheme } = useProject()
 
   return (
     <header
@@ -19,8 +19,10 @@ export function Header() {
         position: 'sticky',
         top: 0,
         zIndex: 20,
-        background: 'var(--color-bg)',
-        borderBottom: '1px solid var(--color-ink)',
+        background: 'var(--color-header-bg)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderBottom: '1px solid var(--color-border)',
       }}
     >
       <div
@@ -73,6 +75,27 @@ export function Header() {
             <button aria-pressed={house.currency === 'AMD'} onClick={() => setHouse({ currency: 'AMD' })}>֏</button>
             <button aria-pressed={house.currency === 'USD'} onClick={() => setHouse({ currency: 'USD' })}>$</button>
           </div>
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+            title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+            style={{
+              border: '1px solid var(--color-border)',
+              background: 'transparent',
+              color: 'var(--color-ink)',
+              cursor: 'pointer',
+              borderRadius: 999,
+              width: '2rem',
+              height: '2rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '0.95rem',
+              lineHeight: 1,
+            }}
+          >
+            {theme === 'dark' ? '☀' : '☾'}
+          </button>
         </div>
       </div>
     </header>

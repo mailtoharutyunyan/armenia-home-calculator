@@ -247,8 +247,9 @@ function Tile({ label, value, accent }: { label: string; value: string; accent: 
       style={{
         border: `1px solid var(--color-border)`,
         borderLeft: `3px solid var(--color-${accent})`,
-        padding: '0.7rem 0.8rem',
-        background: '#fff',
+        borderRadius: 10,
+        padding: '0.8rem 0.9rem',
+        background: 'var(--color-surface-2)',
       }}
     >
       <div className="mono" style={{ fontSize: '0.66rem', color: 'var(--color-ink-soft)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>

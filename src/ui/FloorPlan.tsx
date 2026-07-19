@@ -1,13 +1,16 @@
 import type { HouseParams } from '../model/house'
 import type { Door, Room, Spec } from '../engine/floorplan'
 import { buildFloorPlan } from '../engine/floorplan'
+import { useProject } from '../store/useProject'
 
-const WALL = '#33383e'
-const ROOM = '#eef0f2'
-const FURN = '#9aa0a6'
-const TXT = '#3f454c'
+type Pal = { sheet: string; wall: string; room: string; furn: string; txt: string; grid: string; hatch: string; voidFill: string; furnFill: string }
+const LIGHT: Pal = { sheet: '#ffffff', wall: '#33383e', room: '#eef0f2', furn: '#9aa0a6', txt: '#3f454c', grid: '#e2e6ea', hatch: '#c2c9d0', voidFill: '#f6f8fa', furnFill: '#f6f7f8' }
+const DARK: Pal = { sheet: '#191b20', wall: '#d8d5cb', room: '#23262e', furn: '#8b8f99', txt: '#cdd0d6', grid: 'rgba(255,255,255,0.06)', hatch: '#3a3f49', voidFill: '#111318', furnFill: 'rgba(255,255,255,0.05)' }
+let PAL: Pal = LIGHT
+
 
 export function FloorPlanSvg({ house, floorIndex, custom, voidLabel }: { house: HouseParams; floorIndex: number; custom?: Spec[]; voidLabel?: string }) {
+  PAL = useProject((st) => st.theme) === 'dark' ? DARK : LIGHT
   const plan = buildFloorPlan(house, floorIndex, custom, voidLabel)
   const { L, W, wall, rooms, windows, doors } = plan
   const pad = 1.6
@@ -18,16 +21,16 @@ export function FloorPlanSvg({ house, floorIndex, custom, voidLabel }: { house: 
   return (
     <svg
       viewBox={`${-pad} ${-pad} ${L + 2 * pad} ${W + 2 * pad}`}
-      style={{ width: '100%', height: 'auto', display: 'block', background: '#fff', borderRadius: 12 }}
+      style={{ width: '100%', height: 'auto', display: 'block', background: PAL.sheet, borderRadius: 12 }}
       role="img"
       aria-label="Планировка"
     >
       <defs>
         <pattern id="grid" width="0.5" height="0.5" patternUnits="userSpaceOnUse">
-          <path d="M0.5 0 L0 0 0 0.5" fill="none" stroke="#e2e6ea" strokeWidth="0.012" />
+          <path d="M0.5 0 L0 0 0 0.5" fill="none" stroke={PAL.grid} strokeWidth="0.012" />
         </pattern>
         <pattern id="voidhatch" width="0.7" height="0.7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <line x1="0" y1="0" x2="0" y2="0.7" stroke="#c2c9d0" strokeWidth="0.05" />
+          <line x1="0" y1="0" x2="0" y2="0.7" stroke={PAL.hatch} strokeWidth="0.05" />
         </pattern>
       </defs>
 
@@ -35,23 +38,23 @@ export function FloorPlanSvg({ house, floorIndex, custom, voidLabel }: { house: 
       {rooms.map((r, i) =>
         r.open ? (
           <g key={i}>
-            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="#f6f8fa" />
+            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={PAL.voidFill} />
             <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="url(#voidhatch)" />
-            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={WALL} strokeWidth={0.09} strokeDasharray="0.35 0.22" />
-            <text x={r.x + r.w / 2} y={r.y + r.h / 2} textAnchor="middle" fontSize={Math.min(0.5, r.w / 9)} fill={TXT} fontFamily="Inter, sans-serif" fontWeight={600}>
+            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={PAL.wall} strokeWidth={0.09} strokeDasharray="0.35 0.22" />
+            <text x={r.x + r.w / 2} y={r.y + r.h / 2} textAnchor="middle" fontSize={Math.min(0.5, r.w / 9)} fill={PAL.txt} fontFamily="Inter, sans-serif" fontWeight={600}>
               {r.label}
             </text>
           </g>
         ) : (
           <g key={i}>
-            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={ROOM} />
+            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={PAL.room} />
             <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="url(#grid)" />
-            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={WALL} strokeWidth={0.09} />
+            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={PAL.wall} strokeWidth={0.09} />
             <Furniture room={r} />
-            <text x={r.x + r.w / 2} y={r.y + r.h / 2 - 0.1} textAnchor="middle" fontSize={Math.min(0.52, r.w / 7)} fill={TXT} fontFamily="Inter, sans-serif" fontWeight={600}>
+            <text x={r.x + r.w / 2} y={r.y + r.h / 2 - 0.1} textAnchor="middle" fontSize={Math.min(0.52, r.w / 7)} fill={PAL.txt} fontFamily="Inter, sans-serif" fontWeight={600}>
               {r.label}
             </text>
-            <text x={r.x + r.w / 2} y={r.y + r.h / 2 + 0.5} textAnchor="middle" fontSize={0.34} fill={TXT} opacity={0.65} fontFamily="Inter, sans-serif">
+            <text x={r.x + r.w / 2} y={r.y + r.h / 2 + 0.5} textAnchor="middle" fontSize={0.34} fill={PAL.txt} opacity={0.65} fontFamily="Inter, sans-serif">
               {r.w.toFixed(1)}×{r.h.toFixed(1)} м
             </text>
           </g>
@@ -59,7 +62,7 @@ export function FloorPlanSvg({ house, floorIndex, custom, voidLabel }: { house: 
       )}
 
       {/* outer wall */}
-      <rect x={0} y={0} width={L} height={W} fill="none" stroke={WALL} strokeWidth={wall * 2} />
+      <rect x={0} y={0} width={L} height={W} fill="none" stroke={PAL.wall} strokeWidth={wall * 2} />
 
       {/* windows: cut opening + double frame line */}
       {windows.map((wn, i) => {
@@ -69,17 +72,17 @@ export function FloorPlanSvg({ house, floorIndex, custom, voidLabel }: { house: 
         if (horiz) {
           return (
             <g key={i}>
-              <rect x={cx} y={cy - wall} width={wn.len} height={wall * 2} fill="#fff" />
-              <line x1={cx} y1={cy - 0.05} x2={cx + wn.len} y2={cy - 0.05} stroke={WALL} strokeWidth={0.04} />
-              <line x1={cx} y1={cy + 0.05} x2={cx + wn.len} y2={cy + 0.05} stroke={WALL} strokeWidth={0.04} />
+              <rect x={cx} y={cy - wall} width={wn.len} height={wall * 2} fill={PAL.sheet} />
+              <line x1={cx} y1={cy - 0.05} x2={cx + wn.len} y2={cy - 0.05} stroke={PAL.wall} strokeWidth={0.04} />
+              <line x1={cx} y1={cy + 0.05} x2={cx + wn.len} y2={cy + 0.05} stroke={PAL.wall} strokeWidth={0.04} />
             </g>
           )
         }
         return (
           <g key={i}>
-            <rect x={cx - wall} y={cy} width={wall * 2} height={wn.len} fill="#fff" />
-            <line x1={cx - 0.05} y1={cy} x2={cx - 0.05} y2={cy + wn.len} stroke={WALL} strokeWidth={0.04} />
-            <line x1={cx + 0.05} y1={cy} x2={cx + 0.05} y2={cy + wn.len} stroke={WALL} strokeWidth={0.04} />
+            <rect x={cx - wall} y={cy} width={wall * 2} height={wn.len} fill={PAL.sheet} />
+            <line x1={cx - 0.05} y1={cy} x2={cx - 0.05} y2={cy + wn.len} stroke={PAL.wall} strokeWidth={0.04} />
+            <line x1={cx + 0.05} y1={cy} x2={cx + 0.05} y2={cy + wn.len} stroke={PAL.wall} strokeWidth={0.04} />
           </g>
         )
       })}
@@ -96,7 +99,7 @@ export function FloorPlanSvg({ house, floorIndex, custom, voidLabel }: { house: 
 }
 
 function DoorSymbol({ door, wc }: { door: Door; wc: number }) {
-  const s = { stroke: WALL, strokeWidth: 0.05, fill: 'none' } as const
+  const s = { stroke: PAL.wall, strokeWidth: 0.05, fill: 'none' } as const
   if (door.orient === 'v') {
     const x = door.pos
     const y0 = door.start
@@ -104,7 +107,7 @@ function DoorSymbol({ door, wc }: { door: Door; wc: number }) {
     const ex = x + door.swing * door.w
     return (
       <g>
-        <rect x={x - wc / 2} y={y0} width={wc} height={door.w} fill="#fff" />
+        <rect x={x - wc / 2} y={y0} width={wc} height={door.w} fill={PAL.sheet} />
         <line x1={x} y1={y0} x2={ex} y2={y0} {...s} />
         <path d={`M ${ex} ${y0} A ${door.w} ${door.w} 0 0 ${door.swing > 0 ? 1 : 0} ${x} ${y1}`} {...s} opacity={0.6} />
       </g>
@@ -116,7 +119,7 @@ function DoorSymbol({ door, wc }: { door: Door; wc: number }) {
   const ey = y + door.swing * door.w
   return (
     <g>
-      <rect x={x0} y={y - wc / 2} width={door.w} height={wc} fill="#fff" />
+      <rect x={x0} y={y - wc / 2} width={door.w} height={wc} fill={PAL.sheet} />
       <line x1={x0} y1={y} x2={x0} y2={ey} {...s} />
       <path d={`M ${x0} ${ey} A ${door.w} ${door.w} 0 0 ${door.swing > 0 ? 0 : 1} ${x1} ${y}`} {...s} opacity={0.6} />
     </g>
@@ -125,7 +128,7 @@ function DoorSymbol({ door, wc }: { door: Door; wc: number }) {
 
 function DimLine({ L, W, pad }: { L: number; W: number; pad: number }) {
   return (
-    <g stroke={TXT} strokeWidth={0.02} fill={TXT} fontFamily="Inter, sans-serif">
+    <g stroke={PAL.txt} strokeWidth={0.02} fill={PAL.txt} fontFamily="Inter, sans-serif">
       <line x1={0} y1={W + pad * 0.55} x2={L} y2={W + pad * 0.55} />
       <text x={L / 2} y={W + pad * 0.9} textAnchor="middle" fontSize={0.45} stroke="none">
         {L.toFixed(1)} м
@@ -142,8 +145,8 @@ function Furniture({ room }: { room: Room }) {
   const { x, y, w, h, type } = room
   if (w < 1.6 || h < 1.6) return null // too small to furnish cleanly
   const m = 0.4
-  const s = { stroke: FURN, strokeWidth: 0.05, fill: 'none' } as const
-  const fill = { stroke: FURN, strokeWidth: 0.05, fill: '#f6f7f8' } as const
+  const s = { stroke: PAL.furn, strokeWidth: 0.05, fill: 'none' } as const
+  const fill = { stroke: PAL.furn, strokeWidth: 0.05, fill: PAL.furnFill } as const
 
   switch (type) {
     case 'bedroom': {

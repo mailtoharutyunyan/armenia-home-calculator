@@ -38,8 +38,12 @@ function Num({
 }
 
 export function Inputs() {
-  const { house, lang, setHouse } = useProject()
+  const { house, lang, setHouse, resetAll } = useProject()
   const set = (patch: Partial<HouseParams>) => setHouse(patch)
+  const confirmReset = () => {
+    const msg = lang === 'hy' ? 'Վերականգնե՞լ բոլոր կարգավորումները գործարանային վիճակի։' : lang === 'en' ? 'Reset all settings to factory defaults?' : 'Сбросить все настройки к заводским?'
+    if (window.confirm(msg)) resetAll()
+  }
 
   const changeSystem = (system: HouseParams['system']) => {
     set({
@@ -80,6 +84,14 @@ export function Inputs() {
         <span className="sub">{house.length}×{house.width} · {house.floors} {t(lang, 'floors').toLowerCase()}</span>
       </div>
       <div style={{ padding: '1rem' }}>
+        <button
+          className="btn btn-ghost no-print"
+          onClick={confirmReset}
+          style={{ marginBottom: '1rem', padding: '0.3rem 0.1rem', fontSize: '0.76rem' }}
+        >
+          ↺ {lang === 'hy' ? 'Զրոյացնել գործարանային' : lang === 'en' ? 'Reset to factory' : 'Сбросить к заводским'}
+        </button>
+
         {/* Step 1 — region + system */}
         <div className="eyebrow">01 · {t(lang, 'step_region')}</div>
         <label className="field">

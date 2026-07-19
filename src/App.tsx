@@ -13,9 +13,14 @@ import { PriceEditor } from './ui/PriceEditor'
 import { Suppliers } from './ui/Suppliers'
 import { useProject } from './store/useProject'
 import { t } from './i18n'
+import { useEffect } from 'react'
 
 export default function App() {
-  const { lang, tab } = useProject()
+  const { lang, tab, theme } = useProject()
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
 
   return (
     <div id="top">
@@ -25,7 +30,10 @@ export default function App() {
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '2.4rem 2rem' }}>
         {tab === 'calc' && (
           <div className="workspace">
-            <div style={{ position: 'sticky', top: 70, alignSelf: 'start' }}>
+            <div
+              className="side-fixed"
+              style={{ position: 'sticky', top: 70, alignSelf: 'start', maxHeight: 'calc(100vh - 90px)', overflowY: 'auto', paddingRight: '0.5rem' }}
+            >
               <Inputs />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.6rem' }}>
@@ -57,10 +65,10 @@ export default function App() {
         )}
       </main>
 
-      <footer style={{ background: 'var(--color-ink)', color: 'var(--color-bg)', marginTop: '3rem' }}>
+      <footer style={{ background: 'var(--color-footer-bg)', borderTop: '1px solid var(--color-border)', color: 'var(--color-footer-fg)', marginTop: '3rem' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2.4rem 2rem', fontSize: '0.85rem', lineHeight: 1.7 }}>
-          <div className="eyebrow" style={{ color: 'var(--color-bg)' }}>{lang !== 'hy' ? 'Важно' : 'Կարևոր'}</div>
-          <p style={{ margin: '1rem 0 0', maxWidth: 820, opacity: 0.85 }}>{t(lang, 'disclaimer')}</p>
+          <div className="eyebrow">{lang === 'hy' ? 'Կարևոր' : lang === 'en' ? 'Important' : 'Важно'}</div>
+          <p style={{ margin: '1rem 0 0', maxWidth: 820 }}>{t(lang, 'disclaimer')}</p>
         </div>
       </footer>
 
@@ -71,9 +79,16 @@ export default function App() {
           gap: 1.6rem;
           align-items: start;
         }
+        .side-fixed::-webkit-scrollbar { width: 8px; }
+        .side-fixed::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 8px; }
+        .side-fixed { scrollbar-width: thin; scrollbar-color: var(--color-border) transparent; }
         @media (max-width: 900px) {
           .workspace { grid-template-columns: 1fr; }
-          .workspace > div:first-child { position: static !important; }
+          .workspace > div:first-child {
+            position: static !important;
+            max-height: none !important;
+            overflow: visible !important;
+          }
         }
       `}</style>
     </div>
