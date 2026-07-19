@@ -33,6 +33,7 @@ export interface Geometry {
   wallHeight: number // H
   totalFloorArea: number // A_общ (без вычета)
   netFloorArea: number // A_общ − проём двусветного зала (реальная площадь пола)
+  hallVoid: number // площадь двусветного проёма
   wallGross: number
   openingsArea: number
   wallNet: number
@@ -284,6 +285,7 @@ export function computeQuantities(p: HouseParams): Quantities {
     wallHeight: H,
     totalFloorArea,
     netFloorArea: Math.max(0, totalFloorArea - hallVoid),
+    hallVoid,
     wallGross,
     openingsArea,
     wallNet,

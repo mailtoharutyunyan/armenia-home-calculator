@@ -85,9 +85,24 @@ export function Results() {
             {t(lang, proc41 ? 'proc41Ok' : 'proc41No')}
           </span>
         </div>
-        <p style={{ margin: '-0.4rem 0 1rem', fontSize: '0.72rem', color: 'var(--color-ink-soft)', lineHeight: 1.5 }}>
+        <p style={{ margin: '-0.4rem 0 0.8rem', fontSize: '0.72rem', color: 'var(--color-ink-soft)', lineHeight: 1.5 }}>
           {t(lang, 'proc41Cond')}
         </p>
+
+        {/* area breakdown */}
+        <details style={{ marginBottom: '1rem' }}>
+          <summary className="eyebrow" style={{ cursor: 'pointer' }}>{t(lang, 'areaBreakdown')}</summary>
+          <div style={{ marginTop: '0.6rem' }}>
+            <AreaRow label={t(lang, 'ab_builtup')} v={geo.footprint} />
+            <AreaRow label={t(lang, 'ab_floor1')} v={geo.footprint} />
+            {house.floors > 1 && <AreaRow label={t(lang, 'ab_upper')} v={Math.max(0, geo.netFloorArea - geo.footprint)} />}
+            {geo.hallVoid > 0 && <AreaRow label={t(lang, 'ab_hall')} v={geo.hallVoid} minus />}
+            <div className="spec-row" style={{ fontWeight: 700, borderBottom: 'none' }}>
+              <span>{t(lang, 'ab_total')}</span>
+              <span className="num" style={{ color: 'var(--color-copper)' }}>{num(geo.netFloorArea, 0)} м²</span>
+            </div>
+          </div>
+        </details>
 
         {/* include / exclude sections */}
         <div style={{ marginBottom: '1rem' }}>
@@ -219,6 +234,15 @@ function Tile({ label, value, accent }: { label: string; value: string; accent: 
       <div className="mono" style={{ fontSize: '1.25rem', fontWeight: 700, marginTop: '0.2rem' }}>
         {value}
       </div>
+    </div>
+  )
+}
+
+function AreaRow({ label, v, minus }: { label: string; v: number; minus?: boolean }) {
+  return (
+    <div className="spec-row">
+      <span style={{ color: 'var(--color-ink-soft)' }}>{label}</span>
+      <span className="num">{minus ? '−' : ''}{num(v, 0)} м²</span>
     </div>
   )
 }

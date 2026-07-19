@@ -506,6 +506,12 @@ export const DICT: Dict = {
   tab_analysis: { ru: 'Сравнение и сроки', hy: 'Համեմատություն և ժամկետներ' },
   tab_docs: { ru: 'Нормы и документы', hy: 'Նորմեր և փաստաթղթեր' },
   plotArea: { ru: 'Площадь участка, м²', hy: 'Հողամասի մակերես, մ²' },
+  ab_builtup: { ru: 'Площадь застройки', hy: 'Կառուցապատման մակերես' },
+  ab_floor1: { ru: '1-й этаж', hy: '1-ին հարկ' },
+  ab_upper: { ru: 'Этажи выше 1-го', hy: '1-ից բարձր հարկեր' },
+  ab_hall: { ru: 'Двусветная зона (проём)', hy: 'Կրկնահարկ սրահ (բացվածք)' },
+  ab_total: { ru: 'Общая площадь (норматив.)', hy: 'Ընդհանուր մակերես (նորմ.)' },
+  areaBreakdown: { ru: 'Разбивка площадей', hy: 'Մակերեսների բաշխում' },
   proc41Ok: { ru: 'Подходит под упрощённый порядок N 4.1 (пост. N 1969-Ն)', hy: 'Համապատասխանում է պարզեցված ընթացակարգին N 4.1 (N 1969-Ն)' },
   proc41No: { ru: 'Не подходит под упрощённый порядок N 4.1 — обычная процедура', hy: 'Չի համապատասխանում N 4.1-ին — սովորական ընթացակարգ' },
   proc41Cond: {
@@ -669,6 +675,12 @@ const EN: Record<string, string> = {
   proc41Ok: 'Eligible for simplified procedure N 4.1 (Decision N 1969-Ն)',
   proc41No: 'Not eligible for simplified N 4.1 — standard procedure',
   proc41Cond: 'N 4.1 conditions: plot ≥ 400 m², house ≤ 300 m², ≤ 2 above-ground + 1 basement, non-commercial.',
+  ab_builtup: 'Built-up area',
+  ab_floor1: '1st floor',
+  ab_upper: 'Floors above 1st',
+  ab_hall: 'Double-height void',
+  ab_total: 'Total area (normative)',
+  areaBreakdown: 'Area breakdown',
 }
 
 export function t(lang: Lang, key: keyof typeof DICT): string {
