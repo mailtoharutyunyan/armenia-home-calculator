@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useProject } from '../store/useProject'
 import { t } from '../i18n'
 import type { HouseParams } from '../model/house'
@@ -10,12 +11,14 @@ function Num({
   onChange,
   step = 1,
   min = 0,
+  disabled = false,
 }: {
   label: string
   value: number
   onChange: (n: number) => void
   step?: number
   min?: number
+  disabled?: boolean
 }) {
   return (
     <label className="field">
@@ -26,7 +29,9 @@ function Num({
         value={value}
         min={min}
         step={step}
+        disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}
+        style={disabled ? { opacity: 0.6 } : undefined}
       />
     </label>
   )
@@ -52,6 +57,21 @@ export function Inputs() {
     wallGross > 0 ? Math.round(((house.windowAreaTotal + house.exteriorDoors * 2) / wallGross) * 100) : 15
   const eng = house.eng
   const setEng = (patch: Partial<HouseParams['eng']>) => set({ eng: { ...house.eng, ...patch } })
+
+  // --- окна по норме освещения (ՀՀՇՆ 31-01-2014): ≥ 1/8 пола, ≤ 40% стен ---
+  const wallT = house.wallThickness
+  const internalPerFloor = Math.max(0, house.length - 2 * wallT) * Math.max(0, house.width - 2 * wallT)
+  const hallV = house.doubleHeightHall && house.floors >= 2 ? Math.min(house.hallArea, house.length * house.width) : 0
+  const netA = Math.max(0, internalPerFloor * house.floors - hallV)
+  const usableA = netA * 0.8
+  const outerWallArea = P * house.floors * house.floorHeight
+  const winMin = usableA / 8 // норма освещения (минимум)
+  const winMax = outerWallArea * 0.4 // макс остекление
+  const winRec = Math.round(Math.min(Math.max(usableA / 6, winMin), outerWallArea * 0.38))
+  useEffect(() => {
+    if (house.windowAuto && Math.abs(house.windowAreaTotal - winRec) > 0.5) set({ windowAreaTotal: winRec })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [house.windowAuto, winRec, house.windowAreaTotal])
 
   return (
     <div className="panel">
@@ -158,7 +178,20 @@ export function Inputs() {
 
         {/* Step 5 — openings */}
         <div className="eyebrow" style={{ marginTop: '0.8rem' }}>05 · {t(lang, 'step_openings')}</div>
-        <Num label={t(lang, 'windowArea')} value={house.windowAreaTotal} step={1} onChange={(n) => set({ windowAreaTotal: n })} />
+        <Num label={t(lang, 'windowArea')} value={house.windowAreaTotal} step={1} onChange={(n) => set({ windowAreaTotal: n })} disabled={house.windowAuto} />
+        <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input type="checkbox" checked={house.windowAuto} onChange={(e) => set({ windowAuto: e.target.checked })} />
+          <span style={{ marginBottom: 0 }}>
+            {lang === 'hy' ? 'Ավտո՝ ըստ լուսավորության նորմայի' : lang === 'en' ? 'Auto (by daylight norm)' : 'Авто (по норме освещения)'}
+          </span>
+        </label>
+        <p style={{ margin: '-0.2rem 0 0.4rem', fontSize: '0.72rem', color: 'var(--color-ink-soft)', lineHeight: 1.4 }}>
+          {lang === 'hy'
+            ? `Նորմա՝ ≥ ${Math.round(winMin)} մ² (1/8 հատակ), ≤ ${Math.round(winMax)} մ² (40% պատեր)`
+            : lang === 'en'
+            ? `Norm: ≥ ${Math.round(winMin)} m² (1/8 floor), ≤ ${Math.round(winMax)} m² (40% walls)`
+            : `Норма: ≥ ${Math.round(winMin)} м² (1/8 пола), ≤ ${Math.round(winMax)} м² (40% стен)`}
+        </p>
         <label className="field">
           <span>{t(lang, 'vitrageShare')} · {Math.round(house.vitrageShare * 100)}%</span>
           <input

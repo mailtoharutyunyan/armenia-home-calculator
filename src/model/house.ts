@@ -39,6 +39,7 @@ export interface HouseParams {
   roof: RoofType
   roofPitchDeg: number
   windowAreaTotal: number // m2
+  windowAuto: boolean // площадь окон считается автоматически по норме освещения
   vitrageShare: number // 0..1
   exteriorDoors: number
   interiorDoors: number | null // null => auto estimate
@@ -102,6 +103,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   roof: 'flat', // плоская крыша
   roofPitchDeg: 30,
   windowAreaTotal: 40, // панорамные окна студии
+  windowAuto: false, // по умолчанию вручную; включается тумблером «Авто по норме»
   vitrageShare: 0.25,
   exteriorDoors: 2,
   interiorDoors: null,
