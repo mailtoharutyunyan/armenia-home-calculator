@@ -269,6 +269,45 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (eng.wastePct != null && eng.wastePct < 3)
     push('info', `Запас ${eng.wastePct}% мал — рекомендуется 5–10%.`, `Պահուստ ${eng.wastePct}% քիչ է — խորհուրդ է 5–10%։`)
 
+  // верхние границы инженерных параметров (нереалистично большие значения)
+  if (eng.stripWidth != null && eng.stripWidth > 120)
+    push('warning', `Ширина ленты ${eng.stripWidth} см необычно велика (> 120 см) — проверьте/уменьшите.`, `Ժապավենի լայնությունը ${eng.stripWidth} սմ անսովոր մեծ է (> 120 սմ) — ստուգեք/նվազեցրեք։`)
+  if (eng.stripHeight != null && eng.stripHeight > 150)
+    push('warning', `Высота ленты ${eng.stripHeight} см необычно велика (> 150 см) — проверьте.`, `Ժապավենի բարձրությունը ${eng.stripHeight} սմ անսովոր մեծ է (> 150 սմ) — ստուգեք։`)
+  if (eng.columnSize != null && eng.columnSize > 80)
+    push('info', `Сечение колонны ${eng.columnSize} см избыточно (> 80 см) — можно уменьшить.`, `Սյան կտրվածքը ${eng.columnSize} սմ ավելորդ է (> 80 սմ)։`)
+  if (eng.extWall != null && eng.extWall > 60)
+    push('info', `Наружная стена ${eng.extWall} см избыточно толстая (> 60 см).`, `Արտաքին պատը ${eng.extWall} սմ ավելորդ հաստ է (> 60 սմ)։`)
+  if (eng.basementWall != null && eng.basementWall > 60)
+    push('info', `Стена подвала ${eng.basementWall} см избыточно толстая (> 60 см).`, `Նկուղի պատը ${eng.basementWall} սմ ավելորդ հաստ է (> 60 սմ)։`)
+  if (eng.beamSection != null && eng.beamSection > 0.6)
+    push('info', `Сечение ригеля ${eng.beamSection} м² избыточно (> 0.6 м²).`, `Հեծանի կտրվածքը ${eng.beamSection} մ² ավելորդ է (> 0.6 մ²)։`)
+  if (eng.stripLen != null) {
+    const per = 2 * (p.length + p.width)
+    if (eng.stripLen < per)
+      push('warning', `Лента ${eng.stripLen} пог.м короче периметра дома (${Math.round(per)} м) — проверьте.`, `Ժապավենը ${eng.stripLen} գ.մ կարճ է տան պարագծից (${Math.round(per)} մ) — ստուգեք։`)
+    else if (eng.stripLen > per * 4)
+      push('info', `Лента ${eng.stripLen} пог.м избыточно длинная (> ${Math.round(per * 4)} м).`, `Ժապավենը ${eng.stripLen} գ.մ ավելորդ երկար է (> ${Math.round(per * 4)} մ)։`)
+  }
+  if (eng.beamsLen != null) {
+    const lb = 2 * (p.length + p.width) * 1.5
+    if (eng.beamsLen < lb * 0.5)
+      push('warning', `Ригели ${eng.beamsLen} пог.м — мало (ожидается ≈ ${Math.round(lb * p.floors)} м), проверьте.`, `Հեծանները ${eng.beamsLen} գ.մ քիչ է (սպասվում է ≈ ${Math.round(lb * p.floors)} մ) — ստուգեք։`)
+    else if (eng.beamsLen > lb * p.floors * 3)
+      push('info', `Ригели ${eng.beamsLen} пог.м — избыточно.`, `Հեծանները ${eng.beamsLen} գ.մ ավելորդ է։`)
+  }
+  if (eng.columns != null) {
+    const need2 = Math.max(4, Math.ceil(q.geometry.footprint / 20))
+    if (eng.columns > need2 * 4)
+      push('info', `Колонн ${eng.columns} шт — избыточно много (нужно ≈ ${need2}).`, `Սյուներ ${eng.columns} հատ — ավելորդ շատ է (պետք է ≈ ${need2})։`)
+  }
+  if (eng.floorOnGround != null && eng.floorOnGround > 40)
+    push('info', `Пол по грунту ${eng.floorOnGround} см — избыточно толстый (> 40 см).`, `Գետնի հատակը ${eng.floorOnGround} սմ — ավելորդ հաստ է (> 40 սմ)։`)
+  if (eng.blinding != null && eng.blinding > 15)
+    push('info', `Подбетонка ${eng.blinding} см — избыточно (> 15 см).`, `Ենթաբетонը ${eng.blinding} սմ — ավելորդ է (> 15 սմ)։`)
+  if (eng.wastePct != null && eng.wastePct > 25)
+    push('info', `Запас ${eng.wastePct}% завышен (> 25%).`, `Պահուստ ${eng.wastePct}% բարձր է (> 25%)։`)
+
   // ---- urban planning reminder (ՀՀՇՆ 30-01-2014) ----
   w.push({
     level: 'info',
