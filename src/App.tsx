@@ -10,6 +10,7 @@ import { Timeline } from './ui/Timeline'
 import { NormsRef } from './ui/NormsRef'
 import { Permit } from './ui/Permit'
 import { PriceEditor } from './ui/PriceEditor'
+import { Suppliers } from './ui/Suppliers'
 import { useProject } from './store/useProject'
 import { t } from './i18n'
 
@@ -48,7 +49,12 @@ export default function App() {
             <Permit />
           </div>
         )}
-        {tab === 'prices' && <PriceEditor />}
+        {tab === 'prices' && (
+          <>
+            <PriceEditor />
+            <Suppliers />
+          </>
+        )}
       </main>
 
       <footer style={{ background: 'var(--color-ink)', color: 'var(--color-bg)', marginTop: '3rem' }}>
