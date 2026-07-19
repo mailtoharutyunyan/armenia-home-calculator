@@ -213,16 +213,10 @@ function layoutFloor(rect: Rect, specs: Spec[], out: Room[]) {
     // living/kitchen fills the whole left column (the big open studio)
     out.push({ x: rect.x, y: rect.y, w: leftW, h: rect.h, type: living.type, label: living.label })
     if (beds.length === 0) {
-      if (restH > 0.6) out.push({ x: rx, y: belowY, w: Wc, h: restH, type: living.type, label: living.label })
-    } else if (beds.length === 1) {
-      // one bedroom sits at the bottom-right at a realistic size; the gap above it
-      // (between service band and bedroom) belongs to the open studio
-      const bedH = Math.min(restH, Math.max(3.6, 22 / Wc))
-      const bedY = rect.y + rect.h - bedH
-      out.push({ x: rx, y: bedY, w: Wc, h: bedH, type: beds[0].type, label: beds[0].label })
-      const gapH = bedY - belowY
-      if (gapH > 0.6) out.push({ x: rx, y: belowY, w: Wc, h: gapH, type: living.type, label: living.label })
+      // no bedrooms — extend the studio into the right column (no second label)
+      if (restH > 0.6) out.push({ x: rx, y: belowY, w: Wc, h: restH, type: living.type, label: '' })
     } else {
+      // bedrooms stack below the service band and fill the right column (no gaps → no duplicate room)
       const bh = restH / beds.length
       beds.forEach((b, i) => out.push({ x: rx, y: belowY + i * bh, w: Wc, h: bh, type: b.type, label: b.label }))
     }
