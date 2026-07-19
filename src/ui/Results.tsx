@@ -106,6 +106,24 @@ export function Results() {
               <span>{t(lang, 'ab_total')}</span>
               <span className="num" style={{ color: 'var(--color-copper)' }}>{num(geo.netFloorArea, 0)} м²</span>
             </div>
+            {/* справочно: по наружным осям (габаритная), минус двусветный зал */}
+            <div className="spec-row" style={{ borderBottom: 'none', opacity: 0.8 }}>
+              <span style={{ color: 'var(--color-ink-soft)' }}>
+                {lang === 'hy'
+                  ? 'Ըստ արտաքին առանցքների (−սրահ), տեղեկատու'
+                  : lang === 'en'
+                  ? 'By outer axes (−hall), for reference'
+                  : 'По наружным осям (−зал), справочно'}
+              </span>
+              <span className="num" style={{ color: 'var(--color-ink-soft)' }}>{num(Math.max(0, geo.totalFloorArea - geo.hallVoid), 0)} м²</span>
+            </div>
+            <p style={{ margin: '0.5rem 0 0', fontSize: '0.7rem', color: 'var(--color-ink-soft)', lineHeight: 1.5 }}>
+              {lang === 'hy'
+                ? 'Նորմատիվ մակերեսը (ՀՀՇՆ 31-01-2014) հաշվվում է պատերի ներքին մակերևույթներով, ուստի փոքր է առանցքային մակերեսից պատերի հաստության չափով։'
+                : lang === 'en'
+                ? 'The normative area (ՀՀՇՆ 31-01-2014) is measured by internal wall surfaces, so it is smaller than the axis area by the thickness of the walls.'
+                : 'Нормативная площадь (ՀՀՇՆ 31-01-2014) считается по внутренним поверхностям стен, поэтому меньше «осевой» на толщину наружных стен.'}
+            </p>
           </div>
         </details>
 
