@@ -31,7 +31,8 @@ export interface Geometry {
   perimeter: number // P
   bearingLength: number // L_нес
   wallHeight: number // H
-  totalFloorArea: number // A_общ
+  totalFloorArea: number // A_общ (без вычета)
+  netFloorArea: number // A_общ − проём двусветного зала (реальная площадь пола)
   wallGross: number
   openingsArea: number
   wallNet: number
@@ -282,6 +283,7 @@ export function computeQuantities(p: HouseParams): Quantities {
     bearingLength: Lb,
     wallHeight: H,
     totalFloorArea,
+    netFloorArea: Math.max(0, totalFloorArea - hallVoid),
     wallGross,
     openingsArea,
     wallNet,

@@ -505,6 +505,17 @@ export const DICT: Dict = {
   beamsOverHall: { ru: 'Балки над залом заложены', hy: 'Հեծանները սրահի վրա նախատեսված են' },
   tab_analysis: { ru: 'Сравнение и сроки', hy: 'Համեմատություն և ժամկետներ' },
   tab_docs: { ru: 'Нормы и документы', hy: 'Նորմեր և փաստաթղթեր' },
+  plotArea: { ru: 'Площадь участка, м²', hy: 'Հողամասի մակերես, մ²' },
+  proc41Ok: { ru: 'Подходит под упрощённый порядок N 4.1 (пост. N 1969-Ն)', hy: 'Համապատասխանում է պարզեցված ընթացակարգին N 4.1 (N 1969-Ն)' },
+  proc41No: { ru: 'Не подходит под упрощённый порядок N 4.1 — обычная процедура', hy: 'Չի համապատասխանում N 4.1-ին — սովորական ընթացակարգ' },
+  proc41Cond: {
+    ru: 'Условия N 4.1: участок ≥ 400 м², дом ≤ 300 м², ≤ 2 надземных + 1 подземный этаж, непредпринимательское назначение.',
+    hy: 'N 4.1 պայմաններ՝ հողամաս ≥ 400 մ², տուն ≤ 300 մ², ≤ 2 վերգետնյա + 1 ստորգետնյա հարկ, ոչ ձեռնարկատիրական։',
+  },
+  areaTotal: { ru: 'Площадь дома', hy: 'Տան մակերես' },
+  areaHint: { ru: 'с учётом открытого зала', hy: 'բաց սրահը հաշված' },
+  procSimplified: { ru: '≤ 300 м² · обычно Категория II (упрощённо, без экспертизы)', hy: '≤ 300 մ² · սովորաբար II կարգ (պարզեցված, առանց փորձաքննության)' },
+  procFull: { ru: '> 300 м² · вероятно выше Кат. II — нужна экспертиза', hy: '> 300 մ² · հավանաբար II կարգից բարձր — պահանջվում է փորձաքննություն' },
   points: { ru: 'баллов', hy: 'բալ' },
   noPrice: { ru: 'нет цены', hy: 'չկա գին' },
   invalidDims: { ru: 'неверные габариты', hy: 'սխալ չափսեր' },
@@ -650,6 +661,14 @@ const EN: Record<string, string> = {
   points: 'points',
   noPrice: 'no price',
   invalidDims: 'invalid dimensions',
+  areaTotal: 'House area',
+  areaHint: 'open hall accounted for',
+  procSimplified: '≤ 300 m² · simplified',
+  procFull: '> 300 m² · full procedure',
+  plotArea: 'Plot area, m²',
+  proc41Ok: 'Eligible for simplified procedure N 4.1 (Decision N 1969-Ն)',
+  proc41No: 'Not eligible for simplified N 4.1 — standard procedure',
+  proc41Cond: 'N 4.1 conditions: plot ≥ 400 m², house ≤ 300 m², ≤ 2 above-ground + 1 basement, non-commercial.',
 }
 
 export function t(lang: Lang, key: keyof typeof DICT): string {

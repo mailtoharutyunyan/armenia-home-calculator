@@ -29,6 +29,7 @@ export interface HouseParams {
   infillMaterial: InfillMaterial // used when system === 'frame'
   length: number // m, outer axis
   width: number // m, outer axis
+  plotArea: number // м², площадь земельного участка (для упрощённого порядка N 4.1)
   floors: number // above-ground floors
   floorHeight: number // m
   wallThickness: number // m
@@ -86,6 +87,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   infillMaterial: 'aerated',
   length: 13,
   width: 14,
+  plotArea: 500,
   floors: 2,
   floorHeight: 3, // двусветный зал = 2 × 3 = 6 м
   wallThickness: 0.3,
@@ -108,7 +110,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   floorSlab: 'monolith',
   seismicReinforcementDisabled: false,
   doubleHeightHall: true, // двусветный зал 6 м
-  hallArea: 45,
+  hallArea: 80, // проём двусветного зала: 364 − 80 = 284 м² (≤ 300, порядок N 4.1)
   includePermitCost: true,
   roomsPerFloor: 3, // студия (зал+кухня) + гостевой санузел + мастер-комната
   kitchenLivingCombined: true,

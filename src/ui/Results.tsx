@@ -4,7 +4,7 @@ import { t } from '../i18n'
 import { computeQuantities } from '../engine/quantities'
 import { computeEstimate } from '../engine/pricing'
 import type { SectionId } from '../engine/quantities'
-import { money } from './format'
+import { money, num } from './format'
 
 const SECTION_LABEL: Record<SectionId, { ru: string; hy: string }> = {
   earthworks: { ru: 'Земляные работы', hy: 'Հողային աշխատանքներ' },
@@ -32,10 +32,12 @@ export function Results() {
       excludedSections: excluded.includes(sec) ? excluded.filter((s) => s !== sec) : [...excluded, sec],
     })
 
-  const est = useMemo(() => {
+  const { est, geo } = useMemo(() => {
     const q = computeQuantities(house)
-    return computeEstimate(q, prices, house, priceMode)
+    return { est: computeEstimate(q, prices, house, priceMode), geo: q.geometry }
   }, [house, prices, priceMode])
+  // Упрощённый порядок N 4.1 (пост. N 1969-Ն): участок ≥400 м², дом ≤300 м², ≤2 надземных этажа
+  const proc41 = geo.netFloorArea <= 300 && house.floors <= 2 && house.plotArea >= 400
 
   const m = (v: number) => money(v, house.currency, amdPerUsd)
 
@@ -58,6 +60,35 @@ export function Results() {
       </div>
 
       <div style={{ padding: '1rem' }}>
+        {/* area + RA procedure threshold (300 m²) */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '0.8rem',
+            flexWrap: 'wrap',
+            marginBottom: '1rem',
+            paddingBottom: '0.9rem',
+            borderBottom: '1px solid var(--color-border)',
+          }}
+        >
+          <div>
+            <div className="mono" style={{ fontSize: '0.66rem', color: 'var(--color-ink-soft)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              {t(lang, 'areaTotal')} · {t(lang, 'areaHint')}
+            </div>
+            <div className="mono" style={{ fontSize: '1.4rem', fontWeight: 700 }}>
+              {num(geo.netFloorArea, 0)} м²
+            </div>
+          </div>
+          <span className={`badge ${proc41 ? 'lvl-info' : 'lvl-warning'}`} style={{ padding: '0.3rem 0.7rem' }}>
+            {t(lang, proc41 ? 'proc41Ok' : 'proc41No')}
+          </span>
+        </div>
+        <p style={{ margin: '-0.4rem 0 1rem', fontSize: '0.72rem', color: 'var(--color-ink-soft)', lineHeight: 1.5 }}>
+          {t(lang, 'proc41Cond')}
+        </p>
+
         {/* include / exclude sections */}
         <div style={{ marginBottom: '1rem' }}>
           <div className="eyebrow" style={{ marginBottom: '0.6rem' }}>

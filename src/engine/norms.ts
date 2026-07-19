@@ -104,15 +104,30 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
       hy: `Հարկի բարձրությունը ${p.floorHeight} մ բարձր է սովորականից։`,
     })
   }
-  if (p.floors > n.simplifiedMaxFloors || q.geometry.totalFloorArea > n.simplifiedMaxArea) {
+  // Упрощённый порядок N 4.1 (пост. N 1969-Ն, с 01.06.2026)
+  const proc41 =
+    q.geometry.netFloorArea <= n.simplifiedMaxArea && p.floors <= n.simplifiedMaxFloors && p.plotArea >= 400
+  if (!proc41) {
+    const reasons: string[] = []
+    if (q.geometry.netFloorArea > n.simplifiedMaxArea) reasons.push(`площадь ${Math.round(q.geometry.netFloorArea)} > 300 м²`)
+    if (p.floors > n.simplifiedMaxFloors) reasons.push(`этажей > ${n.simplifiedMaxFloors}`)
+    if (p.plotArea < 400) reasons.push(`участок ${p.plotArea} < 400 м²`)
     w.push({
       level: 'info',
-      code: 'ՀՀՇՆ 31-01-2014',
-      ru: `Дом выходит за упрощённую процедуру (≤ ${n.simplifiedMaxFloors} эт. и ≤ ${n.simplifiedMaxArea} м²): нужна полная процедура/экспертиза.`,
-      hy: `Տունը դուրս է պարզեցված ընթացակարգից (≤ ${n.simplifiedMaxFloors} հարկ և ≤ ${n.simplifiedMaxArea} մ²)։`,
+      code: 'Пост. N 1969-Ն (N 4.1)',
+      ru: `Не подходит под упрощённый порядок N 4.1 (${reasons.join(', ')}) — обычная процедура для категории объекта.`,
+      hy: `Չի համապատասխանում պարզեցված N 4.1 ընթացակարգին — սովորական ընթացակարգ։`,
     })
   }
-  const usableArea = q.geometry.totalFloorArea * n.usableRatio
+  if (q.geometry.netFloorArea > 1000) {
+    w.push({
+      level: 'info',
+      code: 'Мин. экологии РА',
+      ru: 'Площадь > 1000 м² — требуется экологическая экспертиза (Минэкологии РА).',
+      hy: 'Մակերեսը > 1000 մ² — պահանջվում է էկոլոգիական փորձաքննություն։',
+    })
+  }
+  const usableArea = q.geometry.netFloorArea * n.usableRatio
   const lightRatio = usableArea > 0 ? p.windowAreaTotal / usableArea : 0
   if (lightRatio < n.minLightRatio) {
     w.push({

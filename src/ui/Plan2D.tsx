@@ -36,9 +36,15 @@ export function Plan2D() {
     ? editRooms!.map((r) => ({ type: r.type, label: r.label, weight: r.weight }))
     : (() => {
         let bed = 0
+        const ground = activeFloor === 0
         return autoProgram(house, activeFloor).map((s) => {
-          const base = TYPE_LABEL[s.type][lang === 'hy' ? 'hy' : 'ru']
-          const label = s.type === 'bedroom' ? `${base} ${++bed}` : base
+          const ru = lang !== 'hy'
+          let label = TYPE_LABEL[s.type][ru ? 'ru' : 'hy']
+          if (s.type === 'bath' && ground) label = ru ? 'Гостевой санузел' : 'Հյուրերի սանհանգույց'
+          else if (s.type === 'bedroom') {
+            bed++
+            label = ground && bed === 1 ? (ru ? 'Мастер-спальня' : 'Գլխավոր ննջասենյակ') : `${TYPE_LABEL.bedroom[ru ? 'ru' : 'hy']} ${bed}`
+          }
           return { type: s.type, label, weight: s.weight }
         })
       })()

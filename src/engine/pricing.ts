@@ -157,8 +157,7 @@ export function computeEstimate(
   const low = priceAtMode(q, catalog, p, 'min')
   const high = priceAtMode(q, catalog, p, 'max')
 
-  const perM2 =
-    q.geometry.totalFloorArea > 0 ? selected.turnkey.total / q.geometry.totalFloorArea : 0
+  const perM2 = q.geometry.netFloorArea > 0 ? selected.turnkey.total / q.geometry.netFloorArea : 0
 
   return {
     lines: selected.lines,

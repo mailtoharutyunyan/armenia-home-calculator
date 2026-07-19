@@ -112,6 +112,7 @@ export function Inputs() {
           <Num label={t(lang, 'floors')} value={house.floors} onChange={(n) => set({ floors: n })} />
           <Num label={t(lang, 'floorHeight')} value={house.floorHeight} step={0.1} onChange={(n) => set({ floorHeight: n })} />
         </div>
+        <Num label={t(lang, 'plotArea')} value={house.plotArea} step={50} onChange={(n) => set({ plotArea: n })} />
 
         {/* Step 3 — foundation */}
         <div className="eyebrow" style={{ marginTop: '0.8rem' }}>03 · {t(lang, 'step_foundation')}</div>
