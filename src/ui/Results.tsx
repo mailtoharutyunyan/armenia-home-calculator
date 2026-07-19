@@ -94,8 +94,8 @@ export function Results() {
           <summary className="eyebrow" style={{ cursor: 'pointer' }}>{t(lang, 'areaBreakdown')}</summary>
           <div style={{ marginTop: '0.6rem' }}>
             <AreaRow label={t(lang, 'ab_builtup')} v={geo.footprint} />
-            <AreaRow label={t(lang, 'ab_floor1')} v={geo.footprint} />
-            {house.floors > 1 && <AreaRow label={t(lang, 'ab_upper')} v={Math.max(0, geo.netFloorArea - geo.footprint)} />}
+            <AreaRow label={t(lang, 'ab_floor1')} v={geo.internalPerFloor} />
+            {house.floors > 1 && <AreaRow label={t(lang, 'ab_upper')} v={Math.max(0, geo.netFloorArea - geo.internalPerFloor)} />}
             {geo.hallVoid > 0 && <AreaRow label={t(lang, 'ab_hall')} v={geo.hallVoid} minus />}
             <div className="spec-row" style={{ fontWeight: 700, borderBottom: 'none' }}>
               <span>{t(lang, 'ab_total')}</span>
