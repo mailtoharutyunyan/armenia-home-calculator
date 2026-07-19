@@ -37,7 +37,8 @@ export interface Estimate {
   sectionTotals: Record<string, number>
   act: Totals
   turnkey: Totals
-  perM2: number
+  perM2: number // под ключ, ֏/м²
+  perM2Act: number // коробка (акт), ֏/м²
   rangeLow: number // turnkey total at min supplier prices
   rangeHigh: number // turnkey total at max supplier prices
   missing: string[]
@@ -160,7 +161,9 @@ export function computeEstimate(
   const low = priceAtMode(q, catalog, p, 'min')
   const high = priceAtMode(q, catalog, p, 'max')
 
-  const perM2 = q.geometry.netFloorArea > 0 ? selected.turnkey.total / q.geometry.netFloorArea : 0
+  const area = q.geometry.netFloorArea
+  const perM2 = area > 0 ? selected.turnkey.total / area : 0
+  const perM2Act = area > 0 ? selected.act.total / area : 0
 
   return {
     lines: selected.lines,
@@ -168,6 +171,7 @@ export function computeEstimate(
     act: selected.act,
     turnkey: selected.turnkey,
     perM2,
+    perM2Act,
     rangeLow: low.turnkey.total,
     rangeHigh: high.turnkey.total,
     missing: selected.missing,

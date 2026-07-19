@@ -144,8 +144,8 @@ export function Results() {
 
         {/* headline totals */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
-          <Tile label={t(lang, 'stageAct')} value={m(est.act.total)} accent="navy" />
-          <Tile label={t(lang, 'stageTurnkey')} value={m(est.turnkey.total)} accent="copper" />
+          <Tile label={t(lang, 'stageAct')} value={m(est.act.total)} sub={`${m(est.perM2Act)} / м²`} accent="navy" />
+          <Tile label={t(lang, 'stageTurnkey')} value={m(est.turnkey.total)} sub={`${m(est.perM2)} / м²`} accent="copper" />
         </div>
 
         <div
@@ -241,7 +241,7 @@ export function Results() {
   )
 }
 
-function Tile({ label, value, accent }: { label: string; value: string; accent: 'navy' | 'copper' }) {
+function Tile({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent: 'navy' | 'copper' }) {
   return (
     <div
       style={{
@@ -258,6 +258,11 @@ function Tile({ label, value, accent }: { label: string; value: string; accent: 
       <div className="mono" style={{ fontSize: '1.25rem', fontWeight: 700, marginTop: '0.2rem' }}>
         {value}
       </div>
+      {sub && (
+        <div className="mono" style={{ fontSize: '0.72rem', color: 'var(--color-copper)', marginTop: '0.15rem' }}>
+          {sub}
+        </div>
+      )}
     </div>
   )
 }
