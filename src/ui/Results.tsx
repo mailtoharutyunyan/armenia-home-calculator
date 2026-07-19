@@ -1,0 +1,180 @@
+import { useMemo } from 'react'
+import { useProject } from '../store/useProject'
+import { t } from '../i18n'
+import { computeQuantities } from '../engine/quantities'
+import { computeEstimate } from '../engine/pricing'
+import type { SectionId } from '../engine/quantities'
+import { money } from './format'
+
+const SECTION_LABEL: Record<SectionId, { ru: string; hy: string }> = {
+  earthworks: { ru: 'Земляные работы', hy: 'Հողային աշխատանքներ' },
+  foundation: { ru: 'Фундамент и бетон', hy: 'Հիմք և բետոն' },
+  walls: { ru: 'Стены и кладка', hy: 'Պատեր և շարվածք' },
+  frame: { ru: 'Каркас', hy: 'Կմախք' },
+  floors: { ru: 'Перекрытия и стяжка', hy: 'Ծածկեր և շաղախ' },
+  stair: { ru: 'Лестница', hy: 'Աստիճան' },
+  roof: { ru: 'Кровля', hy: 'Տանիք' },
+  openings: { ru: 'Окна и двери', hy: 'Պատուհաններ և դռներ' },
+  partitions: { ru: 'Перегородки', hy: 'Միջնապատեր' },
+  finishing: { ru: 'Отделка', hy: 'Հարդարում' },
+  facade: { ru: 'Фасад', hy: 'Ֆասադ' },
+  engineering: { ru: 'Инженерные сети', hy: 'Ինժեներական ցանցեր' },
+  permit: { ru: 'Документы и разрешение', hy: 'Փաստաթղթեր և թույլտվություն' },
+}
+
+export function Results() {
+  const { house, prices, lang, priceMode, setPriceMode, amdPerUsd } = useProject()
+
+  const est = useMemo(() => {
+    const q = computeQuantities(house)
+    return computeEstimate(q, prices, house, priceMode)
+  }, [house, prices, priceMode])
+
+  const m = (v: number) => money(v, house.currency, amdPerUsd)
+
+  // group lines by section
+  const sections = new Map<SectionId, typeof est.lines>()
+  for (const l of est.lines) {
+    if (!sections.has(l.section)) sections.set(l.section, [])
+    sections.get(l.section)!.push(l)
+  }
+
+  return (
+    <div className="panel" id="estimate">
+      <div className="panel-head">
+        <span>{t(lang, 'resultTitle')}</span>
+        <div className="seg no-print">
+          <button aria-pressed={priceMode === 'min'} onClick={() => setPriceMode('min')}>{t(lang, 'pm_min')}</button>
+          <button aria-pressed={priceMode === 'typical'} onClick={() => setPriceMode('typical')}>{t(lang, 'pm_typical')}</button>
+          <button aria-pressed={priceMode === 'max'} onClick={() => setPriceMode('max')}>{t(lang, 'pm_max')}</button>
+        </div>
+      </div>
+
+      <div style={{ padding: '1rem' }}>
+        {/* headline totals */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+          <Tile label={t(lang, 'stageAct')} value={m(est.act.total)} accent="navy" />
+          <Tile label={t(lang, 'stageTurnkey')} value={m(est.turnkey.total)} accent="copper" />
+        </div>
+
+        <div
+          style={{
+            marginTop: '0.8rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            borderTop: '1px solid var(--color-border)',
+            borderBottom: '1px solid var(--color-border)',
+            padding: '0.6rem 0',
+          }}
+        >
+          <div>
+            <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--color-ink-soft)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              {t(lang, 'range')}
+            </div>
+            <div className="mono" style={{ fontSize: '1.02rem', fontWeight: 700 }}>
+              {m(est.rangeLow)} — {m(est.rangeHigh)}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--color-ink-soft)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              {t(lang, 'perM2')}
+            </div>
+            <div className="mono" style={{ fontSize: '1.02rem', fontWeight: 700, color: 'var(--color-copper)' }}>
+              {m(est.perM2)}
+            </div>
+          </div>
+        </div>
+
+        {est.missing.length > 0 && (
+          <div className="mono lvl-warning" style={{ marginTop: '0.6rem', fontSize: '0.74rem' }}>
+            ⚠ нет цены: {est.missing.join(', ')}
+          </div>
+        )}
+
+        {/* bill of quantities by section */}
+        <div style={{ marginTop: '1rem' }}>
+          {[...sections.entries()].map(([sec, lines]) => {
+            const secTotal = est.sectionTotals[sec] ?? 0
+            return (
+              <details key={sec} style={{ marginBottom: '0.4rem' }} open>
+                <summary
+                  style={{
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    padding: '0.3rem 0',
+                  }}
+                >
+                  <span>{lang === 'ru' ? SECTION_LABEL[sec].ru : SECTION_LABEL[sec].hy}</span>
+                  <span className="mono">{m(secTotal)}</span>
+                </summary>
+                <div style={{ paddingLeft: '0.4rem' }}>
+                  {lines.map((l, i) => (
+                    <div className="spec-row" key={i}>
+                      <span>
+                        {lang === 'ru' ? l.labelRu : l.labelHy}
+                        <span className="mono" style={{ color: 'var(--color-ink-soft)', marginLeft: '0.4rem', fontSize: '0.72rem' }}>
+                          {l.quantity.toFixed(l.unit === 'шт' ? 0 : 1)} {l.unit}
+                        </span>
+                      </span>
+                      <span className="num">{m(l.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )
+          })}
+        </div>
+
+        {/* footer totals */}
+        <div style={{ marginTop: '0.8rem', borderTop: '2px solid var(--color-navy)', paddingTop: '0.6rem' }}>
+          <Row label={t(lang, 'material')} value={m(est.turnkey.material)} />
+          <Row label={t(lang, 'labor')} value={m(est.turnkey.labor)} />
+          <Row label={t(lang, 'reserve')} value={m(est.turnkey.reserve)} />
+          {house.vatIncluded && <Row label={t(lang, 'vatLine')} value={m(est.turnkey.vat)} />}
+          <div className="spec-row" style={{ borderBottom: 'none', fontWeight: 700 }}>
+            <span style={{ fontFamily: 'var(--font-display)' }}>{t(lang, 'total')} ({t(lang, 'stageTurnkey')})</span>
+            <span className="num" style={{ fontSize: '1.05rem', color: 'var(--color-copper)' }}>{m(est.turnkey.total)}</span>
+          </div>
+        </div>
+
+        <p style={{ marginTop: '0.9rem', fontSize: '0.72rem', color: 'var(--color-ink-soft)', lineHeight: 1.5 }}>
+          {t(lang, 'disclaimer')}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function Tile({ label, value, accent }: { label: string; value: string; accent: 'navy' | 'copper' }) {
+  return (
+    <div
+      style={{
+        border: `1px solid var(--color-border)`,
+        borderLeft: `3px solid var(--color-${accent})`,
+        padding: '0.7rem 0.8rem',
+        background: '#fff',
+      }}
+    >
+      <div className="mono" style={{ fontSize: '0.66rem', color: 'var(--color-ink-soft)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+        {label}
+      </div>
+      <div className="mono" style={{ fontSize: '1.25rem', fontWeight: 700, marginTop: '0.2rem' }}>
+        {value}
+      </div>
+    </div>
+  )
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="spec-row">
+      <span style={{ color: 'var(--color-ink-soft)' }}>{label}</span>
+      <span className="num">{value}</span>
+    </div>
+  )
+}
