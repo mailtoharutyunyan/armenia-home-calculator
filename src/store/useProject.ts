@@ -16,10 +16,34 @@ export interface EditRoom {
 let roomCounter = 0
 export const newRoomId = () => `r${++roomCounter}`
 
+export interface Scenario {
+  id: string
+  name: string
+  house: HouseParams
+}
+
 const PRICE_KEY = 'ahc_prices_v1'
 const LANG_KEY = 'ahc_lang_v1'
 const HOUSE_KEY = 'ahc_house_v4'
 const THEME_KEY = 'ahc_theme_v1'
+const SCEN_KEY = 'ahc_scenarios_v1'
+
+function loadScenarios(): Scenario[] {
+  try {
+    const raw = localStorage.getItem(SCEN_KEY)
+    return raw ? (JSON.parse(raw) as Scenario[]) : []
+  } catch {
+    return []
+  }
+}
+
+function persistScenarios(list: Scenario[]) {
+  try {
+    localStorage.setItem(SCEN_KEY, JSON.stringify(list))
+  } catch {
+    /* ignore */
+  }
+}
 
 export type Theme = 'dark' | 'light'
 
@@ -89,6 +113,10 @@ interface ProjectState {
   setPriceItem: (key: string, patch: Partial<PriceItem>) => void
   resetPrices: () => void
   resetAll: () => void
+  scenarios: Scenario[]
+  saveScenario: (name: string) => void
+  loadScenario: (id: string) => void
+  deleteScenario: (id: string) => void
   setLang: (l: Lang) => void
   setPriceMode: (m: PriceMode) => void
   setAmdPerUsd: (n: number) => void
@@ -99,6 +127,7 @@ export const useProject = create<ProjectState>((set, get) => ({
   prices: loadPrices(),
   lang: loadLang(),
   theme: loadTheme(),
+  scenarios: loadScenarios(),
   priceMode: 'typical',
   amdPerUsd: AMD_PER_USD_DEFAULT,
   tab: 'calc',
@@ -157,6 +186,31 @@ export const useProject = create<ProjectState>((set, get) => ({
     } catch {
       /* ignore */
     }
+  },
+
+  saveScenario: (name) => {
+    const trimmed = name.trim() || 'Вариант'
+    const house = { ...get().house, eng: { ...get().house.eng } }
+    const id = 's' + get().scenarios.length + '_' + trimmed
+    const list = [...get().scenarios.filter((s) => s.name !== trimmed), { id, name: trimmed, house }]
+    set({ scenarios: list })
+    persistScenarios(list)
+  },
+  loadScenario: (id) => {
+    const s = get().scenarios.find((x) => x.id === id)
+    if (!s) return
+    const house = { ...s.house, eng: { ...s.house.eng } }
+    set({ house })
+    try {
+      localStorage.setItem(HOUSE_KEY, JSON.stringify(house))
+    } catch {
+      /* ignore */
+    }
+  },
+  deleteScenario: (id) => {
+    const list = get().scenarios.filter((s) => s.id !== id)
+    set({ scenarios: list })
+    persistScenarios(list)
   },
 
   setLang: (lang) => {

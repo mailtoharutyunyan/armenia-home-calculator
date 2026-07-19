@@ -239,6 +239,18 @@ tbody tr:hover { background: var(--color-surface-2); }
 
 .swatch { display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 2px; vertical-align: -1px; margin-right: 0.3rem; }
 
+/* allow inputs to shrink inside grid/flex columns (prevents mobile overflow) */
+.input { min-width: 0; }
+
+@media (max-width: 560px) {
+  body { overflow-x: hidden; }
+  main { padding: 1.5rem 1rem !important; }
+  .panel-head { flex-wrap: wrap; }
+  .panel-head .sub { flex-basis: 100%; }
+  /* long letter-spaced step labels must not overflow the narrow panel */
+  .eyebrow { letter-spacing: 0.06em; font-size: 0.62rem; flex-wrap: wrap; min-width: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }

@@ -178,3 +178,6 @@ export const SEED_PRICES: Catalog = Object.fromEntries(
 )
 
 export const AMD_PER_USD_DEFAULT = 385
+
+// Когда прайс последний раз сверялся с поставщиками (показывается в редакторе цен).
+export const PRICES_UPDATED = '20.07.2026'

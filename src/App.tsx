@@ -4,6 +4,7 @@ import { Plan2D } from './ui/Plan2D'
 import { Results } from './ui/Results'
 import { Warnings } from './ui/Warnings'
 import { Compare } from './ui/Compare'
+import { Scenarios } from './ui/Scenarios'
 import { Credit } from './ui/Credit'
 import { Gallery } from './ui/Gallery'
 import { Timeline } from './ui/Timeline'
@@ -46,6 +47,7 @@ export default function App() {
         {tab === 'gallery' && <Gallery />}
         {tab === 'analysis' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.6rem' }}>
+            <Scenarios />
             <Compare />
             <Timeline />
             <Credit />
@@ -79,6 +81,7 @@ export default function App() {
           gap: 1.6rem;
           align-items: start;
         }
+        .workspace > div { min-width: 0; }
         .side-fixed::-webkit-scrollbar { width: 8px; }
         .side-fixed::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 8px; }
         .side-fixed { scrollbar-width: thin; scrollbar-color: var(--color-border) transparent; }

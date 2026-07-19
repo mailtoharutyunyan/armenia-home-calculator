@@ -6,6 +6,8 @@ import { computeEstimate } from '../engine/pricing'
 import type { SectionId } from '../engine/quantities'
 import { labelFor } from '../model/catalog'
 import { money, num } from './format'
+import { openSmetaPdf } from './smetaPdf'
+import { PRICES_UPDATED } from '../data/prices'
 
 const SECTION_LABEL: Record<SectionId, { ru: string; hy: string; en: string }> = {
   earthworks: { ru: 'Земляные работы', hy: 'Հողային աշխատանքներ', en: 'Earthworks' },
@@ -53,14 +55,35 @@ export function Results() {
     sections.get(l.section)!.push(l)
   }
 
+  const openPdf = () =>
+    openSmetaPdf({
+      lang,
+      house: `${house.length}×${house.width} ${lang !== 'hy' ? 'м' : 'մ'} · ${house.floors} ${t(lang, 'floors').toLowerCase()} · ${t(lang, `sys_${house.system}` as 'sys_frame')}`,
+      area: `${num(geo.netFloorArea, 0)} м²`,
+      shell: m(est.act.total),
+      turnkey: m(est.turnkey.total),
+      perM2: m(est.perM2),
+      perM2Act: m(est.perM2Act),
+      sections: [...sections.keys()].map((sec) => ({ label: secLabel(sec, lang), value: m(est.sectionTotals[sec] ?? 0) })),
+      material: m(est.turnkey.material),
+      labor: m(est.turnkey.labor),
+      date: PRICES_UPDATED,
+      disclaimer: t(lang, 'disclaimer'),
+    })
+
   return (
     <div className="panel" id="estimate">
       <div className="panel-head">
         <span>{t(lang, 'resultTitle')}</span>
-        <div className="seg no-print">
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }} className="no-print">
+        <button className="btn btn-ghost" style={{ padding: '0.25rem 0.1rem', fontSize: '0.76rem' }} onClick={openPdf}>
+          ↧ {lang === 'hy' ? 'Նախահաշիվ PDF' : lang === 'en' ? 'Estimate PDF' : 'Смета PDF'}
+        </button>
+        <div className="seg">
           <button aria-pressed={priceMode === 'min'} onClick={() => setPriceMode('min')}>{t(lang, 'pm_min')}</button>
           <button aria-pressed={priceMode === 'typical'} onClick={() => setPriceMode('typical')}>{t(lang, 'pm_typical')}</button>
           <button aria-pressed={priceMode === 'max'} onClick={() => setPriceMode('max')}>{t(lang, 'pm_max')}</button>
+        </div>
         </div>
       </div>
 

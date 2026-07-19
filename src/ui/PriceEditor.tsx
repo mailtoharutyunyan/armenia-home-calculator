@@ -1,6 +1,7 @@
 import { useProject } from '../store/useProject'
 import { t } from '../i18n'
 import { labelFor } from '../model/catalog'
+import { PRICES_UPDATED } from '../data/prices'
 
 const SUPPLIER_LINKS: { label: string; url: string }[] = [
   { label: 'MM Leader (бетон)', url: 'https://mmlider.am/betoni-artadrowtyown' },
@@ -24,6 +25,9 @@ export function PriceEditor() {
       </div>
 
       <div style={{ padding: '0.6rem 1rem', borderBottom: '1px solid var(--color-border)', display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <span className="badge lvl-info" style={{ padding: '0.14rem 0.5rem' }}>
+          {(lang === 'hy' ? 'ստուգված ' : lang === 'en' ? 'verified ' : 'проверено ') + PRICES_UPDATED}
+        </span>
         <span className="mono" style={{ fontSize: '0.72rem', color: 'var(--color-ink-soft)' }}>{t(lang, 'sources')}:</span>
         {SUPPLIER_LINKS.map((s) => (
           <a key={s.url} href={s.url} target="_blank" rel="noreferrer" className="mono" style={{ fontSize: '0.72rem', color: 'var(--color-info)' }}>
