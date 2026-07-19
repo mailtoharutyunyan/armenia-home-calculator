@@ -94,7 +94,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   foundation: 'strip',
   basement: false,
   basementDepth: 2.4,
-  roof: 'pitched',
+  roof: 'flat', // плоская крыша
   roofPitchDeg: 30,
   windowAreaTotal: 40, // панорамные окна студии
   vitrageShare: 0.25,
