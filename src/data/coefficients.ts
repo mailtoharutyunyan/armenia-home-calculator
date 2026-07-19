@@ -61,7 +61,7 @@ export const COEFF = {
   precastSlabArea: 5.4, // m2 per ПК slab (typ 1.2 x 4.5)
 
   // economics
-  contingency: 0.12, // reserve on the total
+  contingency: 0, // резерв отключён (было 0.12)
   vatRate: 0.2,
 
   // engineering-network cost is priced per m2 of total floor area (see prices)

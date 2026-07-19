@@ -202,7 +202,7 @@ export function Results() {
         <div style={{ marginTop: '0.8rem', borderTop: '2px solid var(--color-navy)', paddingTop: '0.6rem' }}>
           <Row label={t(lang, 'material')} value={m(est.turnkey.material)} />
           <Row label={t(lang, 'labor')} value={m(est.turnkey.labor)} />
-          <Row label={t(lang, 'reserve')} value={m(est.turnkey.reserve)} />
+          {est.turnkey.reserve > 0 && <Row label={t(lang, 'reserve')} value={m(est.turnkey.reserve)} />}
           {house.vatIncluded && <Row label={t(lang, 'vatLine')} value={m(est.turnkey.vat)} />}
           <div className="spec-row" style={{ borderBottom: 'none', fontWeight: 700 }}>
             <span style={{ fontFamily: 'var(--font-display)' }}>{t(lang, 'total')} ({t(lang, 'stageTurnkey')})</span>

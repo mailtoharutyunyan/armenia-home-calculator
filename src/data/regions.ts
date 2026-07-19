@@ -16,7 +16,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     nameHy: 'Երևան',
     seismic: 8,
     frostDepth: 0.8,
-    deliverySurcharge: 0.05,
+    deliverySurcharge: 0,
   },
   ararat_valley: {
     key: 'ararat_valley',
@@ -24,7 +24,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     nameHy: 'Արարատյան դաշտ',
     seismic: 8,
     frostDepth: 0.8,
-    deliverySurcharge: 0.06,
+    deliverySurcharge: 0,
   },
   kotayk: {
     key: 'kotayk',
@@ -32,7 +32,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     nameHy: 'Կոտայք',
     seismic: 8,
     frostDepth: 1.4,
-    deliverySurcharge: 0.06,
+    deliverySurcharge: 0,
   },
   gyumri: {
     key: 'gyumri',
@@ -40,7 +40,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     nameHy: 'Գյումրի',
     seismic: 9,
     frostDepth: 1.5,
-    deliverySurcharge: 0.08,
+    deliverySurcharge: 0,
   },
   vanadzor: {
     key: 'vanadzor',
@@ -48,7 +48,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     nameHy: 'Վանաձոր',
     seismic: 9,
     frostDepth: 1.2,
-    deliverySurcharge: 0.08,
+    deliverySurcharge: 0,
   },
   sevan: {
     key: 'sevan',
@@ -56,7 +56,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     nameHy: 'Սևան',
     seismic: 9,
     frostDepth: 1.8,
-    deliverySurcharge: 0.1,
+    deliverySurcharge: 0,
   },
   aparan: {
     key: 'aparan',
@@ -64,7 +64,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     nameHy: 'Ապարան',
     seismic: 9,
     frostDepth: 1.8,
-    deliverySurcharge: 0.1,
+    deliverySurcharge: 0,
   },
   syunik: {
     key: 'syunik',
@@ -72,7 +72,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     nameHy: 'Սյունիք',
     seismic: 8,
     frostDepth: 1.4,
-    deliverySurcharge: 0.12,
+    deliverySurcharge: 0,
   },
   other: {
     key: 'other',
@@ -80,6 +80,6 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     nameHy: 'Այլ մարզ',
     seismic: 9,
     frostDepth: 1.2,
-    deliverySurcharge: 0.08,
+    deliverySurcharge: 0,
   },
 }
