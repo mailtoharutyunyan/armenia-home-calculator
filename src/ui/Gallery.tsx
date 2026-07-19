@@ -8,10 +8,22 @@ const modules = import.meta.glob('../assets/gallery/*.{jpg,jpeg,png,webp,JPG,JPE
   import: 'default',
 })
 
-const images = Object.entries(modules).map(([path, url]) => ({
-  url: url as string,
-  name: (path.split('/').pop() ?? '').replace(/\.[^.]+$/, ''),
-}))
+const CAPTIONS: Record<string, string> = {
+  exterior: 'Экстерьер',
+  facade: 'Фасад',
+  'living-room': 'Гостиная',
+  kitchen: 'Кухня',
+  construction: 'Строительство',
+  bedroom: 'Спальня',
+}
+
+const images = Object.entries(modules).map(([path, url]) => {
+  const base = (path.split('/').pop() ?? '').replace(/\.[^.]+$/, '')
+  return {
+    url: url as string,
+    name: CAPTIONS[base] ?? base.replace(/[-_]/g, ' '),
+  }
+})
 
 // Illustrative placeholders shown until the user adds their own photos.
 const PLACEHOLDERS = [
