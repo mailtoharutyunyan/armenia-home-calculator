@@ -25,44 +25,25 @@ const TABS = [
 export default function App() {
   const { house, lang, tab, setTab } = useProject()
 
-  const chips =
-    lang === 'ru'
-      ? ['Соответствие ՀՀՇՆ', 'Акт + под ключ', 'Сейсмика 8–9 баллов', 'Экспорт DXF / PDF']
-      : ['ՀՀՇՆ համապատասխանություն', 'Ակտ + բանալի', 'Սեյսմիկ 8–9 բալ', 'DXF / PDF արտահանում']
-
   return (
     <div id="top">
       <Header />
 
-      {/* Hero — editorial masthead */}
+      {/* Hero — compact editorial masthead */}
       <section style={{ borderBottom: '1px solid var(--color-ink)' }}>
         <div className="hero">
           <div>
             <div className="eyebrow">
               Երևան · {lang === 'ru' ? 'Смета · Проект · 2026' : 'Նախահաշիվ · Նախագիծ · 2026'}
             </div>
-            <h1 style={{ fontSize: 'clamp(2.6rem, 6.5vw, 5rem)', marginTop: '1.4rem', fontWeight: 500, letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: 'clamp(1.7rem, 3.4vw, 2.6rem)', marginTop: '0.7rem', fontWeight: 500, letterSpacing: '-0.02em' }}>
               {t(lang, 'appTitle')}
             </h1>
-            <p style={{ color: 'var(--color-ink-soft)', marginTop: '1.2rem', fontSize: '1.05rem', maxWidth: 480, lineHeight: 1.6 }}>
-              {t(lang, 'appSubtitle')}. {lang === 'ru'
-                ? 'Материалы, стоимость и сроки — от коробки до отделки под ключ.'
-                : 'Նյութեր, արժեք և ժամկետներ՝ կմախքից մինչև հարդարում։'}
+            <p style={{ color: 'var(--color-ink-soft)', marginTop: '0.6rem', fontSize: '0.95rem', maxWidth: 520, lineHeight: 1.55 }}>
+              {t(lang, 'appSubtitle')}.
             </p>
-            <div style={{ marginTop: '2rem', display: 'flex', gap: '1.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <button className="btn btn-accent" onClick={() => setTab('calc')}>{t(lang, 'start')}</button>
-              <button className="btn btn-ghost" onClick={() => setTab('gallery')}>{t(lang, 'nav_gallery')}</button>
-            </div>
-            <div style={{ marginTop: '2rem', borderTop: '1px solid var(--color-border)', paddingTop: '1rem', display: 'flex', gap: '1.4rem', flexWrap: 'wrap' }}>
-              {chips.map((c, i) => (
-                <span key={c} style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-ink-soft)' }}>
-                  <span style={{ color: 'var(--color-copper)', marginRight: '0.4rem' }}>{String(i + 1).padStart(2, '0')}</span>
-                  {c}
-                </span>
-              ))}
-            </div>
           </div>
-          <div className="heroart" style={{ borderLeft: '1px solid var(--color-border)', paddingLeft: '2rem' }}>
+          <div className="heroart">
             <IsoHouse floors={house.floors} pitched={house.roof !== 'flat'} />
           </div>
         </div>
@@ -140,12 +121,13 @@ export default function App() {
         .hero {
           max-width: 1200px;
           margin: 0 auto;
-          padding: 4rem 2rem 3rem;
+          padding: 1.6rem 2rem;
           display: grid;
-          grid-template-columns: 1.15fr 0.85fr;
-          gap: 2.5rem;
+          grid-template-columns: 1fr 220px;
+          gap: 2rem;
           align-items: center;
         }
+        .hero .heroart { max-width: 220px; margin-left: auto; }
         .workspace {
           display: grid;
           grid-template-columns: minmax(320px, 380px) 1fr;

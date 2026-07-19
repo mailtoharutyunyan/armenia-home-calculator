@@ -1,16 +1,7 @@
 import { useProject } from '../store/useProject'
-import { t } from '../i18n'
-
-const NAV = [
-  { id: 'calc', key: 'nav_calc' as const },
-  { id: 'gallery', key: 'nav_gallery' as const },
-  { id: 'analysis', key: 'tab_analysis' as const },
-  { id: 'docs', key: 'tab_docs' as const },
-  { id: 'prices', key: 'nav_prices' as const },
-]
 
 export function Header() {
-  const { lang, setLang, house, setHouse, setTab } = useProject()
+  const { lang, setLang, house, setHouse } = useProject()
 
   return (
     <header
@@ -43,21 +34,7 @@ export function Header() {
           </span>
         </a>
 
-        <nav style={{ display: 'flex', gap: '1.6rem', marginLeft: 'auto', flexWrap: 'wrap' }}>
-          {NAV.map((n) => (
-            <button
-              key={n.id}
-              onClick={() => setTab(n.id)}
-              style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--color-ink-soft)', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-copper)')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-ink-soft)')}
-            >
-              {t(lang, n.key)}
-            </button>
-          ))}
-        </nav>
-
-        <div className="seg">
+        <div className="seg" style={{ marginLeft: 'auto' }}>
           <button aria-pressed={lang === 'ru'} onClick={() => setLang('ru')}>RU</button>
           <button aria-pressed={lang === 'hy'} onClick={() => setLang('hy')}>ՀՅ</button>
         </div>
