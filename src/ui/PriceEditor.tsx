@@ -79,7 +79,7 @@ function NumCell({ value, onChange }: { value: number; onChange: (n: number) => 
   return (
     <input
       className="input mono"
-      style={{ width: 92, padding: '0.3rem 0.4rem', textAlign: 'right' }}
+      style={{ width: 110, padding: '0.3rem 0.4rem', textAlign: 'right' }}
       type="number"
       value={value}
       onChange={(e) => onChange(Number(e.target.value))}
