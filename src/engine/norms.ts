@@ -189,6 +189,16 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
     }
   }
 
+  // ---- Марка арматуры ----
+  if (p.rebarGrade === 'rebar_a400') {
+    w.push({
+      level: 'info',
+      code: 'ՀՀՇՆ II-6.02',
+      ru: 'Арматура A400 допустима, но в сейсмозоне РА предпочтительна A500С.',
+      hy: 'A400 արմատուրը թույլատրելի է, բայց ՀՀ սեյսմիկ գոտում նախընտրելի է A500С։',
+    })
+  }
+
   // ---- Инженерные параметры (ручной ввод) — проверка по нормам ----
   const eng = p.eng
   const push = (level: NormLevel, ru: string, hy: string) => w.push({ level, code: 'ՀՀՇՆ II-6.02', ru, hy })

@@ -72,6 +72,7 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
   let permitAmt = 0
 
   for (const ql of q.lines) {
+    if (p.excludedSections.includes(ql.section)) continue // раздел отключён чекбоксом
     const item = catalog[ql.key]
     if (!item) {
       if (!missing.includes(ql.key)) missing.push(ql.key)
@@ -113,7 +114,7 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
   }
 
   // builders' brigade labour for the shell (act), by editable ֏/m² rate
-  const brigade = Math.max(0, p.laborPerM2) * q.geometry.totalFloorArea
+  const brigade = p.excludedSections.includes('walls') ? 0 : Math.max(0, p.laborPerM2) * q.geometry.totalFloorArea
   if (brigade > 0) {
     lines.push({
       key: 'brigade',

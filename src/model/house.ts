@@ -47,6 +47,8 @@ export interface HouseParams {
   vatIncluded: boolean
   // advanced
   concreteGrade: string // catalog key of the structural concrete grade
+  rebarGrade: string // catalog key of the rebar grade
+  excludedSections: string[] // разделы, исключённые из сметы (чекбоксы)
   floorSlab: 'monolith' | 'precast'
   seismicReinforcementDisabled: boolean // "без сейсмоусиления" toggle -> norm error
   doubleHeightHall: boolean // зал двойной высоты (проём в перекрытии 2-го этажа)
@@ -101,6 +103,8 @@ export const DEFAULT_HOUSE: HouseParams = {
   region: 'yerevan',
   vatIncluded: false,
   concreteGrade: 'concrete_b25',
+  rebarGrade: 'rebar_a500',
+  excludedSections: [],
   floorSlab: 'monolith',
   seismicReinforcementDisabled: false,
   doubleHeightHall: false,

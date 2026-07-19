@@ -264,7 +264,7 @@ export function computeQuantities(p: HouseParams): Quantities {
   for (const key of Object.keys(rebarBySection) as SectionId[]) {
     const kg = (rebarBySection[key] ?? 0) * rebarFloorK
     rebarKg += kg
-    if (kg > 0) lines.push({ key: 'rebar_a500', section: key, stage: 'act', quantity: kg / 1000 })
+    if (kg > 0) lines.push({ key: p.rebarGrade, section: key, stage: 'act', quantity: kg / 1000 })
   }
 
   const geometry: Geometry = {

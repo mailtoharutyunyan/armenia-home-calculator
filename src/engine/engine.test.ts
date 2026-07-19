@@ -136,6 +136,26 @@ describe('permit & hall', () => {
     expect(ff(hall)).toBeLessThan(ff(base))
   })
 
+  it('excluding a section lowers the turnkey total', () => {
+    const q = computeQuantities(house())
+    const full = computeEstimate(q, SEED_PRICES, house({ excludedSections: [] }), 'typical').turnkey.total
+    const noFacade = computeEstimate(q, SEED_PRICES, house({ excludedSections: ['facade'] }), 'typical').turnkey.total
+    expect(noFacade).toBeLessThan(full)
+  })
+
+  it('rebar grade drives the rebar catalog key', () => {
+    const a400 = computeQuantities(house({ rebarGrade: 'rebar_a400' }))
+    expect(a400.lines.some((l) => l.key === 'rebar_a400')).toBe(true)
+    expect(a400.lines.some((l) => l.key === 'rebar_a500')).toBe(false)
+  })
+
+  it('builders labour rate scales the estimate', () => {
+    const q = computeQuantities(house())
+    const low = computeEstimate(q, SEED_PRICES, house({ laborPerM2: 5000 }), 'typical').act.total
+    const high = computeEstimate(q, SEED_PRICES, house({ laborPerM2: 20000 }), 'typical').act.total
+    expect(high).toBeGreaterThan(low)
+  })
+
   it('Kotayk region exists with seismic rating', async () => {
     const { REGIONS } = await import('../data/regions')
     expect(REGIONS.kotayk).toBeTruthy()

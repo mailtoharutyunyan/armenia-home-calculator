@@ -22,8 +22,15 @@ const SECTION_LABEL: Record<SectionId, { ru: string; hy: string }> = {
   permit: { ru: 'Документы и разрешение', hy: 'Փաստաթղթեր և թույլտվություն' },
 }
 
+const TOGGLEABLE: SectionId[] = ['stair', 'roof', 'openings', 'partitions', 'finishing', 'facade', 'engineering', 'permit']
+
 export function Results() {
-  const { house, prices, lang, priceMode, setPriceMode, amdPerUsd } = useProject()
+  const { house, prices, lang, priceMode, setPriceMode, amdPerUsd, setHouse } = useProject()
+  const excluded = house.excludedSections
+  const toggle = (sec: string) =>
+    setHouse({
+      excludedSections: excluded.includes(sec) ? excluded.filter((s) => s !== sec) : [...excluded, sec],
+    })
 
   const est = useMemo(() => {
     const q = computeQuantities(house)
@@ -51,6 +58,21 @@ export function Results() {
       </div>
 
       <div style={{ padding: '1rem' }}>
+        {/* include / exclude sections */}
+        <div style={{ marginBottom: '1rem' }}>
+          <div className="eyebrow" style={{ marginBottom: '0.6rem' }}>
+            {lang !== 'hy' ? 'Включить в смету' : 'Ներառել նախահաշվում'}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem' }}>
+            {TOGGLEABLE.map((sec) => (
+              <label key={sec} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', cursor: 'pointer' }}>
+                <input type="checkbox" checked={!excluded.includes(sec)} onChange={() => toggle(sec)} />
+                {lang !== 'hy' ? SECTION_LABEL[sec].ru : SECTION_LABEL[sec].hy}
+              </label>
+            ))}
+          </div>
+        </div>
+
         {/* headline totals */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
           <Tile label={t(lang, 'stageAct')} value={m(est.act.total)} accent="navy" />

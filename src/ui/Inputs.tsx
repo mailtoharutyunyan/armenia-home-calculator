@@ -242,6 +242,13 @@ export function Inputs() {
               </select>
             </label>
             <label className="field">
+              <span>{lang !== 'hy' ? 'Марка арматуры' : 'Արմատուրի դաս'}</span>
+              <select className="input" value={house.rebarGrade} onChange={(e) => set({ rebarGrade: e.target.value })}>
+                <option value="rebar_a500">А500С</option>
+                <option value="rebar_a400">А400 (A-III)</option>
+              </select>
+            </label>
+            <label className="field">
               <span>{t(lang, 'floorSlab')}</span>
               <div className="seg" role="group">
                 <button aria-pressed={house.floorSlab === 'monolith'} onClick={() => set({ floorSlab: 'monolith' })}>
