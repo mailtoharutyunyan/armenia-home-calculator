@@ -99,9 +99,10 @@ export function computeQuantities(p: HouseParams): Quantities {
     rebarBySection[section] = (rebarBySection[section] ?? 0) + vol * rebarPerM3
   }
 
-  const isMasonry = p.system !== 'frame'
+  const isMasonry = p.system === 'tuff' || p.system === 'aerated' || p.system === 'brick'
+  const isMonolith = p.system === 'monolith'
   const wallMat: InfillMaterial =
-    p.system === 'frame' ? p.infillMaterial : (p.system as InfillMaterial)
+    p.system === 'frame' || p.system === 'monolith' ? p.infillMaterial : (p.system as InfillMaterial)
 
   // ---- Foundation footing area ----
   const soleArea = p.foundation === 'slab' ? A : stripLen * stripW
@@ -168,6 +169,10 @@ export function computeQuantities(p: HouseParams): Quantities {
     // mortar / glue
     if (wallMat === 'aerated') add('glue_aerated', 'walls', 'act', masonryVol * C.glueShare)
     else add('mortar', 'walls', 'act', masonryVol * C.mortarShare)
+  } else if (isMonolith) {
+    // полный монолит: несущие ж/б стены (бетон + арматура), без кладки и заполнения
+    const wallVol = Math.max(0, wallNet * wallT) * waste
+    addStruct('walls', wallVol, C.rebar.monolithWall)
   } else {
     // frame: columns + beams + infill
     const nx = Math.floor(p.length / C.columnGridStep) + 1

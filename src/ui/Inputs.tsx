@@ -104,6 +104,7 @@ export function Inputs() {
             onChange={(e) => changeSystem(e.target.value as HouseParams['system'])}
           >
             <option value="frame">{t(lang, 'sys_frame')}</option>
+            <option value="monolith">{t(lang, 'sys_monolith')}</option>
             <option value="tuff">{t(lang, 'sys_tuff')}</option>
             <option value="aerated">{t(lang, 'sys_aerated')}</option>
             <option value="brick">{t(lang, 'sys_brick')}</option>

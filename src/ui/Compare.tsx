@@ -8,6 +8,7 @@ const SYS_KEY = {
   tuff: 'sys_tuff',
   aerated: 'sys_aerated',
   frame: 'sys_frame',
+  monolith: 'sys_monolith',
   brick: 'sys_brick',
 } as const
 
@@ -42,6 +43,16 @@ const PROS_CONS: Record<string, { pros: { ru: string; hy: string; en: string }[]
     cons: [
       { ru: 'Больше бетона и арматуры', hy: 'Ավելի շատ բետոն և արմատուր', en: 'More concrete and rebar' },
       { ru: 'Нужна опалубка и расчёт', hy: 'Պահանջվում է կաղապար և հաշվարկ', en: 'Needs formwork and design' },
+    ],
+  },
+  monolith: {
+    pros: [
+      { ru: 'Максимальная прочность и сейсмостойкость', hy: 'Առավելագույն ամրություն և սեյսմակայունություն', en: 'Maximum strength & seismic resistance' },
+      { ru: 'Монолитный контур — без швов', hy: 'Ամբողջական մոնոլիտ՝ առանց կարերի', en: 'Seamless monolithic shell' },
+    ],
+    cons: [
+      { ru: 'Дороже: много бетона и арматуры', hy: 'Թանկ՝ շատ բետոն և արմատուր', en: 'Costlier: lots of concrete & rebar' },
+      { ru: 'Опалубка; холоднее без утепления', hy: 'Կաղապար; ցուրտ առանց մեկուսացման', en: 'Formwork; colder without insulation' },
     ],
   },
   brick: {

@@ -41,6 +41,7 @@ export const COEFF = {
     lintel: 120,
     basementWall: 90,
     stair: 110,
+    monolithWall: 130, // несущая монолитная ж/б стена — плотное сейсмоармирование (ՀՀՇՆ II-6.02)
   },
 
   // masonry mortar / glue (share of masonry volume)

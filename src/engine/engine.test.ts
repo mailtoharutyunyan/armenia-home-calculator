@@ -201,11 +201,12 @@ describe('permit & hall', () => {
 })
 
 describe('compare', () => {
-  it('returns 4 systems, aerated flagged with caution', () => {
+  it('returns all systems, aerated flagged with caution', () => {
     const rows = compareSystems(house(), SEED_PRICES, 'typical')
-    expect(rows).toHaveLength(4)
+    expect(rows).toHaveLength(5)
     const aerated = rows.find((r) => r.system === 'aerated')!
     expect(aerated.caution).toBe(true)
+    expect(rows.some((r) => r.system === 'monolith')).toBe(true)
     expect(rows.every((r) => r.turnkeyTotal > 0)).toBe(true)
   })
 })

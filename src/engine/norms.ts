@@ -24,7 +24,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   const w: Warning[] = []
   const region = REGIONS[p.region]
   const n = C.norms
-  const isMasonry = p.system !== 'frame'
+  const isMasonry = p.system === 'tuff' || p.system === 'aerated' || p.system === 'brick'
 
   // ---- input validation ----
   if (p.floors < 1) {
@@ -41,6 +41,14 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
       code: 'ГОСТ 31360-2024 / ՀՀՇՆ II-6.02',
       ru: 'Несущий газоблок допустим (ГОСТ 31360-2024), но в сейсмозоне РА требует поверочного расчёта. Для частного дома обычно безопаснее ж/б каркас с газоблочным заполнением + армопояса/перемычки.',
       hy: 'Կրող գազաբլոկը թույլատրելի է (ГОСТ 31360-2024), սակայն ՀՀ սեյսմիկ գոտում պահանջում է հաշվարկ։ Մասնավոր տան համար սովորաբար ավելի ապահով է ե/բ կմախք գազաբլոկե լցվածքով + գոտիներ/հեծաններ։',
+    })
+  }
+  if (p.system === 'monolith') {
+    w.push({
+      level: 'info',
+      code: 'ՀՀՇՆ II-6.02',
+      ru: 'Полный монолит (несущие ж/б стены + перекрытия) — максимальная сейсмостойкость для зоны РА; ограничения по этажности кладки не действуют.',
+      hy: 'Ամբողջական մոնոլիտ (կրող ե/բ պատեր + ծածկեր) — առավելագույն սեյսմակայունություն ՀՀ գոտու համար։',
     })
   }
   const maxMasonry = region.seismic === 9 ? n.maxMasonryFloorsSeismic9 : n.maxMasonryFloorsSeismic8
@@ -154,6 +162,14 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
       code: 'ՀՀՇՆ II-6.02',
       ru: `Толщина кирпичной несущей стены ${p.wallThickness} м < ${n.brickMinThickness} м.`,
       hy: `Աղյուսե կրող պատի հաստությունը ${p.wallThickness} մ < ${n.brickMinThickness} մ։`,
+    })
+  }
+  if (p.system === 'monolith' && p.wallThickness < 0.16) {
+    w.push({
+      level: 'warning',
+      code: 'ՀՀՇՆ II-6.02',
+      ru: `Толщина несущей монолитной ж/б стены ${p.wallThickness} м < 0.16 м — увеличьте.`,
+      hy: `Կրող մոնոլիտ ե/բ պատի հաստությունը ${p.wallThickness} մ < 0.16 մ — ավելացրեք։`,
     })
   }
 

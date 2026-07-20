@@ -98,6 +98,10 @@ export const DICT: Dict = {
     ru: 'Монолитный каркас + заполнение',
     hy: 'Մոնոլիտ կարկաս + պատային լցվածք',
   },
+  sys_monolith: {
+    ru: 'Полный монолит (ж/б стены)',
+    hy: 'Ամբողջական մոնոլիտ (ե/բ պատեր)',
+  },
   sys_tuff: {
     ru: 'Несущие стены из туфа',
     hy: 'Տուֆե կրող պատեր',
@@ -561,6 +565,7 @@ const EN: Record<string, string> = {
   region: 'Region',
   system: 'Structural system',
   sys_frame: 'RC frame + infill',
+  sys_monolith: 'Full monolith (RC walls)',
   sys_tuff: 'Load-bearing tuff walls',
   sys_aerated: 'Load-bearing aerated block',
   sys_brick: 'Brick',

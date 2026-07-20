@@ -1,10 +1,11 @@
 // Core domain types for the house being estimated.
 
-export type ConstructionSystem = 'frame' | 'tuff' | 'aerated' | 'brick'
-// frame  = монолитный каркас + заполнение
-// tuff   = несущий туф
-// aerated= несущий газоблок
-// brick  = несущий кирпич
+export type ConstructionSystem = 'frame' | 'monolith' | 'tuff' | 'aerated' | 'brick'
+// frame   = монолитный каркас + заполнение
+// monolith= полный монолит (несущие ж/б стены + перекрытия) — макс. сейсмостойкость
+// tuff    = несущий туф
+// aerated = несущий газоблок
+// brick   = несущий кирпич
 
 export type InfillMaterial = 'tuff' | 'aerated' | 'brick'
 export type FoundationType = 'strip' | 'slab' | 'pile' | 'column'
@@ -145,6 +146,8 @@ export function defaultWallThickness(p: {
       return 0.38
     case 'aerated':
       return 0.3
+    case 'monolith':
+      return 0.2 // несущая монолитная ж/б стена (ՀՀՇՆ II-6.02)
     default:
       return 0.3
   }

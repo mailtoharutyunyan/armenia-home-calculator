@@ -12,7 +12,7 @@ export interface CompareRow {
   caution: boolean // несущий газоблок: допустим по расчёту, но в сейсмозоне рискованнее
 }
 
-const SYSTEMS: ConstructionSystem[] = ['tuff', 'aerated', 'frame', 'brick']
+const SYSTEMS: ConstructionSystem[] = ['tuff', 'aerated', 'frame', 'monolith', 'brick']
 
 export function compareSystems(
   base: HouseParams,
