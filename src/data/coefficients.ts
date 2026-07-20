@@ -64,6 +64,8 @@ export const COEFF = {
   // economics
   contingency: 0, // резерв отключён (было 0.12)
   vatRate: 0.2,
+  // полный монолит трудозатратнее (опалубка, вязка, бетонирование стен) — надбавка к работе бригады
+  monolithLabourFactor: 1.25,
 
   // engineering-network cost is priced per m2 of total floor area (see prices)
   stairVolumePerFlight: 2.5, // m3
