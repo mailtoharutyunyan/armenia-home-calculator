@@ -91,14 +91,14 @@ export interface EngOverrides {
 }
 
 export const DEFAULT_HOUSE: HouseParams = {
-  system: 'monolith', // полный монолит — макс. сейсмостойкость (рекомендуется)
-  infillMaterial: 'aerated',
+  system: 'frame', // ж/б каркас + газоблок-заполнение: тёплые стены, сейсмостойко (рекомендуется)
+  infillMaterial: 'aerated', // стены — газоблок
   length: 13,
   width: 14,
   plotArea: 500,
   floors: 2,
   floorHeight: 3, // двусветный зал = 2 × 3 = 6 м
-  wallThickness: 0.2, // несущая монолитная ж/б стена
+  wallThickness: 0.3, // газоблок-заполнение
   foundation: 'strip',
   basement: false,
   basementDepth: 2.4,
