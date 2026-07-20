@@ -173,6 +173,40 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
     })
   }
 
+  // ---- теплотехника стены (энергонорма РА) ----
+  {
+    const thermMat = p.system === 'monolith' ? 'concrete' : p.system === 'frame' ? p.infillMaterial : p.system
+    const wallR = p.wallThickness / (C.thermalLambda[thermMat] ?? 0.5)
+    if (wallR < n.wallThermalRReq) {
+      w.push({
+        level: 'info',
+        code: 'ՀՀՇՆ II-7.01',
+        ru: `Сопротивление стены R≈${wallR.toFixed(1)} < ${n.wallThermalRReq} м²·К/Вт — нужна наружная теплоизоляция.`,
+        hy: `Պատի ջերմադիմադրությունը R≈${wallR.toFixed(1)} < ${n.wallThermalRReq} — անհրաժեշտ է արտաքին ջերմամեկուսացում։`,
+      })
+    }
+  }
+
+  // ---- уклон скатной кровли ----
+  if (p.roof !== 'flat' && p.roofPitchDeg < n.minRoofPitchDeg) {
+    w.push({
+      level: 'warning',
+      code: 'ՀՀՇՆ IV-14.02',
+      ru: `Уклон скатной кровли ${p.roofPitchDeg}° < ${n.minRoofPitchDeg}° — риск протечек, увеличьте.`,
+      hy: `Թեք տանիքի թեքությունը ${p.roofPitchDeg}° < ${n.minRoofPitchDeg}° — արտահոսքի ռիսկ, ավելացրեք։`,
+    })
+  }
+
+  // ---- ограждения лестниц/галереи ----
+  if (p.floors >= 2 || p.doubleHeightHall) {
+    w.push({
+      level: 'info',
+      code: 'ՀՀՇՆ 31-01-2014',
+      ru: `Ограждения лестниц и антресоли/галереи — высота ≥ ${n.railingMinHeight} м.`,
+      hy: `Աստիճանների և միջհարկի բազրիքների բարձրությունը ≥ ${n.railingMinHeight} մ։`,
+    })
+  }
+
   // ---- foundation depth vs frost ----
   const stripHeightM = p.eng.stripHeight && p.eng.stripHeight > 0 ? p.eng.stripHeight / 100 : C.stripHeight
   if (!p.basement && p.foundation !== 'slab' && region.frostDepth > stripHeightM) {

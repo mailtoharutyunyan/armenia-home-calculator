@@ -91,7 +91,13 @@ export const COEFF = {
     minRoomArea: 8, // ՀՀՇՆ 31-01-2014, м²
     usableRatio: 0.8, // доля полезной площади этажа (за вычетом стен/коридоров)
     combinedKitchenLivingMin: 18, // м², студия зал+кухня
+    minKitchenArea: 6, // м², отдельная кухня (ՀՀՇՆ 31-01-2014)
+    minRoofPitchDeg: 8, // мин. уклон скатной кровли (водоотвод)
+    wallThermalRReq: 2.0, // м²·К/Вт, практич. минимум сопротивления стены (энергонорма РА, климат Еревана)
+    railingMinHeight: 0.9, // м, высота ограждений лестниц/антресоли/галереи
   },
+  // теплопроводность стеновых материалов (Вт/м·К) для оценки теплотехники
+  thermalLambda: { tuff: 0.52, aerated: 0.14, brick: 0.7, concrete: 1.69 } as Record<string, number>,
 }
 
 export type Coefficients = typeof COEFF
