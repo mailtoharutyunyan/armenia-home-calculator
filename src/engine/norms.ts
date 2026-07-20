@@ -51,6 +51,14 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
       hy: 'Ամբողջական մոնոլիտ (կրող ե/բ պատեր + ծածկեր) — առավելագույն սեյսմակայունություն ՀՀ գոտու համար։',
     })
   }
+  if (p.floorSlab === 'precast') {
+    w.push({
+      level: 'info',
+      code: 'ՀՀՇՆ II-6.02',
+      ru: 'Сборные перекрытия (ПК) в сейсмозоне допустимы, но требуют монолитных обвязок/анкеровки. Монолитное перекрытие образует жёсткий диск и предпочтительнее.',
+      hy: 'Հավաքովի ծածկերը (ПК) սեյսմիկ գոտում թույլատրելի են, բայց պահանջում են մոնոլիտ գոտիներ/խարսխում։ Մոնոլիտ ծածկը նախընտրելի է (կոշտ սկավառակ)։',
+    })
+  }
   const maxMasonry = region.seismic === 9 ? n.maxMasonryFloorsSeismic9 : n.maxMasonryFloorsSeismic8
   if (isMasonry && p.floors > maxMasonry) {
     w.push({

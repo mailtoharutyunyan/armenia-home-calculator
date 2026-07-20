@@ -124,6 +124,17 @@ export function Inputs() {
             </select>
           </label>
         )}
+        <label className="field">
+          <span>{t(lang, 'floorSlab')}</span>
+          <div className="seg" role="group">
+            <button aria-pressed={house.floorSlab === 'monolith'} onClick={() => set({ floorSlab: 'monolith' })}>
+              {t(lang, 'monolith')}
+            </button>
+            <button aria-pressed={house.floorSlab === 'precast'} onClick={() => set({ floorSlab: 'precast' })}>
+              {t(lang, 'precast')}
+            </button>
+          </div>
+        </label>
 
         {/* Step 2 — size */}
         <div className="eyebrow" style={{ marginTop: '0.8rem' }}>02 · {t(lang, 'step_size')}</div>
@@ -317,17 +328,6 @@ export function Inputs() {
                 <option value="rebar_a500">А500С</option>
                 <option value="rebar_a400">А400 (A-III)</option>
               </select>
-            </label>
-            <label className="field">
-              <span>{t(lang, 'floorSlab')}</span>
-              <div className="seg" role="group">
-                <button aria-pressed={house.floorSlab === 'monolith'} onClick={() => set({ floorSlab: 'monolith' })}>
-                  {t(lang, 'monolith')}
-                </button>
-                <button aria-pressed={house.floorSlab === 'precast'} onClick={() => set({ floorSlab: 'precast' })}>
-                  {t(lang, 'precast')}
-                </button>
-              </div>
             </label>
             <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <input
