@@ -4,6 +4,8 @@ import type { HouseParams, PriceMode } from '../model/house'
 import { DEFAULT_HOUSE } from '../model/house'
 import { SEED_PRICES, AMD_PER_USD_DEFAULT } from '../data/prices'
 import type { Lang } from '../i18n'
+import type { Rates } from '../data/rates'
+import { isRateStale } from '../data/rates'
 import type { RoomType } from '../engine/floorplan'
 
 export interface EditRoom {
@@ -102,6 +104,10 @@ interface ProjectState {
   setTheme: (t: Theme) => void
   priceMode: PriceMode
   amdPerUsd: number
+  rateSource: 'default' | 'cba' | 'manual' // откуда взят курс — показывается в редакторе цен
+  rateDate: string | null // дата, на которую ЦБ установил курс
+  rateStale: boolean // курс давно не обновлялся
+  applyCbaRates: (r: Rates) => void
   tab: string
   setTab: (t: string) => void
   editRooms: EditRoom[] | null // null => auto layout from params
@@ -130,6 +136,9 @@ export const useProject = create<ProjectState>((set, get) => ({
   scenarios: loadScenarios(),
   priceMode: 'typical',
   amdPerUsd: AMD_PER_USD_DEFAULT,
+  rateSource: 'default',
+  rateDate: null,
+  rateStale: false,
   tab: 'calc',
   setTab: (tab) => set({ tab }),
   editRooms: null,
@@ -179,7 +188,7 @@ export const useProject = create<ProjectState>((set, get) => ({
   // Заводской сброс: параметры дома, цены и режимы. Язык и тема (настройки вида) не трогаем.
   resetAll: () => {
     const house = { ...DEFAULT_HOUSE, eng: {} }
-    set({ house, prices: structuredClone(SEED_PRICES), priceMode: 'typical', amdPerUsd: AMD_PER_USD_DEFAULT, editRooms: null })
+    set({ house, prices: structuredClone(SEED_PRICES), priceMode: 'typical', amdPerUsd: AMD_PER_USD_DEFAULT, rateSource: 'default', editRooms: null })
     try {
       localStorage.setItem(HOUSE_KEY, JSON.stringify(house))
       localStorage.removeItem(PRICE_KEY)
@@ -232,6 +241,21 @@ export const useProject = create<ProjectState>((set, get) => ({
   },
 
   setPriceMode: (priceMode) => set({ priceMode }),
-  // keep the last valid rate: ignore empty / 0 / negative input
-  setAmdPerUsd: (n) => set((s) => ({ amdPerUsd: n > 0 ? n : s.amdPerUsd })),
+  // keep the last valid rate: ignore empty / 0 / negative input.
+  // Ручная правка помечает курс как пользовательский, чтобы пришедший позже
+  // ответ ЦБ не затёр введённое значение.
+  setAmdPerUsd: (n) => set((s) => (n > 0 ? { amdPerUsd: n, rateSource: 'manual' } : s)),
+
+  // Курс от ЦБ применяем только если пользователь не задал свой.
+  applyCbaRates: (r) =>
+    set((s) =>
+      s.rateSource === 'manual'
+        ? { rateDate: r.currentDate, rateStale: isRateStale(r.currentDate) }
+        : {
+            amdPerUsd: r.rates.USD,
+            rateSource: 'cba',
+            rateDate: r.currentDate,
+            rateStale: isRateStale(r.currentDate),
+          },
+    ),
 }))

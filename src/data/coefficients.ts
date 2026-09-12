@@ -49,7 +49,10 @@ export const COEFF = {
   glueShare: 0.025, // aerated block
 
   // earthworks
-  backfillFactor: 0.6, // backfill = factor * excavation
+  backfillFactor: 0.6, // backfill = factor * excavation (trench only)
+  // Ширина рабочей зоны вокруг стен подвала: только она засыпается обратно —
+  // сам подвал занимает объём котлована и засыпке не подлежит.
+  basementWorkingWidth: 0.6, // m
   sandBedThickness: 0.1,
   blindingThickness: 0.05, // подбетонка
   apronWidth: 1.0, // отмостка
@@ -78,8 +81,12 @@ export const COEFF = {
     maxRoomHeight: 3.5,
     maxGlazingPct: 40,
     minLightRatio: 1 / 8,
-    simplifiedMaxFloors: 2,
-    simplifiedMaxArea: 300,
+    // Упрощённый порядок: реш. Правительства РА N 1969-Ն от 25.12.2025 (в силе
+    // с 01.06.2026), вносит подпункт 4.1 в реш. N 596-Ն от 19.03.2015.
+    simplifiedMaxFloors: 2, // надземных (+ не более 1 подземного)
+    simplifiedMaxArea: 300, // м² общей площади дома
+    simplifiedMinPlot: 400, // м² участка
+    simplifiedMaxAuxArea: 50, // м² вспомогательных построек
     maxMasonryFloorsSeismic8: 3,
     maxMasonryFloorsSeismic9: 2,
     masonryMaxFloorHeight8: 5, // м, макс. высота этажа несущей кладки при 8 баллах

@@ -506,6 +506,42 @@ export const DICT: Dict = {
   },
 
   laborPerM2: { ru: 'Работа строителей, ֏/м²', hy: 'Բրիգադի աշխատանք, ֏/մ²' },
+
+  // --- Постоянно видимый итог ---
+  rb_turnkey: { ru: 'Под ключ', hy: 'Բանալի հանձնում' },
+  rb_perM2: { ru: 'За м²', hy: 'Մեկ մ²' },
+  rb_act: { ru: 'Коробка', hy: 'Կմախք' },
+  rb_area: { ru: 'Площадь', hy: 'Մակերես' },
+  rb_clean: { ru: 'Нарушений норм нет', hy: 'Նորմերի խախտում չկա' },
+  rb_violations: { ru: 'Нарушений норм: {n}', hy: 'Նորմերի խախտում՝ {n}' },
+
+  // --- Возврат подоходного налога по ипотеке ---
+  taxRefund: { ru: 'Возврат подоходного налога', hy: 'Եկամտային հարկի վերադարձ' },
+  taxRefundNote: {
+    ru: 'Верхняя граница: ограничено ещё и вашим уплаченным подоходным налогом. Потолок 750 000 ֏/квартал, возраст ≤ 45 лет, нужно разрешение на строительство.',
+    hy: 'Վերին սահման՝ սահմանափակվում է նաև ձեր վճարած եկամտային հարկով։ Առաստաղը՝ 750 000 ֏/եռամսյակ, տարիքը ≤ 45, պահանջվում է շին. թույլտվություն։',
+  },
+  taxRefundUntil: { ru: 'программа действует до', hy: 'ծրագիրը գործում է մինչև' },
+  taxRefundNone: {
+    ru: 'Для этого региона возврат уже не действует (в Ереване — по кредитам с 01.01.2025). Уточните исключение для приграничных общин.',
+    hy: 'Այս մարզի համար վերադարձն այլևս չի գործում (Երևանում՝ 01.01.2025-ից հետո վարկերի համար)։ Ճշտեք սահմանամերձ համայնքների բացառությունը։',
+  },
+
+  // --- Подключение к сетям, благоустройство, вспомогательные постройки ---
+  step_utilities: { ru: 'Сети и участок', hy: 'Ցանցեր և հողամաս' },
+  auxBuildingArea: { ru: 'Вспом. постройки (гараж, хозблок), м²', hy: 'Օժանդակ շինություններ, մ²' },
+  connectElectricity: { ru: 'Подключение электричества', hy: 'Էլեկտրաէներգիայի միացում' },
+  connectGas: { ru: 'Подключение газа', hy: 'Գազի միացում' },
+  connectWater: { ru: 'Подключение водопровода', hy: 'Ջրագծի միացում' },
+  connectSewer: { ru: 'Центральная канализация', hy: 'Կենտրոնական կոյուղի' },
+  septic: { ru: 'Септик (если нет канализации)', hy: 'Սեպտիկ (եթե կոյուղի չկա)' },
+  fenceLength: { ru: 'Забор, пог.м', hy: 'Ցանկապատ, գ.մ' },
+  sitePavingArea: { ru: 'Дорожки и площадки, м²', hy: 'Ճանապարհներ և հարթակներ, մ²' },
+  balconyArea: { ru: 'Балконы и террасы, м²', hy: 'Պատշգամբներ և տեռասներ, մ²' },
+  utilitiesHint: {
+    ru: 'Подключения — договорные платежи сетевым организациям, в смете помечены как оценка.',
+    hy: 'Միացումները պայմանագրային վճարներ են ցանցային կազմակերպություններին՝ սմետայում նշված են որպես գնահատական։',
+  },
   beamsOverHall: { ru: 'Балки над залом заложены', hy: 'Հեծանները սրահի վրա նախատեսված են' },
   tab_analysis: { ru: 'Сравнение и сроки', hy: 'Համեմատություն և ժամկետներ' },
   tab_docs: { ru: 'Нормы и документы', hy: 'Նորմեր և փաստաթղթեր' },
@@ -686,6 +722,27 @@ const EN: Record<string, string> = {
   ab_hall: 'Double-height void',
   ab_total: 'Total area (normative)',
   areaBreakdown: 'Area breakdown',
+  rb_turnkey: 'Turnkey',
+  rb_perM2: 'Per m²',
+  rb_act: 'Shell',
+  rb_area: 'Area',
+  rb_clean: 'No code violations',
+  rb_violations: 'Code violations: {n}',
+  taxRefund: 'Income tax refund',
+  taxRefundNote: 'Upper bound: also capped by the income tax you actually paid. Cap 750,000 ֏/quarter, age ≤ 45, building permit required.',
+  taxRefundUntil: 'programme runs until',
+  taxRefundNone: 'The refund no longer applies in this region (Yerevan: loans from 01.01.2025). Check the border-settlement exception.',
+  step_utilities: 'Utilities & site',
+  auxBuildingArea: 'Auxiliary buildings (garage, shed), m²',
+  connectElectricity: 'Electricity connection',
+  connectGas: 'Gas connection',
+  connectWater: 'Water connection',
+  connectSewer: 'Central sewerage',
+  septic: 'Septic (if no sewerage)',
+  fenceLength: 'Fence, linear m',
+  sitePavingArea: 'Paths & paved areas, m²',
+  balconyArea: 'Balconies & terraces, m²',
+  utilitiesHint: 'Connections are contract payments to utility operators; flagged as estimates in the bill.',
 }
 
 export function t(lang: Lang, key: keyof typeof DICT): string {

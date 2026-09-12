@@ -20,6 +20,22 @@ export function gradeFromKey(key: string): number {
   return raw.length === 3 ? Number(raw) / 10 : Number(raw)
 }
 
+// Критерии упрощённого порядка N 4.1 — реш. Правительства РА N 1969-Ն от
+// 25.12.2025 (в силе с 01.06.2026), вносит подпункт 4.1 в реш. N 596-Ն от
+// 19.03.2015. Возвращает причины несоответствия; пустой массив = порядок применим.
+// Единственный источник правды: и движок норм, и UI зовут эту функцию.
+export function simplified41Reasons(p: HouseParams, netFloorArea: number): string[] {
+  const n = C.norms
+  const r: string[] = []
+  if (netFloorArea > n.simplifiedMaxArea)
+    r.push(`площадь ${Math.round(netFloorArea)} > ${n.simplifiedMaxArea} м²`)
+  if (p.floors > n.simplifiedMaxFloors) r.push(`надземных этажей > ${n.simplifiedMaxFloors}`)
+  if (p.plotArea < n.simplifiedMinPlot) r.push(`участок ${p.plotArea} < ${n.simplifiedMinPlot} м²`)
+  if (p.auxBuildingArea > n.simplifiedMaxAuxArea)
+    r.push(`вспом. постройки ${p.auxBuildingArea} > ${n.simplifiedMaxAuxArea} м²`)
+  return r
+}
+
 export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   const w: Warning[] = []
   const region = REGIONS[p.region]
@@ -34,11 +50,11 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
     w.push({ level: 'error', code: 'input', ru: 'Габариты дома должны быть положительными.', hy: 'Տան չափերը պետք է լինեն դրական։' })
   }
 
-  // ---- seismic (ՀՀՇՆ II-6.02) — все РА 8–9 баллов ----
+  // ---- seismic (ՀՀՇՆ 20-04-2020) — все РА 8–9 баллов ----
   if (p.system === 'aerated') {
     w.push({
       level: 'warning',
-      code: 'ГОСТ 31360-2024 / ՀՀՇՆ II-6.02',
+      code: 'ГОСТ 31360-2024 / ՀՀՇՆ 20-04-2020',
       ru: 'Несущий газоблок допустим (ГОСТ 31360-2024), но в сейсмозоне РА требует поверочного расчёта. Для частного дома обычно безопаснее ж/б каркас с газоблочным заполнением + армопояса/перемычки.',
       hy: 'Կրող գազաբլոկը թույլատրելի է (ГОСТ 31360-2024), սակայն ՀՀ սեյսմիկ գոտում պահանջում է հաշվարկ։ Մասնավոր տան համար սովորաբար ավելի ապահով է ե/բ կմախք գազաբլոկե լցվածքով + գոտիներ/հեծաններ։',
     })
@@ -46,7 +62,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (p.system === 'monolith') {
     w.push({
       level: 'info',
-      code: 'ՀՀՇՆ II-6.02',
+      code: 'ՀՀՇՆ 20-04-2020',
       ru: 'Полный монолит (несущие ж/б стены + перекрытия) — максимальная сейсмостойкость для зоны РА; ограничения по этажности кладки не действуют.',
       hy: 'Ամբողջական մոնոլիտ (կրող ե/բ պատեր + ծածկեր) — առավելագույն սեյսմակայունություն ՀՀ գոտու համար։',
     })
@@ -54,7 +70,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (p.floorSlab === 'precast') {
     w.push({
       level: 'info',
-      code: 'ՀՀՇՆ II-6.02',
+      code: 'ՀՀՇՆ 20-04-2020',
       ru: 'Сборные перекрытия (ПК) в сейсмозоне допустимы, но требуют монолитных обвязок/анкеровки. Монолитное перекрытие образует жёсткий диск и предпочтительнее.',
       hy: 'Հավաքովի ծածկերը (ПК) սեյսմիկ գոտում թույլատրելի են, բայց պահանջում են մոնոլիտ գոտիներ/խարսխում։ Մոնոլիտ ծածկը նախընտրելի է (կոշտ սկավառակ)։',
     })
@@ -63,7 +79,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (isMasonry && p.floors > maxMasonry) {
     w.push({
       level: 'error',
-      code: 'ՀՀՇՆ II-6.02',
+      code: 'ՀՀՇՆ 20-04-2020',
       ru: `Несущая кладка выше ${maxMasonry} эт. в зоне ${region.seismic} баллов требует каркаса/расчёта.`,
       hy: `${maxMasonry} հարկից բարձր կրող շարվածքը ${region.seismic} բալ գոտում պահանջում է կմախք/հաշվարկ։`,
     })
@@ -72,7 +88,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (grade > 0 && grade < n.minStructuralConcreteGrade) {
     w.push({
       level: 'error',
-      code: 'ՀՀՇՆ II-6.02',
+      code: 'ՀՀՇՆ 20-04-2020',
       ru: `Марка бетона несущих конструкций ниже B${n.minStructuralConcreteGrade} недопустима в сейсмозоне.`,
       hy: `Կրող կոնստրուկցիաների բետոնի դասը B${n.minStructuralConcreteGrade}-ից ցածր չի թույլատրվում սեյսմիկ գոտում։`,
     })
@@ -81,7 +97,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (aspect > n.maxAspectRatio) {
     w.push({
       level: 'warning',
-      code: 'ՀՀՇՆ II-6.02',
+      code: 'ՀՀՇՆ 20-04-2020',
       ru: `Соотношение сторон ${aspect.toFixed(1)} > ${n.maxAspectRatio} неблагоприятно для сейсмики.`,
       hy: `Կողմերի հարաբերությունը ${aspect.toFixed(1)} > ${n.maxAspectRatio} անբարենպաստ է սեյսմիկայի համար։`,
     })
@@ -90,7 +106,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (isMasonry && p.floorHeight > maxMasonryH) {
     w.push({
       level: 'error',
-      code: 'ՀՀՇՆ II-6.02',
+      code: 'ՀՀՇՆ 20-04-2020',
       ru: `Высота этажа несущей кладки ${p.floorHeight} м > ${maxMasonryH} м (зона ${region.seismic} баллов) — уменьшите или перейдите на каркас.`,
       hy: `Կրող շարվածքի հարկի բարձրությունը ${p.floorHeight} մ > ${maxMasonryH} մ (${region.seismic} բալ) — նվազեցրեք կամ անցեք կմախքի։`,
     })
@@ -98,7 +114,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (isMasonry && p.seismicReinforcementDisabled) {
     w.push({
       level: 'error',
-      code: 'ՀՀՇՆ II-6.02',
+      code: 'ՀՀՇՆ 20-04-2020',
       ru: 'Отключены сейсмосердечники/армопояс — нарушение сейсмических требований.',
       hy: 'Անջատված են սեյսմ. միջուկները/գոտին — սեյսմիկ պահանջների խախտում։',
     })
@@ -120,20 +136,55 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
       hy: `Հարկի բարձրությունը ${p.floorHeight} մ բարձր է սովորականից։`,
     })
   }
-  // Упрощённый порядок N 4.1 (пост. N 1969-Ն, с 01.06.2026)
-  const proc41 =
-    q.geometry.netFloorArea <= n.simplifiedMaxArea && p.floors <= n.simplifiedMaxFloors && p.plotArea >= 400
-  if (!proc41) {
-    const reasons: string[] = []
-    if (q.geometry.netFloorArea > n.simplifiedMaxArea) reasons.push(`площадь ${Math.round(q.geometry.netFloorArea)} > 300 м²`)
-    if (p.floors > n.simplifiedMaxFloors) reasons.push(`этажей > ${n.simplifiedMaxFloors}`)
-    if (p.plotArea < 400) reasons.push(`участок ${p.plotArea} < 400 м²`)
+  // Упрощённый порядок N 4.1 — реш. Правительства РА N 1969-Ն от 25.12.2025
+  // (в силе с 01.06.2026), подпункт 4.1 к реш. N 596-Ն от 19.03.2015.
+  // Подземный этаж: модель допускает максимум один (флаг basement), что norm
+  // соблюдает по построению, поэтому отдельной проверки на него нет.
+  const reasons41 = simplified41Reasons(p, q.geometry.netFloorArea)
+  if (reasons41.length > 0) {
     w.push({
       level: 'info',
       code: 'Пост. N 1969-Ն (N 4.1)',
-      ru: `Не подходит под упрощённый порядок N 4.1 (${reasons.join(', ')}) — обычная процедура для категории объекта.`,
+      ru: `Не подходит под упрощённый порядок N 4.1 (${reasons41.join(', ')}) — обычная процедура для категории объекта.`,
       hy: `Չի համապատասխանում պարզեցված N 4.1 ընթացակարգին — սովորական ընթացակարգ։`,
     })
+  } else {
+    w.push({
+      level: 'info',
+      code: 'Пост. N 1969-Ն (N 4.1)',
+      ru: `Подходит под упрощённый порядок N 4.1: участок ${p.plotArea} ≥ ${n.simplifiedMinPlot} м², площадь ${Math.round(q.geometry.netFloorArea)} ≤ ${n.simplifiedMaxArea} м², ${p.floors} надземных + ${p.basement ? 1 : 0} подземный. Без обычной экспертизы, разрешение до 7 раб. дней.`,
+      hy: `Համապատասխանում է պարզեցված N 4.1 ընթացակարգին՝ առանց սովորական փորձաքննության, թույլտվությունը մինչև 7 աշխ. օր։`,
+    })
+  }
+
+  // ---- застройка участка и отступы (ՀՀՇՆ 30-01-2014) ----
+  if (p.plotArea > 0 && q.geometry.footprint > 0) {
+    const coverage = (q.geometry.footprint / p.plotArea) * 100
+    if (coverage > n.maxCoveragePct) {
+      w.push({
+        level: 'error',
+        code: 'ՀՀՇՆ 30-01-2023',
+        ru: `Застройка участка ${coverage.toFixed(1)}% > ${n.maxCoveragePct}%: пятно ${Math.round(q.geometry.footprint)} м² на участке ${p.plotArea} м². Уменьшите габариты или возьмите больший участок.`,
+        hy: `Կառուցապատումը ${coverage.toFixed(1)}% > ${n.maxCoveragePct}%՝ ${Math.round(q.geometry.footprint)} մ² հետք ${p.plotArea} մ² հողամասում։`,
+      })
+    } else {
+      w.push({
+        level: 'info',
+        code: 'ՀՀՇՆ 30-01-2023',
+        ru: `Застройка участка ${coverage.toFixed(1)}% (норма ≤ ${n.maxCoveragePct}%). Точный процент задаётся зоной — сверьте с АПЗ.`,
+        hy: `Կառուցապատումը ${coverage.toFixed(1)}% (նորմա ≤ ${n.maxCoveragePct}%)։ Ճշգրիտ տոկոսը սահմանվում է գոտիով։`,
+      })
+    }
+    // помещается ли дом с нормативными отступами от границ
+    const needPlot = (p.length + 2 * n.minSetback) * (p.width + 2 * n.minSetback)
+    if (needPlot > p.plotArea) {
+      w.push({
+        level: 'warning',
+        code: 'ՀՀՇՆ 30-01-2023',
+        ru: `Дом ${p.length}×${p.width} м с отступами ${n.minSetback} м требует участка ≈ ${Math.round(needPlot)} м² (${p.length + 2 * n.minSetback}×${p.width + 2 * n.minSetback}), у вас ${p.plotArea} м² — проверьте форму участка и отступы по АПЗ.`,
+        hy: `${p.length}×${p.width} մ տունը ${n.minSetback} մ հեռավորություններով պահանջում է ≈ ${Math.round(needPlot)} մ² հողամաս, առկա է ${p.plotArea} մ²։`,
+      })
+    }
   }
   if (q.geometry.netFloorArea > 1000) {
     w.push({
@@ -159,7 +210,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (wallMat === 'tuff' && p.wallThickness < n.tuffMinThickness && p.floors >= 2) {
     w.push({
       level: 'warning',
-      code: 'ՀՀՇՆ II-6.02',
+      code: 'ՀՀՇՆ 20-04-2020',
       ru: `Толщина несущей стены из туфа ${p.wallThickness} м < ${n.tuffMinThickness} м при ${p.floors} эт.`,
       hy: `Տուֆե կրող պատի հաստությունը ${p.wallThickness} մ < ${n.tuffMinThickness} մ։`,
     })
@@ -167,7 +218,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (wallMat === 'brick' && p.wallThickness < n.brickMinThickness) {
     w.push({
       level: 'warning',
-      code: 'ՀՀՇՆ II-6.02',
+      code: 'ՀՀՇՆ 20-04-2020',
       ru: `Толщина кирпичной несущей стены ${p.wallThickness} м < ${n.brickMinThickness} м.`,
       hy: `Աղյուսե կրող պատի հաստությունը ${p.wallThickness} մ < ${n.brickMinThickness} մ։`,
     })
@@ -175,7 +226,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (p.system === 'monolith' && p.wallThickness < 0.16) {
     w.push({
       level: 'warning',
-      code: 'ՀՀՇՆ II-6.02',
+      code: 'ՀՀՇՆ 20-04-2020',
       ru: `Толщина несущей монолитной ж/б стены ${p.wallThickness} м < 0.16 м — увеличьте.`,
       hy: `Կրող մոնոլիտ ե/բ պատի հաստությունը ${p.wallThickness} մ < 0.16 մ — ավելացրեք։`,
     })
@@ -188,7 +239,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
     if (wallR < n.wallThermalRReq) {
       w.push({
         level: 'info',
-        code: 'ՀՀՇՆ II-7.01',
+        code: 'ՀՀՇՆ 24-01-2016',
         ru: `Сопротивление стены R≈${wallR.toFixed(1)} < ${n.wallThermalRReq} м²·К/Вт — нужна наружная теплоизоляция.`,
         hy: `Պատի ջերմադիմադրությունը R≈${wallR.toFixed(1)} < ${n.wallThermalRReq} — անհրաժեշտ է արտաքին ջերմամեկուսացում։`,
       })
@@ -210,7 +261,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
     w.push({
       level: 'info',
       code: 'ՀՀՇՆ 31-01-2014',
-      ru: `Ограждения лестниц и антресоли/галереи — высота ≥ ${n.railingMinHeight} м.`,
+      ru: `Ограждения лестниц и антресоли/галереи — высота ≥ ${n.railingMinHeight} м (для многоэтажных норма выше, ≥ 1.1 м — уточните редакцию ՀՀՇՆ 31-01-2014).`,
       hy: `Աստիճանների և միջհարկի բազրիքների բարձրությունը ≥ ${n.railingMinHeight} մ։`,
     })
   }
@@ -240,7 +291,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (glazingPct > n.maxGlazingPct) {
     w.push({
       level: 'warning',
-      code: 'ՀՀՇՆ II-6.02',
+      code: 'ՀՀՇՆ 20-04-2020',
       ru: `Остекление ${glazingPct.toFixed(0)}% стен > ${n.maxGlazingPct}% — теплопотери и снижение жёсткости.`,
       hy: `Ապակեպատումը ${glazingPct.toFixed(0)}% > ${n.maxGlazingPct}% — ջերմակորուստ և կոշտության նվազում։`,
     })
@@ -260,9 +311,10 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   const usable = q.geometry.footprint * n.usableRatio
   // combined kitchen-living counts as one large space; separate = one extra room
   const spaces = p.roomsPerFloor
+  // раздельно: одна из зон — кухня (мин. 6 м²), остальные — жилые комнаты (мин. 8 м²)
   const minNeeded = p.kitchenLivingCombined
     ? n.combinedKitchenLivingMin + Math.max(0, spaces - 1) * n.minRoomArea
-    : spaces * n.minRoomArea
+    : Math.max(0, spaces - 1) * n.minRoomArea + n.minKitchenArea
   if (spaces > 0 && minNeeded > usable) {
     w.push({
       level: 'error',
@@ -286,7 +338,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (p.rebarGrade === 'rebar_a400') {
     w.push({
       level: 'info',
-      code: 'ՀՀՇՆ II-6.02',
+      code: 'ՀՀՇՆ 20-04-2020',
       ru: 'Арматура A400 допустима, но в сейсмозоне РА предпочтительна A500С.',
       hy: 'A400 արմատուրը թույլատրելի է, բայց ՀՀ սեյսմիկ գոտում նախընտրելի է A500С։',
     })
@@ -294,7 +346,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
 
   // ---- Инженерные параметры (ручной ввод) — проверка по нормам ----
   const eng = p.eng
-  const push = (level: NormLevel, ru: string, hy: string) => w.push({ level, code: 'ՀՀՇՆ II-6.02', ru, hy })
+  const push = (level: NormLevel, ru: string, hy: string) => w.push({ level, code: 'ՀՀՇՆ 20-04-2020', ru, hy })
 
   if (eng.stripWidth != null && eng.stripWidth < 30)
     push('error', `Ширина ленты ${eng.stripWidth} см < 30 см — увеличьте.`, `Ժապավենի լայնությունը ${eng.stripWidth} սմ < 30 սմ — ավելացրեք։`)
@@ -366,12 +418,14 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (eng.wastePct != null && eng.wastePct > 25)
     push('info', `Запас ${eng.wastePct}% завышен (> 25%).`, `Պահուստ ${eng.wastePct}% բարձր է (> 25%)։`)
 
-  // ---- urban planning reminder (ՀՀՇՆ 30-01-2014) ----
+  // ---- что калькулятор проверить не может (ՀՀՇՆ 30-01-2014) ----
+  // Застройка и отступы посчитаны выше; здесь остаётся то, что зависит от
+  // конкретного участка и АПЗ и не выводится из габаритов.
   w.push({
     level: 'info',
-    code: 'ՀՀՇՆ 30-01-2014',
-    ru: `Проверьте вручную: отступ от границы ≥ ${n.minSetback} м и застройка участка ≤ ${n.maxCoveragePct}%.`,
-    hy: `Ստուգեք ձեռքով՝ սահմանից հեռավորությունը ≥ ${n.minSetback} մ և կառուցապատումը ≤ ${n.maxCoveragePct}%։`,
+    code: 'ՀՀՇՆ 30-01-2023',
+    ru: `Проверьте по АПЗ: расстояние до соседних строений, инсоляция соседних участков, красные линии и охранные зоны сетей — из габаритов дома они не выводятся.`,
+    hy: `Ստուգեք ՃՀԱ-ով՝ հարևան շինություններից հեռավորությունը, հարևան հողամասերի ինսոլյացիան, կարմիր գծերը և ցանցերի պահպանման գոտիները։`,
   })
 
   return w

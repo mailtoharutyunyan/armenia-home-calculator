@@ -81,7 +81,9 @@ export function Inputs() {
       </div>
       <div style={{ padding: '1rem' }}>
         {/* Step 1 — region + system */}
-        <div className="eyebrow">01 · {t(lang, 'step_region')}</div>
+        <details className="group" open>
+          <summary><span className="eyebrow">01 · {t(lang, 'step_region')}</span></summary>
+          <div className="group-body">
         <label className="field">
           <span>{t(lang, 'region')}</span>
           <select
@@ -137,17 +139,28 @@ export function Inputs() {
         </label>
 
         {/* Step 2 — size */}
-        <div className="eyebrow" style={{ marginTop: '0.8rem' }}>02 · {t(lang, 'step_size')}</div>
+          </div>
+        </details>
+        <details className="group" open>
+          <summary><span className="eyebrow">02 · {t(lang, 'step_size')}</span></summary>
+          <div className="group-body">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
           <Num label={t(lang, 'length')} value={house.length} step={0.5} onChange={(n) => set({ length: n })} />
           <Num label={t(lang, 'width')} value={house.width} step={0.5} onChange={(n) => set({ width: n })} />
           <Num label={t(lang, 'floors')} value={house.floors} min={1} onChange={(n) => set({ floors: n })} />
           <Num label={t(lang, 'floorHeight')} value={house.floorHeight} step={0.1} onChange={(n) => set({ floorHeight: n })} />
         </div>
-        <Num label={t(lang, 'plotArea')} value={house.plotArea} step={50} onChange={(n) => set({ plotArea: n })} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+          <Num label={t(lang, 'plotArea')} value={house.plotArea} step={50} onChange={(n) => set({ plotArea: n })} />
+          <Num label={t(lang, 'auxBuildingArea')} value={house.auxBuildingArea} step={5} onChange={(n) => set({ auxBuildingArea: n })} />
+        </div>
 
         {/* Step 3 — foundation */}
-        <div className="eyebrow" style={{ marginTop: '0.8rem' }}>03 · {t(lang, 'step_foundation')}</div>
+          </div>
+        </details>
+        <details className="group" open>
+          <summary><span className="eyebrow">03 · {t(lang, 'step_foundation')}</span></summary>
+          <div className="group-body">
         <label className="field">
           <span>{t(lang, 'foundation')}</span>
           <select
@@ -174,7 +187,11 @@ export function Inputs() {
         )}
 
         {/* Step 4 — roof */}
-        <div className="eyebrow" style={{ marginTop: '0.8rem' }}>04 · {t(lang, 'step_roof')}</div>
+          </div>
+        </details>
+        <details className="group">
+          <summary><span className="eyebrow">04 · {t(lang, 'step_roof')}</span></summary>
+          <div className="group-body">
         <label className="field">
           <span>{t(lang, 'roof')}</span>
           <select className="input" value={house.roof} onChange={(e) => set({ roof: e.target.value as HouseParams['roof'] })}>
@@ -189,7 +206,11 @@ export function Inputs() {
         )}
 
         {/* Step 5 — openings */}
-        <div className="eyebrow" style={{ marginTop: '0.8rem' }}>05 · {t(lang, 'step_openings')}</div>
+          </div>
+        </details>
+        <details className="group">
+          <summary><span className="eyebrow">05 · {t(lang, 'step_openings')}</span></summary>
+          <div className="group-body">
         <Num label={t(lang, 'windowArea')} value={house.windowAreaTotal} step={1} onChange={(n) => set({ windowAreaTotal: n })} disabled={house.windowAuto} />
         <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input type="checkbox" checked={house.windowAuto} onChange={(e) => set({ windowAuto: e.target.checked })} />
@@ -226,7 +247,11 @@ export function Inputs() {
         </div>
 
         {/* Step 7 — layout */}
-        <div className="eyebrow" style={{ marginTop: '0.8rem' }}>07 · {t(lang, 'step_layout')}</div>
+          </div>
+        </details>
+        <details className="group">
+          <summary><span className="eyebrow">06 · {t(lang, 'step_layout')}</span></summary>
+          <div className="group-body">
         <Num label={t(lang, 'roomsPerFloor')} value={house.roomsPerFloor} onChange={(n) => set({ roomsPerFloor: n })} />
         <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input type="checkbox" checked={house.kitchenLivingCombined} onChange={(e) => set({ kitchenLivingCombined: e.target.checked })} />
@@ -241,7 +266,11 @@ export function Inputs() {
         )}
 
         {/* Step 6 — finish */}
-        <div className="eyebrow" style={{ marginTop: '0.8rem' }}>06 · {t(lang, 'step_finish')}</div>
+          </div>
+        </details>
+        <details className="group">
+          <summary><span className="eyebrow">07 · {t(lang, 'step_finish')}</span></summary>
+          <div className="group-body">
         <label className="field">
           <span>{t(lang, 'finishLevel')}</span>
           <div className="seg" role="group">
@@ -266,10 +295,46 @@ export function Inputs() {
         </label>
         <Num label={t(lang, 'laborPerM2')} value={house.laborPerM2} step={500} onChange={(n) => set({ laborPerM2: n })} />
 
-        {/* Step 08 — optional premium systems */}
-        <div className="eyebrow" style={{ marginTop: '0.8rem' }}>
-          08 · {lang === 'hy' ? 'Լրացուցիչ համակարգեր' : lang === 'en' ? 'Optional systems' : 'Дополнительные системы'}
+        {/* Step 08 — сети и участок */}
+          </div>
+        </details>
+        <details className="group">
+          <summary><span className="eyebrow">08 · {t(lang, 'step_utilities')}</span></summary>
+          <div className="group-body">
+        <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input type="checkbox" checked={house.connectElectricity} onChange={(e) => set({ connectElectricity: e.target.checked })} />
+          <span style={{ marginBottom: 0 }}>{t(lang, 'connectElectricity')}</span>
+        </label>
+        <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input type="checkbox" checked={house.connectGas} onChange={(e) => set({ connectGas: e.target.checked })} />
+          <span style={{ marginBottom: 0 }}>{t(lang, 'connectGas')}</span>
+        </label>
+        <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input type="checkbox" checked={house.connectWater} onChange={(e) => set({ connectWater: e.target.checked })} />
+          <span style={{ marginBottom: 0 }}>{t(lang, 'connectWater')}</span>
+        </label>
+        <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input type="checkbox" checked={house.connectSewer} onChange={(e) => set({ connectSewer: e.target.checked })} />
+          <span style={{ marginBottom: 0 }}>{t(lang, 'connectSewer')}</span>
+        </label>
+        <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {/* септик нужен только там, где нет центральной канализации */}
+          <input type="checkbox" checked={house.septic} disabled={house.connectSewer} onChange={(e) => set({ septic: e.target.checked })} />
+          <span style={{ marginBottom: 0, opacity: house.connectSewer ? 0.5 : 1 }}>{t(lang, 'septic')}</span>
+        </label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+          <Num label={t(lang, 'fenceLength')} value={house.fenceLength} step={5} onChange={(n) => set({ fenceLength: n })} />
+          <Num label={t(lang, 'sitePavingArea')} value={house.sitePavingArea} step={5} onChange={(n) => set({ sitePavingArea: n })} />
         </div>
+        <Num label={t(lang, 'balconyArea')} value={house.balconyArea} step={2} onChange={(n) => set({ balconyArea: n })} />
+        <p style={{ fontSize: '0.72rem', color: 'var(--color-ink-soft)', margin: '0 0 0.6rem' }}>{t(lang, 'utilitiesHint')}</p>
+
+          </div>
+        </details>
+        {/* Step 09 — optional premium systems */}
+        <details className="group">
+          <summary><span className="eyebrow">09 · {lang === 'hy' ? 'Լրացուցիչ համակարգեր' : lang === 'en' ? 'Optional systems' : 'Дополнительные системы'}</span></summary>
+          <div className="group-body">
         <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input type="checkbox" checked={house.optHeating} onChange={(e) => set({ optHeating: e.target.checked })} />
           <span style={{ marginBottom: 0 }}>
@@ -337,6 +402,8 @@ export function Inputs() {
               />
               <span style={{ marginBottom: 0, color: 'var(--color-err)' }}>{t(lang, 'noSeismic')}</span>
             </label>
+          </div>
+        </details>
           </div>
         </details>
 

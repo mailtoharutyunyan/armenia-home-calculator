@@ -17,6 +17,8 @@ export type SectionId =
   | 'finishing'
   | 'facade'
   | 'engineering'
+  | 'utilities'
+  | 'site'
   | 'options'
   | 'permit'
 
@@ -113,9 +115,22 @@ export function computeQuantities(p: HouseParams): Quantities {
   // ---- Earthworks (act) ----
   const excavationVol = p.basement ? A * (p.basementDepth + 0.3) : soleArea * excDepth
   add('excavation', 'earthworks', 'act', excavationVol)
-  add('backfill', 'earthworks', 'act', excavationVol * C.backfillFactor)
-  add('sand_gravel', 'earthworks', 'act', soleArea * C.sandBedThickness + A * floorOnGround)
+  // Обратная засыпка: у подвала засыпается только рабочая зона вокруг стен —
+  // сам подвал занимает котлован. У ленты — обычная доля объёма траншеи.
+  const backfillVol = p.basement
+    ? P * C.basementWorkingWidth * (p.basementDepth + 0.3)
+    : excavationVol * C.backfillFactor
+  add('backfill', 'earthworks', 'act', backfillVol)
+  // Подсыпка: под подошву фундамента + под пол по грунту, если он задан.
+  add(
+    'sand_gravel',
+    'earthworks',
+    'act',
+    soleArea * C.sandBedThickness + (floorOnGround > 0 ? A * C.sandBedThickness : 0),
+  )
   add('concrete_blinding', 'foundation', 'act', soleArea * blindingT)
+  // Пол по грунту — бетонная плита с сеткой, а не песчано-гравийная подсыпка.
+  if (floorOnGround > 0) addStruct('foundation', A * floorOnGround, C.rebar.slab)
 
   // ---- Foundation ----
   if (p.foundation === 'strip') {
@@ -146,7 +161,11 @@ export function computeQuantities(p: HouseParams): Quantities {
   add('apron', 'foundation', 'act', P * C.apronWidth)
 
   // ---- Walls / frame ----
-  const wallGross = Lb * H
+  // В каркасе вертикаль несут колонны: кладка заполняет только наружный контур,
+  // внутренние деления — это перегородки (учтены отдельно, 0.1 м). В несущей
+  // кладке и полном монолите внутренние несущие стены реальны → полные оси.
+  const structLen = p.system === 'frame' ? P : Lb
+  const wallGross = structLen * H
   const doorsArea = p.exteriorDoors * 2.0
   const openingsArea =
     e.openingsPct != null ? wallGross * (e.openingsPct / 100) : p.windowAreaTotal + doorsArea
@@ -251,8 +270,11 @@ export function computeQuantities(p: HouseParams): Quantities {
   const partitionArea = partitionWalls * Math.sqrt(A) * p.floorHeight * p.floors
   add('aerated_block', 'partitions', 'turnkey', partitionArea * C.partitionThickness)
 
-  // Plaster: interior bearing-wall face + partitions both sides + ceilings (minus hall void)
-  const plasterArea = wallNet + partitionArea * 2 + Math.max(0, totalFloorArea - hallVoid)
+  // Штукатурка: внутренняя грань наружных стен (одна сторона) + внутренние
+  // несущие стены (две стороны) + перегородки (две стороны) + потолки.
+  const intBearingLen = Math.max(0, structLen - P)
+  const plasterWalls = Math.max(0, P * H - openingsArea) + intBearingLen * H * 2
+  const plasterArea = plasterWalls + partitionArea * 2 + Math.max(0, totalFloorArea - hallVoid)
   add('plaster', 'finishing', 'turnkey', plasterArea)
   add('floor_finish', 'finishing', 'turnkey', Math.max(0, totalFloorArea - hallVoid))
 
@@ -265,6 +287,22 @@ export function computeQuantities(p: HouseParams): Quantities {
   add('electrical', 'engineering', 'turnkey', totalFloorArea)
   add('plumbing', 'engineering', 'turnkey', totalFloorArea)
   add('heating', 'engineering', 'turnkey', totalFloorArea)
+  add('ventilation', 'engineering', 'turnkey', totalFloorArea)
+  add('lightning', 'engineering', 'turnkey', 1)
+
+  // ---- Подключение к внешним сетям (ТУ + врезка) ----
+  // Платежи сетевым организациям; от площади дома не зависят.
+  if (p.connectElectricity) add('conn_electricity', 'utilities', 'turnkey', 1)
+  if (p.connectGas) add('conn_gas', 'utilities', 'turnkey', 1)
+  if (p.connectWater) add('conn_water', 'utilities', 'turnkey', 1)
+  if (p.connectSewer) add('conn_sewer', 'utilities', 'turnkey', 1)
+  // Септик нужен только там, где нет центральной канализации.
+  if (p.septic && !p.connectSewer) add('septic', 'utilities', 'turnkey', 1)
+
+  // ---- Благоустройство участка и балконы ----
+  add('fence', 'site', 'turnkey', Math.max(0, p.fenceLength))
+  add('site_paving', 'site', 'turnkey', Math.max(0, p.sitePavingArea))
+  add('balcony', 'site', 'turnkey', Math.max(0, p.balconyArea))
 
   // ---- Optional premium systems (opt-in extras) ----
   // per-m² options use the finished floor area (gross minus the hall void) — same

@@ -1,4 +1,5 @@
 import { Header } from './ui/Header'
+import { ResultBar } from './ui/ResultBar'
 import { Inputs } from './ui/Inputs'
 import { Plan2D } from './ui/Plan2D'
 import { Results } from './ui/Results'
@@ -13,6 +14,7 @@ import { Permit } from './ui/Permit'
 import { PriceEditor } from './ui/PriceEditor'
 import { Suppliers } from './ui/Suppliers'
 import { useProject } from './store/useProject'
+import { loadRates } from './data/rates'
 import { t } from './i18n'
 import { useEffect } from 'react'
 
@@ -23,9 +25,22 @@ export default function App() {
     document.documentElement.dataset.theme = theme
   }, [theme])
 
+  // Курс ЦБ РА подтягиваем один раз при запуске. Файл лежит на том же домене
+  // (его обновляет CI), поэтому CORS не мешает. Не получилось — остаёмся на
+  // зашитом курсе, смета считается в любом случае.
+  useEffect(() => {
+    const ac = new AbortController()
+    loadRates(ac.signal).then((r) => {
+      if (r) useProject.getState().applyCbaRates(r)
+    })
+    return () => ac.abort()
+  }, [])
+
   return (
     <div id="top">
       <Header />
+      {/* Итог всегда на экране, пока крутят параметры */}
+      {tab === 'calc' && <ResultBar />}
 
       {/* Active tab content */}
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '2.4rem 2rem' }}>

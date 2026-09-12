@@ -1,6 +1,7 @@
 import { useProject } from '../store/useProject'
 import { t } from '../i18n'
-import { NORMS_REFERENCE } from '../data/normsReference'
+import { NORMS_REFERENCE, NORMS } from '../data/normsReference'
+import { NormLink } from './NormLink'
 
 export function NormsRef() {
   const { lang } = useProject()
@@ -20,20 +21,27 @@ export function NormsRef() {
             ? 'ՀՀՇՆ — официальное обозначение стандарта (как ГОСТ или СНиП); цифры после — номер документа.'
             : 'ՀՀՇՆ-ը ստանդարտի պաշտոնական նշանակումն է (ինչպես ГОСТ կամ СНиП); թվերը՝ փաստաթղթի համարն են։'}
         </p>
-        {NORMS_REFERENCE.map((n) => (
-          <div key={n.code} style={{ padding: '0.6rem 0', borderBottom: '1px dotted var(--color-border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-              <span className={`badge lvl-${n.level}`}>{n.code}</span>
-              <strong style={{ fontFamily: 'var(--font-display)', fontSize: '0.92rem' }}>
-                {lang !== 'hy' ? n.topicRu : n.topicHy}
+        {/* один документ может встречаться дважды (разные темы), поэтому ключ —
+            код + позиция, иначе React видит дубликат ключа */}
+        {NORMS_REFERENCE.map((n, i) => (
+          <div key={`${n.code}-${i}`} style={{ padding: '0.6rem 0', borderBottom: '1px dotted var(--color-border)' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem', flexWrap: 'wrap' }}>
+              {/* название документа — само ссылка на его текст */}
+              <strong style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', lineHeight: 1.3 }}>
+                <NormLink code={n.code} lang={lang} />
               </strong>
-              <a href={n.source} target="_blank" rel="noreferrer" className="mono" style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--color-info)' }}>
-                {n.source.replace('https://', '')}
-              </a>
+              {NORMS[n.code]?.status === 'draft' && (
+                <span className="badge lvl-warning">{lang === 'hy' ? 'նախագիծ' : 'проект'}</span>
+              )}
             </div>
             <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', lineHeight: 1.5, color: 'var(--color-ink)' }}>
               {lang !== 'hy' ? n.requirementRu : n.requirementHy}
             </p>
+            {NORMS[n.code]?.cautionRu && lang !== 'hy' && (
+              <p style={{ margin: '0.35rem 0 0', fontSize: '0.78rem', lineHeight: 1.45, color: 'var(--color-warn)' }}>
+                {NORMS[n.code].cautionRu}
+              </p>
+            )}
           </div>
         ))}
       </div>

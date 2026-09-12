@@ -7,6 +7,13 @@ const S = {
   market: ['Рыночные данные РА', 'minfin.am'],
 }
 
+// ВНИМАНИЕ о происхождении цен.
+// `typical` — это ориентир, сверенный вручную (см. PRICES_UPDATED). Вилка
+// min/max НЕ является агрегатом котировок разных поставщиков: она строится
+// арифметически от `typical`. Поэтому `rangeLow`/`rangeHigh` в смете — это
+// оценка чувствительности, а не наблюдённый рыночный разброс. Чтобы вилка
+// стала настоящей, materialMin/Max должны приходить из прайсов поставщиков.
+//
 // Build a price band around a typical value (min -10%, max +15%).
 function item(
   key: string,
@@ -46,6 +53,32 @@ function permit(key: string, labelRu: string, labelHy: string, unit: string, typ
     labor: 0,
     sources: ['urban.e-gov.am', 'minurban.am'],
     note: 'ориентир, уточните на urban.e-gov.am',
+  }
+}
+
+// Позиции, которых нет в открытых прайсах (подключение к сетям, благоустройство):
+// стоимость договорная и сильно зависит от расстояния до сети и условий ТУ.
+// Поэтому вилка широкая (0.5x…2x) и в note прямо сказано, что это оценка.
+function estimate(
+  key: string,
+  labelRu: string,
+  labelHy: string,
+  unit: string,
+  typical: number,
+  labor: number,
+  noteRu = 'ОЦЕНКА — уточните по техусловиям поставщика сети',
+): PriceItem {
+  return {
+    key,
+    labelRu,
+    labelHy,
+    unit,
+    materialTypical: typical,
+    materialMin: Math.round(typical * 0.5),
+    materialMax: Math.round(typical * 2),
+    labor,
+    sources: ['оценка, не сверено с прайсом'],
+    note: noteRu,
   }
 }
 
@@ -115,6 +148,29 @@ const items: PriceItem[] = [
   // --- Stair ---
   item('stair', 'Лестница монолитная', 'Աստիճան մոնոլիտ', 'м³', 40000, 30000, S.market),
 
+  // --- Вентиляция и электробезопасность (обязательны, ранее отсутствовали) ---
+  item('ventilation', 'Вентиляция', 'Օդափոխություն', 'м²', 4000, 3000, S.market),
+  estimate('lightning', 'Молниезащита и заземление', 'Կայծակապաշտպանություն և հողանցում', 'компл', 180000, 60000,
+    'ОЦЕНКА — зависит от контура заземления и грунта'),
+
+  // --- Подключение к инженерным сетям (техусловия + врезка) ---
+  // Это отдельные платежи сетевым организациям, они НЕ входят в стоимость
+  // внутренних сетей дома (electrical / plumbing / heating).
+  estimate('conn_electricity', 'Подключение электричества (ТУ + врезка)', 'Էլեկտրաէներգիայի միացում', 'компл', 250000, 0),
+  estimate('conn_gas', 'Подключение газа (ТУ + проект + врезка)', 'Գազի միացում', 'компл', 550000, 0),
+  estimate('conn_water', 'Подключение водопровода', 'Ջրագծի միացում', 'компл', 220000, 0),
+  estimate('conn_sewer', 'Подключение канализации', 'Կոյուղու միացում', 'компл', 200000, 0),
+  estimate('septic', 'Локальное очистное (септик)', 'Տեղական մաքրման կայան (սեպտիկ)', 'компл', 800000, 150000,
+    'ОЦЕНКА — если нет центральной канализации; зависит от числа жильцов'),
+
+  // --- Благоустройство участка ---
+  estimate('fence', 'Забор с фундаментом', 'Ցանկապատ հիմքով', 'пог.м', 32000, 12000,
+    'ОЦЕНКА — зависит от материала и рельефа'),
+  estimate('site_paving', 'Дорожки и площадки', 'Ճանապարհներ և հարթակներ', 'м²', 12000, 5000,
+    'ОЦЕНКА — мощение/бетон, зависит от покрытия'),
+  estimate('balcony', 'Балкон / терраса', 'Պատշգամբ / տեռաս', 'м²', 45000, 18000,
+    'ОЦЕНКА — плита + ограждение + покрытие'),
+
   // --- Permit / documents (AMD, Armenia; per m2 where noted) ---
   permit('permit_apz', 'АПЗ (муниципалитет)', 'ՃՀԱ (համայնք)', 'комплект', 40000),
   permit('permit_design', 'Проект (за м²)', 'Նախագիծ (մ²)', 'м²', 4000),
@@ -166,6 +222,16 @@ const EN_LABELS: Record<string, string> = {
   opt_finish_premium: 'Turnkey finishing',
   opt_panel_ceiling: 'Panel ceiling',
   stair: 'Monolithic staircase',
+  ventilation: 'Ventilation',
+  lightning: 'Lightning protection & earthing',
+  conn_electricity: 'Electricity connection (TU + tap-in)',
+  conn_gas: 'Gas connection (TU + design + tap-in)',
+  conn_water: 'Water connection',
+  conn_sewer: 'Sewerage connection',
+  septic: 'Septic / local treatment unit',
+  fence: 'Fence with footing',
+  site_paving: 'Paths & paved areas',
+  balcony: 'Balcony / terrace',
   permit_apz: 'APZ (municipality)',
   permit_design: 'Design (per m²)',
   permit_geology: 'Geological survey',
@@ -179,7 +245,9 @@ export const SEED_PRICES: Catalog = Object.fromEntries(
   items.map((it) => [it.key, { ...it, labelEn: EN_LABELS[it.key] }]),
 )
 
-export const AMD_PER_USD_DEFAULT = 385
+// Запасной курс на случай, если public/rates.json не загрузился.
+// Актуальный курс приложение берёт у ЦБ РА (см. src/data/rates.ts).
+export const AMD_PER_USD_DEFAULT = 363.28
 
 // Когда прайс последний раз сверялся с поставщиками (показывается в редакторе цен).
 export const PRICES_UPDATED = '20.07.2026'

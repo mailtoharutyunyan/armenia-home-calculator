@@ -1,4 +1,5 @@
 import { useProject } from '../store/useProject'
+import { CBA_SITE } from '../data/rates'
 import { t } from '../i18n'
 import { labelFor } from '../model/catalog'
 import { PRICES_UPDATED } from '../data/prices'
@@ -12,7 +13,7 @@ const SUPPLIER_LINKS: { label: string; url: string }[] = [
 ]
 
 export function PriceEditor() {
-  const { prices, lang, setPriceItem, resetPrices, amdPerUsd, setAmdPerUsd } = useProject()
+  const { prices, lang, setPriceItem, resetPrices, amdPerUsd, setAmdPerUsd, rateSource, rateDate, rateStale } = useProject()
   const items = Object.values(prices)
 
   return (
@@ -44,6 +45,35 @@ export function PriceEditor() {
             onChange={(e) => setAmdPerUsd(Number(e.target.value))}
           />
         </label>
+      </div>
+
+      {/* Откуда взят курс — иначе непонятно, официальный он или выдуманный */}
+      <div style={{ padding: '0 1rem 0.6rem', fontSize: '0.72rem', color: rateStale ? 'var(--color-warn)' : 'var(--color-ink-soft)' }}>
+        {rateSource === 'cba' && (
+          <>
+            {lang === 'hy' ? 'Փոխարժեքը՝ ՀՀ կենտրոնական բանկ' : lang === 'en' ? 'Rate: Central Bank of Armenia' : 'Курс: Центральный банк РА'}
+            {rateDate && ` · ${rateDate}`}
+            {' · '}
+            <a className="normlink" href={CBA_SITE} target="_blank" rel="noreferrer">
+              cba.am
+              <span aria-hidden="true" className="normlink-mark">↗</span>
+            </a>
+            {rateStale &&
+              (lang === 'hy'
+                ? ' · հնացած է, ստուգեք'
+                : lang === 'en'
+                  ? ' · out of date, check it'
+                  : ' · устарел, проверьте')}
+          </>
+        )}
+        {rateSource === 'manual' &&
+          (lang === 'hy' ? 'Փոխարժեքը սահմանված է ձեռքով' : lang === 'en' ? 'Rate set manually' : 'Курс задан вручную')}
+        {rateSource === 'default' &&
+          (lang === 'hy'
+            ? 'Փոխարժեքը՝ ներդրված լռելյայն, ՀՀ ԿԲ-ից չի բեռնվել'
+            : lang === 'en'
+              ? 'Built-in default rate — not loaded from the Central Bank'
+              : 'Курс зашитый по умолчанию — с сайта ЦБ не загрузился')}
       </div>
 
       <div style={{ overflowX: 'auto' }}>

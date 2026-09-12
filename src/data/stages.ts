@@ -17,9 +17,14 @@ export const STAGES: Stage[] = [
   { ru: 'Перекрытия и лестницы', hy: 'Ծածկեր և աստիճաններ', minWeeks: 2, maxWeeks: 4, phase: 'act', sections: ['floors', 'stair'] },
   { ru: 'Кровля', hy: 'Տանիք', minWeeks: 1, maxWeeks: 3, phase: 'act', sections: ['roof'] },
   { ru: 'Окна, двери, фасад', hy: 'Պատուհաններ, դռներ, ֆասադ', minWeeks: 2, maxWeeks: 4, phase: 'act', sections: ['openings', 'facade'] },
-  { ru: 'Инженерные сети', hy: 'Ինժեներական ցանցեր', minWeeks: 3, maxWeeks: 5, phase: 'turnkey', sections: ['engineering'] },
+  { ru: 'Инженерные сети', hy: 'Ինժեներական ցանցեր', minWeeks: 3, maxWeeks: 5, phase: 'turnkey', sections: ['engineering', 'utilities'] },
   { ru: 'Отделка «под ключ»', hy: 'Հարդարում «բանալի հանձնում»', minWeeks: 6, maxWeeks: 12, phase: 'turnkey', sections: ['finishing', 'partitions'] },
+  { ru: 'Доп. системы и благоустройство', hy: 'Լրաց. համակարգեր և բարեկարգում', minWeeks: 2, maxWeeks: 6, phase: 'turnkey', sections: ['options', 'site'] },
 ]
+
+// Каждый раздел сметы должен попасть ровно в один этап, иначе стоимость
+// «теряется» в графике работ и сумма этапов расходится с итогом сметы.
+export const STAGE_SECTIONS: SectionId[] = STAGES.flatMap((s) => s.sections)
 
 // Scale factor by total floor area (baseline 200 m2, clamped 0.6..2.0).
 export function areaScale(totalArea: number): number {
@@ -28,8 +33,9 @@ export function areaScale(totalArea: number): number {
 }
 
 export function stageWeeks(stage: Stage, totalArea: number): { min: number; max: number } {
-  // permit/document stage doesn't scale with area
-  const scale = stage.ru.startsWith('Документы') ? 1 : areaScale(totalArea)
+  // Этап документов не зависит от площади. Определяем его по составу разделов,
+  // а не по подписи — подпись переводится и меняется, состав нет.
+  const scale = stage.sections.includes('permit') ? 1 : areaScale(totalArea)
   return {
     min: Math.round(stage.minWeeks * scale),
     max: Math.round(stage.maxWeeks * scale),

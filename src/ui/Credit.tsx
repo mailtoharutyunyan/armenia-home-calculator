@@ -4,6 +4,7 @@ import { t } from '../i18n'
 import { computeQuantities } from '../engine/quantities'
 import { computeEstimate } from '../engine/pricing'
 import { money } from './format'
+import { REGIONS, TAX_REFUND_QUARTER_CAP } from '../data/regions'
 
 export function Credit() {
   const { house, prices, lang, priceMode, amdPerUsd } = useProject()
@@ -25,6 +26,31 @@ export function Credit() {
   const monthly = i === 0 ? principal / n : (principal * i) / (1 - Math.pow(1 + i, -n))
   const overpay = monthly * n - principal
 
+  // --- Возврат подоходного налога по ипотеке ---
+  // Строительство ИЖС — квалифицирующая цель (при наличии разрешения на
+  // строительство). Программа сворачивается по регионам: Ереван — с 01.01.2025,
+  // Арагацотн/Арарат/Армавир/Котайк — с 01.01.2027, остальные — с 01.01.2029.
+  // Потолок для договоров с 01.01.2025 — 750 000 ֏ за квартал.
+  const region = REGIONS[house.region]
+  const refundEndsAt = region.taxRefundUntil
+  const refundActive = refundEndsAt != null && new Date(refundEndsAt) > new Date()
+  // Возврат идёт с фактически уплаченного подоходного налога, но не больше
+  // процентов по кредиту и не больше потолка. Считаем ВЕРХНЮЮ ГРАНИЦУ: реальная
+  // сумма ограничена ещё и зарплатой заёмщика, которую калькулятор не знает.
+  const quarters = Math.ceil(n / 3)
+  let remaining = principal
+  let refundCap = 0
+  for (let q = 0; q < quarters && remaining > 0; q++) {
+    let interestInQuarter = 0
+    for (let k = 0; k < 3 && remaining > 0; k++) {
+      const interest = remaining * i
+      interestInQuarter += interest
+      remaining = Math.max(0, remaining - (monthly - interest))
+    }
+    refundCap += Math.min(interestInQuarter, TAX_REFUND_QUARTER_CAP)
+  }
+  const refund = refundActive ? refundCap : 0
+
   return (
     <section className="panel" id="credit">
       <div className="panel-head">
@@ -40,6 +66,33 @@ export function Credit() {
         <Stat label={t(lang, 'loanAmount')} value={m(principal)} />
         <Stat label={t(lang, 'monthlyPayment')} value={m(monthly)} accent />
         <Stat label={t(lang, 'overpay')} value={m(overpay)} />
+      </div>
+      <div style={{ padding: '0 1rem 1rem' }}>
+        <div
+          style={{
+            border: '1px solid var(--color-border)',
+            borderLeft: `3px solid ${refundActive ? 'var(--color-copper)' : 'var(--color-border)'}`,
+            borderRadius: 10,
+            padding: '0.7rem 0.8rem',
+            background: 'var(--color-surface-2)',
+          }}
+        >
+          <div style={{ fontSize: '0.72rem', color: 'var(--color-ink-soft)', fontWeight: 600 }}>
+            {t(lang, 'taxRefund')}
+          </div>
+          {refundActive ? (
+            <>
+              <div className="num" style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '0.2rem', color: 'var(--color-copper)' }}>
+                до {m(refund)}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--color-ink-soft)', marginTop: '0.3rem' }}>
+                {t(lang, 'taxRefundNote')} {refundEndsAt && `· ${t(lang, 'taxRefundUntil')} ${new Date(refundEndsAt).toLocaleDateString()}`}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: '0.78rem', marginTop: '0.3rem' }}>{t(lang, 'taxRefundNone')}</div>
+          )}
+        </div>
       </div>
     </section>
   )

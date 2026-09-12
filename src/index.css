@@ -76,24 +76,146 @@ h1, h2, h3, h4 {
 
 .num, .tnum, .mono { font-variant-numeric: tabular-nums; }
 
-/* eyebrow — letterspaced caps with a hairline tick */
+/* Заголовок группы.
+   Раньше здесь были разрядка 0.22em и uppercase. На армянском это читается
+   плохо: буквы не рассчитаны на капитель с трекингом, а длинные подписи вроде
+   «ՄԱՐԶ ԵՎ ԿՈՆՍՏՐՈՒԿՏԻՎ ՀԱՄԱԿԱՐԳ» переносились на две строки. Обычный регистр
+   и нормальный кегль — читаемо на всех трёх языках. */
 .eyebrow {
   font-family: var(--font-body);
-  font-size: 0.7rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--color-ink-soft);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-ink);
   display: flex;
-  align-items: center;
-  gap: 0.7rem;
+  align-items: baseline;
+  gap: 0.55rem;
 }
 .eyebrow::before {
   content: '';
-  width: 2rem;
-  height: 1px;
+  align-self: center;
+  width: 1.1rem;
+  height: 2px;
+  flex: none;
   background: var(--color-copper);
 }
+
+/* ── Постоянно видимый итог ─────────────────────────────────────────────
+   Липнет под шапкой, чтобы сумма не уезжала под сгиб, пока крутят форму. */
+.resultbar {
+  position: sticky;
+  top: 56px;
+  z-index: 20;
+  background: var(--color-footer-bg);
+  color: var(--color-footer-fg);
+  border-bottom: 1px solid var(--color-border);
+}
+.resultbar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.85rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 2.4rem;
+  flex-wrap: wrap;
+}
+.rb-lead { display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; }
+.rb-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--color-footer-fg) 62%, transparent);
+}
+.rb-figure {
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-copper-strong);
+}
+.rb-range {
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--color-footer-fg) 55%, transparent);
+}
+.rb-stats { display: flex; gap: 1.8rem; margin-left: auto; flex-wrap: wrap; }
+.rb-stat { display: flex; flex-direction: column; gap: 0.15rem; }
+.rb-value { font-size: 0.95rem; font-weight: 600; }
+.rb-flag {
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.rb-flag-ok { color: var(--color-ok); }
+.rb-flag-bad { color: var(--color-err); }
+.rb-flag:hover { opacity: 0.8; }
+
+@media (max-width: 900px) {
+  .resultbar { position: static; }
+  .resultbar-inner { padding: 0.8rem 1rem; gap: 1rem; }
+  .rb-figure { font-size: 1.5rem; }
+  .rb-stats { margin-left: 0; gap: 1.1rem; width: 100%; }
+}
+
+/* ── Ссылка на текст нормы ──────────────────────────────────────────────
+   Наследует цвет уровня (ошибка/предупреждение/инфо), поэтому подчёркивание
+   пунктиром — единственный сигнал кликабельности. */
+.normlink {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.normlink:hover {
+  text-decoration-style: solid;
+  color: var(--color-copper);
+}
+.normlink:focus-visible {
+  outline: 2px solid var(--color-copper);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.normlink-mark {
+  font-size: 0.85em;
+  margin-left: 0.22em;
+  opacity: 0.75;
+  text-decoration: none;
+  display: inline-block;
+}
+
+/* ── Сворачиваемые группы формы ─────────────────────────────────────────
+   40 полей одним столбцом не сканируются. Группы можно закрыть и держать
+   открытым только то, что сейчас настраивают. */
+.group { border-bottom: 1px solid var(--color-border); }
+.group:last-of-type { border-bottom: none; }
+.group > summary {
+  list-style: none;
+  padding: 0.85rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  user-select: none;
+}
+.group > summary::-webkit-details-marker { display: none; }
+.group > summary::after {
+  content: '';
+  margin-left: auto;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 1.5px solid var(--color-ink-soft);
+  border-bottom: 1.5px solid var(--color-ink-soft);
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform 0.18s ease;
+}
+.group[open] > summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.group > summary:hover::after { border-color: var(--color-copper); }
+.group > summary:focus-visible { outline: 2px solid var(--color-copper); outline-offset: 2px; }
+.group-body { padding-bottom: 0.6rem; }
 
 /* panel = glass block: lifted surface, soft shadow, faint top highlight */
 .panel {
@@ -121,9 +243,9 @@ h1, h2, h3, h4 {
 .panel-head .sub {
   font-family: var(--font-body);
   font-weight: 500;
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 0.74rem;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--color-ink-soft);
 }
 

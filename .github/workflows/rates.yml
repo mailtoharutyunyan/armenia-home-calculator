@@ -1,0 +1,99 @@
+name: Refresh CBA exchange rates
+
+# Курс ЦБ РА тянем здесь, а не из браузера.
+#
+# api.cba.am отвечает на SOAP-запрос, но НЕ отдаёт заголовок
+# Access-Control-Allow-Origin. Значит fetch со страницы на github.io браузер
+# заблокирует. Сайт статический, серверной части нет, а гонять запрос через
+# сторонний CORS-прокси — это отдать чужому сервису доступ к трафику ради
+# одного числа. Поэтому запрос делает CI, кладёт результат в public/rates.json,
+# и страница читает его со своего же домена — без CORS и без посредников.
+
+on:
+  schedule:
+    # Будни, 08:30 UTC (12:30 в Ереване) — курс на день к этому моменту опубликован.
+    - cron: '30 8 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rates
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Запросить курсы у ЦБ РА
+        id: fetch
+        run: |
+          set -euo pipefail
+          cat > soap.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+            <soap:Body><ExchangeRatesLatest xmlns="http://www.cba.am/" /></soap:Body>
+          </soap:Envelope>
+          EOF
+
+          # --fail роняет шаг на HTTP-ошибке, чтобы не записать мусор вместо курса
+          curl -sS --fail -m 30 --retry 3 --retry-delay 5 \
+            -X POST "https://api.cba.am/exchangerates.asmx" \
+            -H "Content-Type: text/xml; charset=utf-8" \
+            -H "SOAPAction: http://www.cba.am/ExchangeRatesLatest" \
+            --data-binary @soap.xml -o cba.xml
+
+      - name: Собрать rates.json
+        run: |
+          python3 - <<'PY'
+          import json, re, sys, datetime, pathlib
+
+          xml = pathlib.Path('cba.xml').read_text(encoding='utf-8')
+
+          rates = {}
+          for iso, amount, rate in re.findall(
+                  r'<ISO>([A-Z]{3})</ISO><Amount>(\d+)</Amount><Rate>([\d.]+)</Rate>', xml):
+              # ЦБ даёт курс за Amount единиц; приводим к одной единице валюты
+              rates[iso] = round(float(rate) / int(amount), 6)
+
+          need = ['USD', 'EUR', 'RUB', 'GEL']
+          missing = [c for c in need if c not in rates]
+          if missing:
+              sys.exit(f'в ответе ЦБ нет валют: {missing}')
+
+          usd = rates['USD']
+          # защита от явно битого ответа: курс драма к доллару вне 200..900
+          # означает, что распарсили не то — лучше упасть, чем записать ерунду
+          if not 200 < usd < 900:
+              sys.exit(f'USD={usd} вне правдоподобного диапазона')
+
+          m = re.search(r'<CurrentDate>([0-9-]{10})', xml)
+          out = {
+              'base': 'AMD',
+              'currentDate': m.group(1) if m else None,
+              'fetchedAt': datetime.datetime.now(datetime.timezone.utc)
+                            .replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'source': 'https://api.cba.am/exchangerates.asmx',
+              'rates': {c: rates[c] for c in need},
+          }
+          pathlib.Path('public/rates.json').write_text(
+              json.dumps(out, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(out, ensure_ascii=False))
+          PY
+
+      - name: Закоммитить, если курс изменился
+        run: |
+          set -euo pipefail
+          rm -f cba.xml soap.xml
+          if git diff --quiet -- public/rates.json; then
+            echo "курс не изменился — коммит не нужен"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/rates.json
+          git commit -m "chore: обновить курс ЦБ РА"
+          git push

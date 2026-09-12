@@ -3,6 +3,9 @@ import { useProject } from '../store/useProject'
 import { t } from '../i18n'
 import { computeQuantities } from '../engine/quantities'
 import { computeEstimate } from '../engine/pricing'
+import { simplified41Reasons } from '../engine/norms'
+import { NORMS } from '../data/normsReference'
+import { NormLink } from './NormLink'
 import type { SectionId } from '../engine/quantities'
 import { labelFor } from '../model/catalog'
 import { money, num } from './format'
@@ -22,6 +25,8 @@ const SECTION_LABEL: Record<SectionId, { ru: string; hy: string; en: string }> =
   finishing: { ru: 'Отделка', hy: 'Հարդարում', en: 'Finishing' },
   facade: { ru: 'Фасад', hy: 'Ֆասադ', en: 'Facade' },
   engineering: { ru: 'Инженерные сети', hy: 'Ինժեներական ցանցեր', en: 'Engineering networks' },
+  utilities: { ru: 'Подключение к сетям', hy: 'Ցանցերին միացում', en: 'Utility connections' },
+  site: { ru: 'Благоустройство и балконы', hy: 'Բարեկարգում և պատշգամբներ', en: 'Site works & balconies' },
   options: { ru: 'Дополнительные системы', hy: 'Լրացուցիչ համակարգեր', en: 'Optional systems' },
   permit: { ru: 'Документы и разрешение', hy: 'Փաստաթղթեր և թույլտվություն', en: 'Documents & permit' },
 }
@@ -43,8 +48,8 @@ export function Results() {
     const q = computeQuantities(house)
     return { est: computeEstimate(q, prices, house, priceMode), geo: q.geometry }
   }, [house, prices, priceMode])
-  // Упрощённый порядок N 4.1 (пост. N 1969-Ն): участок ≥400 м², дом ≤300 м², ≤2 надземных этажа
-  const proc41 = geo.netFloorArea <= 300 && house.floors <= 2 && house.plotArea >= 400
+  // Упрощённый порядок N 4.1 — критерии живут в движке норм, не дублируются здесь
+  const proc41 = simplified41Reasons(house, geo.netFloorArea).length === 0
 
   const m = (v: number) => money(v, house.currency, amdPerUsd)
 
@@ -102,16 +107,24 @@ export function Results() {
           }}
         >
           <div>
-            <div className="mono" style={{ fontSize: '0.66rem', color: 'var(--color-ink-soft)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <div className="mono" style={{ fontSize: '0.66rem', color: 'var(--color-ink-soft)', letterSpacing: '0.02em' }}>
               {t(lang, 'areaTotal')} · {t(lang, 'areaHint')}
             </div>
             <div className="mono" style={{ fontSize: '1.4rem', fontWeight: 700 }}>
               {num(geo.netFloorArea, 0)} м²
             </div>
           </div>
-          <span className={`badge ${proc41 ? 'lvl-info' : 'lvl-warning'}`} style={{ padding: '0.3rem 0.7rem' }}>
-            {t(lang, proc41 ? 'proc41Ok' : 'proc41No')}
-          </span>
+          {/* плашка ведёт на само решение N 1969-Ն — чтобы условия можно было проверить */}
+          <a
+            className={`badge ${proc41 ? 'lvl-info' : 'lvl-warning'}`}
+            style={{ padding: '0.3rem 0.7rem', whiteSpace: 'normal' }}
+            href={NORMS['Пост. N 1969-Ն (N 4.1)'].source}
+            target="_blank"
+            rel="noreferrer"
+            title={lang === 'hy' ? 'Բացել որոշման տեքստը' : lang === 'en' ? 'Open the decision text' : 'Открыть текст решения'}
+          >
+            {t(lang, proc41 ? 'proc41Ok' : 'proc41No')} ↗
+          </a>
         </div>
         <p style={{ margin: '-0.4rem 0 0.8rem', fontSize: '0.72rem', color: 'var(--color-ink-soft)', lineHeight: 1.5 }}>
           {t(lang, 'proc41Cond')}
@@ -142,10 +155,11 @@ export function Results() {
             </div>
             <p style={{ margin: '0.5rem 0 0', fontSize: '0.7rem', color: 'var(--color-ink-soft)', lineHeight: 1.5 }}>
               {lang === 'hy'
-                ? 'Նորմատիվ մակերեսը (ՀՀՇՆ 31-01-2014) հաշվվում է պատերի ներքին մակերևույթներով, ուստի փոքր է առանցքային մակերեսից պատերի հաստության չափով։'
+                ? 'Նորմատիվ մակերեսը հաշվվում է պատերի ներքին մակերևույթներով, ուստի փոքր է առանցքային մակերեսից պատերի հաստության չափով։ '
                 : lang === 'en'
-                ? 'The normative area (ՀՀՇՆ 31-01-2014) is measured by internal wall surfaces, so it is smaller than the axis area by the thickness of the walls.'
-                : 'Нормативная площадь (ՀՀՇՆ 31-01-2014) считается по внутренним поверхностям стен, поэтому меньше «осевой» на толщину наружных стен.'}
+                ? 'The normative area is measured by internal wall surfaces, so it is smaller than the axis area by the thickness of the walls. '
+                : 'Нормативная площадь считается по внутренним поверхностям стен, поэтому меньше «осевой» на толщину наружных стен. '}
+              <NormLink code="ՀՀՇՆ 31-01-2014" lang={lang} />
             </p>
           </div>
         </details>
@@ -183,7 +197,7 @@ export function Results() {
           }}
         >
           <div>
-            <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--color-ink-soft)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--color-ink-soft)', letterSpacing: '0.02em' }}>
               {t(lang, 'range')}
             </div>
             <div className="mono" style={{ fontSize: '1.02rem', fontWeight: 700 }}>
@@ -191,7 +205,7 @@ export function Results() {
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--color-ink-soft)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--color-ink-soft)', letterSpacing: '0.02em' }}>
               {t(lang, 'perM2')}
             </div>
             <div className="mono" style={{ fontSize: '1.02rem', fontWeight: 700, color: 'var(--color-copper)' }}>
@@ -275,7 +289,7 @@ function Tile({ label, value, sub, accent }: { label: string; value: string; sub
         background: 'var(--color-surface-2)',
       }}
     >
-      <div className="mono" style={{ fontSize: '0.66rem', color: 'var(--color-ink-soft)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+      <div className="mono" style={{ fontSize: '0.66rem', color: 'var(--color-ink-soft)', letterSpacing: '0.02em' }}>
         {label}
       </div>
       <div className="mono" style={{ fontSize: '1.25rem', fontWeight: 700, marginTop: '0.2rem' }}>

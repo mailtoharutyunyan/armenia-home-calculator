@@ -5,6 +5,7 @@ import { computeQuantities } from '../engine/quantities'
 import { checkNorms } from '../engine/norms'
 import type { NormLevel } from '../engine/norms'
 import { LevelIcon } from './icons'
+import { NormLink } from './NormLink'
 
 const ORDER: Record<NormLevel, number> = { error: 0, warning: 1, info: 2 }
 
@@ -41,11 +42,12 @@ export function Warnings() {
             style={{ display: 'flex', gap: '0.6rem', padding: '0.4rem 0', borderBottom: '1px dotted var(--color-border)' }}
           >
             <LevelIcon level={w.level} />
-            <div>
-              <span className={`badge lvl-${w.level}`} style={{ marginRight: '0.5rem' }}>
-                {w.code}
-              </span>
-              <span style={{ fontSize: '0.86rem' }}>{lang !== 'hy' ? w.ru : w.hy}</span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '0.86rem' }}>{lang !== 'hy' ? w.ru : w.hy}</div>
+              {/* полное название нормы, кликабельное — ведёт на текст документа */}
+              <div style={{ fontSize: '0.72rem', marginTop: '0.2rem', lineHeight: 1.35 }}>
+                <NormLink code={w.code} lang={lang} className={`lvl-${w.level}`} />
+              </div>
             </div>
           </div>
         ))}

@@ -31,6 +31,7 @@ export interface HouseParams {
   length: number // m, outer axis
   width: number // m, outer axis
   plotArea: number // м², площадь земельного участка (для упрощённого порядка N 4.1)
+  auxBuildingArea: number // м², вспомогательные постройки (гараж, хоз. блок) — критерий N 4.1 ≤ 50 м²
   floors: number // above-ground floors
   floorHeight: number // m
   wallThickness: number // m
@@ -61,6 +62,17 @@ export interface HouseParams {
   kitchenLivingCombined: boolean // зал и кухня вместе (студия) или раздельно
   laborPerM2: number // работа бригады на стадии «коробка», ֏/м² (default 11000)
   beamsOverHall: boolean // балки над залом заложены
+  // Подключение к сетям — отдельные платежи сетевым организациям (ТУ + врезка),
+  // не входят в стоимость внутренних сетей дома.
+  connectElectricity: boolean
+  connectGas: boolean
+  connectWater: boolean
+  connectSewer: boolean // центральная канализация
+  septic: boolean // локальное очистное, когда центральной канализации нет
+  // Благоустройство участка и балконы
+  fenceLength: number // пог.м забора (0 = нет)
+  sitePavingArea: number // м² дорожек и площадок
+  balconyArea: number // м² балконов/террас
   // optional premium systems (opt-in extras)
   optHeating: boolean // отопление: котёл + тёплый пол (֏/м²)
   optHeatPump: boolean // тепловой насос воздух-вода (компл.)
@@ -96,6 +108,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   length: 13,
   width: 14,
   plotArea: 500,
+  auxBuildingArea: 0,
   floors: 2,
   floorHeight: 3, // двусветный зал = 2 × 3 = 6 м
   wallThickness: 0.3, // газоблок-заполнение
@@ -107,7 +120,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   windowAreaTotal: 40, // панорамные окна студии
   windowAuto: false, // по умолчанию вручную; включается тумблером «Авто по норме»
   vitrageShare: 0.25,
-  exteriorDoors: 2,
+  exteriorDoors: 1,
   interiorDoors: null,
   finishLevel: 'standard',
   currency: 'AMD',
@@ -125,6 +138,16 @@ export const DEFAULT_HOUSE: HouseParams = {
   kitchenLivingCombined: true,
   laborPerM2: 11000,
   beamsOverHall: true,
+  // подключения: газ и электричество в РА нужны почти всегда, вода обычно тоже;
+  // центральная канализация есть не везде — по умолчанию считаем септик.
+  connectElectricity: true,
+  connectGas: true,
+  connectWater: true,
+  connectSewer: false,
+  septic: true,
+  fenceLength: 0,
+  sitePavingArea: 0,
+  balconyArea: 0,
   optHeating: false,
   optHeatPump: false,
   optSolarKw: 0,
