@@ -69,6 +69,8 @@ export interface HouseParams {
   connectWater: boolean
   connectSewer: boolean // центральная канализация
   septic: boolean // локальное очистное, когда центральной канализации нет
+  // Бетон подаётся насосом (иначе — вручную/краном; для монолита обычно насос)
+  concretePump: boolean
   // Благоустройство участка и балконы
   fenceLength: number // пог.м забора (0 = нет)
   sitePavingArea: number // м² дорожек и площадок
@@ -86,20 +88,69 @@ export interface HouseParams {
 // default value. Linear dimensions are entered in the units shown to the user
 // (cm / пог.м / %) and converted inside the engine.
 export interface EngOverrides {
+  // --- Фундамент ---
   stripLen?: number // лента, пог.м
   stripWidth?: number // лента ширина, см
   stripHeight?: number // лента высота, см
+  slabThickness?: number // плита фундамента, см
+  pileDiameter?: number // свая, диаметр, см
+  pileLength?: number // свая, длина, м
+  foundationAxisStep?: number // шаг свай/столбов, м
+  columnFoundationHeight?: number // столбчатый фундамент, высота, м
   floorOnGround?: number // пол по грунту, см
   blinding?: number // подбетонка, см
-  slab?: number // перекрытие, см
+  basementWall?: number // стена подвала, см
+  basementWorkingWidth?: number // рабочая зона у стен подвала, см
+  sandBed?: number // подсыпка под подошву, см
+  apronWidth?: number // отмостка, м
+  backfillPct?: number // обратная засыпка, % от объёма выемки
+
+  // --- Каркас и стены ---
   extWall?: number // стена наружная, см
   columns?: number // колонн, шт
   columnSize?: number // колонна, см
+  columnGridStep?: number // шаг колонн, м
   beamsLen?: number // ригели, пог.м
   beamSection?: number // ригель сечение, м²
+  internalBearingPct?: number // внутренние несущие оси, % от периметра
+  ringBeamW?: number // армопояс, ширина, см
+  ringBeamH?: number // армопояс, высота, см
+  seismicCoreSize?: number // сейсмосердечник, сторона, см
+  seismicCoreStep?: number // шаг сейсмосердечников, м
+  lintelW?: number // перемычка, ширина, см
+  lintelH?: number // перемычка, высота, см
+  partitionThickness?: number // перегородка, см
+  mortarSharePct?: number // раствор, % от объёма кладки
+  glueSharePct?: number // клей для газоблока, % от объёма кладки
+
+  // --- Перекрытия и лестница ---
+  slab?: number // перекрытие, см
+  precastSlabArea?: number // площадь одной плиты ПК, м²
+  stairVolume?: number // лестница, м³ на марш
+
+  // --- Армирование, кг/м³ (результат расчёта, а не константа) ---
+  rebarStrip?: number
+  rebarSlab?: number
+  rebarPile?: number
+  rebarColumn?: number
+  rebarFloor?: number
+  rebarRingBeam?: number
+  rebarSeismicCore?: number
+  rebarLintel?: number
+  rebarBasementWall?: number
+  rebarMonolithWall?: number
+  rebarFloorPct?: number // прирост армирования на каждый этаж выше первого, %
+
+  // --- Класс бетона по элементам (пусто => общий класс из основной формы) ---
+  concreteFoundation?: string
+  concreteFrame?: string
+  concreteFloors?: string
+
+  // --- Прочее ---
   openingsPct?: number // проёмы, %
   wastePct?: number // запас, %
-  basementWall?: number // стена подвала, см
+  formworkPerM3?: number // опалубка, м² контакта на 1 м³ бетона
+  insulationThickness?: number // утеплитель, см (базовая цена дана за 100 мм)
 }
 
 export const DEFAULT_HOUSE: HouseParams = {
@@ -145,6 +196,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   connectWater: true,
   connectSewer: false,
   septic: true,
+  concretePump: true,
   fenceLength: 0,
   sitePavingArea: 0,
   balconyArea: 0,

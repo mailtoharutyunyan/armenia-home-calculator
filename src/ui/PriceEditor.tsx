@@ -2,19 +2,51 @@ import { useProject } from '../store/useProject'
 import { CBA_SITE } from '../data/rates'
 import { t } from '../i18n'
 import { labelFor } from '../model/catalog'
-import { PRICES_UPDATED } from '../data/prices'
+import { PRICES_UPDATED, priceAgeDays, arePricesStale } from '../data/prices'
+import type { Provenance } from '../model/catalog'
 
+// Только адреса, которые реально открываются (проверено 13.09.2026).
+// Убраны: mmlider.am — домен не резолвится; minfin.am — страница о ценах
+// на стройматериалы без данных. Нерабочая ссылка создаёт видимость проверки.
 const SUPPLIER_LINKS: { label: string; url: string }[] = [
-  { label: 'MM Leader (бетон)', url: 'https://mmlider.am/betoni-artadrowtyown' },
   { label: 'Stalmetural (арматура)', url: 'https://stalmetural.am/catalog/armatura/' },
   { label: 'Met-Trans (арматура)', url: 'https://met-trans.am/armatura/armatura-cena-za-tonnu' },
-  { label: 'List.am (газоблок)', url: 'https://www.list.am/en/category/110?q=gazablok' },
-  { label: 'Минфин РА', url: 'https://minfin.am/en/page/construction_materials_prices/' },
+  { label: 'List.am (стройматериалы)', url: 'https://www.list.am/category/110' },
+  { label: 'Construction.am (бетон)', url: 'https://www.construction.am/suppliers.php?act=concrete-products' },
+  { label: 'RMS Group (блоки)', url: 'https://rmsgroup.am/en/shinanyout' },
 ]
+
+// Прайс мог быть сохранён в localStorage до появления provenance, поэтому
+// подпись берём через функцию с запасным значением, а не прямым индексом.
+const prov = (p?: Provenance): Provenance => (p && p in PROV_LABEL ? p : 'unverified')
+
+// hostname из URL — только если адрес разбирается; иначе показываем как есть
+function host(u: string): string {
+  try {
+    return new URL(u).hostname.replace('www.', '')
+  } catch {
+    return u
+  }
+}
+
+const PROV_LABEL: Record<Provenance, { ru: string; hy: string; en: string; cls: string }> = {
+  quoted: { ru: 'сверено', hy: 'ստուգված', en: 'verified', cls: 'lvl-info' },
+  unverified: { ru: 'не сверено', hy: 'չստուգված', en: 'unverified', cls: 'lvl-warning' },
+  estimate: { ru: 'оценка', hy: 'գնահատական', en: 'estimate', cls: 'lvl-warning' },
+  official: { ru: 'госпошлина', hy: 'պետ. տուրք', en: 'state fee', cls: 'lvl-info' },
+}
 
 export function PriceEditor() {
   const { prices, lang, setPriceItem, resetPrices, amdPerUsd, setAmdPerUsd, rateSource, rateDate, rateStale } = useProject()
   const items = Object.values(prices)
+
+  // Сводка по происхождению цен — показывается в шапке таблицы
+  const quoted = items.filter((i) => i.provenance === 'quoted').length
+  const unverified = items.filter((i) => prov(i.provenance) === 'unverified').length
+  const estimateN = items.filter((i) => i.provenance === 'estimate').length
+  const official = items.filter((i) => i.provenance === 'official').length
+  const age = priceAgeDays()
+  const stale = arePricesStale()
 
   return (
     <section className="panel" id="prices">
@@ -25,10 +57,52 @@ export function PriceEditor() {
         </button>
       </div>
 
+      {/* Честный статус прайса: сколько позиций реально сверено с источником.
+          Без этого «проверено 20.07.2026» читается как гарантия, которой нет. */}
+      <div
+        style={{
+          padding: '0.7rem 1rem',
+          borderBottom: '1px solid var(--color-border)',
+          background: 'var(--color-surface-2)',
+          fontSize: '0.78rem',
+          lineHeight: 1.5,
+          color: quoted === 0 ? 'var(--color-warn)' : 'var(--color-ink)',
+        }}
+      >
+        <strong>
+          {lang === 'hy'
+            ? `Ստուգված է ${quoted} դիրք ${items.length}-ից`
+            : lang === 'en'
+              ? `${quoted} of ${items.length} positions verified against a supplier`
+              : `Сверено с прайсом поставщика: ${quoted} из ${items.length} позиций`}
+        </strong>
+        {' — '}
+        {lang === 'hy'
+          ? `${unverified} ուղենիշ, ${estimateN} գնահատական, ${official} պետ. տուրք։ Գումարը կարգի գնահատական է, ոչ թե նախահաշիվ կապալառուի համար։`
+          : lang === 'en'
+            ? `${unverified} indicative, ${estimateN} estimates, ${official} state fees. The total is an order-of-magnitude figure, not a contractor-ready bill.`
+            : `${unverified} ориентир, ${estimateN} оценка, ${official} госпошлина. Итог — оценка порядка величины, а не смета для подрядчика.`}
+        {age !== null && (
+          <>
+            {' '}
+            {lang === 'hy'
+              ? `Վերջին ձեռքով ստուգումը՝ ${PRICES_UPDATED} (${age} օր առաջ)։`
+              : lang === 'en'
+                ? `Last manual check: ${PRICES_UPDATED} (${age} days ago).`
+                : `Последняя ручная сверка: ${PRICES_UPDATED} (${age} дн. назад).`}
+          </>
+        )}
+        {stale && (
+          <>
+            {' '}
+            <strong>
+              {lang === 'hy' ? 'Ժամկետանց է — թարմացրեք։' : lang === 'en' ? 'Out of date — refresh it.' : 'Устарел — обновите.'}
+            </strong>
+          </>
+        )}
+      </div>
+
       <div style={{ padding: '0.6rem 1rem', borderBottom: '1px solid var(--color-border)', display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <span className="badge lvl-info" style={{ padding: '0.14rem 0.5rem' }}>
-          {(lang === 'hy' ? 'ստուգված ' : lang === 'en' ? 'verified ' : 'проверено ') + PRICES_UPDATED}
-        </span>
         <span className="mono" style={{ fontSize: '0.72rem', color: 'var(--color-ink-soft)' }}>{t(lang, 'sources')}:</span>
         {SUPPLIER_LINKS.map((s) => (
           <a key={s.url} href={s.url} target="_blank" rel="noreferrer" className="mono" style={{ fontSize: '0.72rem', color: 'var(--color-info)' }}>
@@ -93,6 +167,22 @@ export function PriceEditor() {
               <tr key={it.key}>
                 <td style={c}>
                   {labelFor(it, lang)}
+                  {/* по каждой строке видно, откуда цена: сверено / ориентир / оценка */}
+                  <div style={{ marginTop: '0.2rem', display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span className={`badge ${PROV_LABEL[prov(it.provenance)].cls}`}>
+                      {lang === 'hy'
+                        ? PROV_LABEL[prov(it.provenance)].hy
+                        : lang === 'en'
+                          ? PROV_LABEL[prov(it.provenance)].en
+                          : PROV_LABEL[prov(it.provenance)].ru}
+                    </span>
+                    {it.verifiedAt && <span className="mono" style={{ fontSize: '0.62rem', color: 'var(--color-ink-soft)' }}>{it.verifiedAt}</span>}
+                    {(it.sourceUrls ?? []).map((u) => (
+                      <a key={u} href={u} target="_blank" rel="noreferrer" className="mono" style={{ fontSize: '0.62rem', color: 'var(--color-info)' }}>
+                        {host(u)}
+                      </a>
+                    ))}
+                  </div>
                   {it.note && <div className="mono" style={{ fontSize: '0.64rem', color: 'var(--color-warn)' }}>{it.note}</div>}
                 </td>
                 <td style={c} className="mono">{it.unit}</td>

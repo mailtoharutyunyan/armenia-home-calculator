@@ -1,10 +1,15 @@
 import type { Catalog, PriceItem } from '../model/catalog'
 
 const S = {
-  concrete: ['mmlider.am'],
-  rebar: ['stalmetural.am', 'met-trans.am'],
-  block: ['list.am'],
-  market: ['Рыночные данные РА', 'minfin.am'],
+  // Проверено curl'ом 13.09.2026. Мёртвые адреса удалены намеренно:
+  // ссылка, которая не открывается, создаёт видимость проверки.
+  // Удалён mmlider.am — домен больше не резолвится (NXDOMAIN).
+  // Удалён minfin.am — страница о ценах на стройматериалы есть, данных на ней нет.
+  rebar: ['https://stalmetural.am/catalog/armatura/', 'https://met-trans.am/armatura/armatura-cena-za-tonnu'],
+  block: ['https://www.list.am/category/110'],
+  concrete: ['https://www.construction.am/suppliers.php?act=concrete-products'],
+  // Для этих позиций открытых прайсов в РА нет: цену дают по запросу.
+  market: [] as string[],
 }
 
 // ВНИМАНИЕ о происхождении цен.
@@ -30,6 +35,10 @@ function item(
     labelRu,
     labelHy,
     unit,
+    // Ни одна позиция пока не сверена с прайсом поставщика: это ориентир
+    // правдоподобного порядка. Станет 'quoted', когда появится verifiedAt.
+    provenance: 'unverified',
+    sourceUrls: sources,
     materialTypical: typical,
     materialMin: Math.round(typical * 0.9),
     materialMax: Math.round(typical * 1.15),
@@ -51,6 +60,8 @@ function permit(key: string, labelRu: string, labelHy: string, unit: string, typ
     materialMin: Math.round(typical * 0.6),
     materialMax: Math.round(typical * 2),
     labor: 0,
+    provenance: 'official',
+    sourceUrls: ['https://urban.e-gov.am'],
     sources: ['urban.e-gov.am', 'minurban.am'],
     note: 'ориентир, уточните на urban.e-gov.am',
   }
@@ -77,13 +88,19 @@ function estimate(
     materialMin: Math.round(typical * 0.5),
     materialMax: Math.round(typical * 2),
     labor,
+    provenance: 'estimate',
+    sourceUrls: [],
     sources: ['оценка, не сверено с прайсом'],
     note: noteRu,
   }
 }
 
 const items: PriceItem[] = [
-  // --- Concrete (AMD/m3, without VAT; real prices from my-home project) ---
+  // --- Бетон (֏/м³, без НДС) ---
+  // Происхождение: цифры перенесены из сметы проекта my-home, а не с сайта
+  // поставщика. Дата сверки неизвестна, поэтому provenance = 'unverified'.
+  // Товарный бетон в РА в открытых прайсах не публикуется: цена зависит от
+  // марки, объёма, расстояния до узла и нужды в насосе — её дают по запросу.
   item('concrete_b15', 'Бетон B15 / М200', 'Բետոն B15 / М200', 'м³', 29000, 18000, S.concrete),
   item('concrete_b20', 'Бетон B20 / М250', 'Բետոն B20 / М250', 'м³', 30000, 18000, S.concrete),
   item('concrete_b225', 'Бетон B22.5 / М300', 'Բետոն B22.5 / М300', 'м³', 32000, 18000, S.concrete),
@@ -147,6 +164,13 @@ const items: PriceItem[] = [
 
   // --- Stair ---
   item('stair', 'Лестница монолитная', 'Աստիճան մոնոլիտ', 'м³', 40000, 30000, S.market),
+
+  // --- Опалубка и подача бетона (ранее отсутствовали как статьи) ---
+  // Опалубка считается по площади контакта с бетоном, а не по объёму.
+  estimate('formwork', 'Опалубка (аренда + монтаж)', 'Կաղապար (վարձույթ + մոնտաժ)', 'м²', 4500, 2500,
+    'ОЦЕНКА — зависит от оборачиваемости щитов и сложности конструкций'),
+  estimate('concrete_pump', 'Подача бетона насосом', 'Բետոնի մատակարարում պոմպով', 'м³', 3500, 0,
+    'ОЦЕНКА — обычно тарифицируется за смену с минимальным объёмом'),
 
   // --- Вентиляция и электробезопасность (обязательны, ранее отсутствовали) ---
   item('ventilation', 'Вентиляция', 'Օդափոխություն', 'м²', 4000, 3000, S.market),
@@ -222,6 +246,8 @@ const EN_LABELS: Record<string, string> = {
   opt_finish_premium: 'Turnkey finishing',
   opt_panel_ceiling: 'Panel ceiling',
   stair: 'Monolithic staircase',
+  formwork: 'Formwork (rental + erection)',
+  concrete_pump: 'Concrete pumping',
   ventilation: 'Ventilation',
   lightning: 'Lightning protection & earthing',
   conn_electricity: 'Electricity connection (TU + tap-in)',
@@ -250,4 +276,25 @@ export const SEED_PRICES: Catalog = Object.fromEntries(
 export const AMD_PER_USD_DEFAULT = 363.28
 
 // Когда прайс последний раз сверялся с поставщиками (показывается в редакторе цен).
+// Дата последней ручной сверки прайса. Это заявление составителя, а не
+// доказательство: записи о том, что и с чем сверялось, в проекте нет.
+// План сверки — docs/PRICE-VERIFICATION.md.
 export const PRICES_UPDATED = '20.07.2026'
+
+// Через сколько дней прайс считается несвежим. Стройматериалы в РА заметно
+// двигаются за квартал, поэтому предупреждаем раньше.
+export const PRICES_STALE_AFTER_DAYS = 90
+
+// Возраст прайса в днях. PRICES_UPDATED в формате дд.мм.гггг.
+export function priceAgeDays(updated: string = PRICES_UPDATED, now = new Date()): number | null {
+  const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(updated)
+  if (!m) return null
+  const d = new Date(Date.UTC(+m[3], +m[2] - 1, +m[1]))
+  if (Number.isNaN(d.getTime())) return null
+  return Math.floor((now.getTime() - d.getTime()) / 86_400_000)
+}
+
+export function arePricesStale(updated: string = PRICES_UPDATED, now = new Date()): boolean {
+  const age = priceAgeDays(updated, now)
+  return age === null || age > PRICES_STALE_AFTER_DAYS
+}

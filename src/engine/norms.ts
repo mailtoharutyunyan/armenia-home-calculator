@@ -50,11 +50,11 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
     w.push({ level: 'error', code: 'input', ru: 'Габариты дома должны быть положительными.', hy: 'Տան չափերը պետք է լինեն դրական։' })
   }
 
-  // ---- seismic (ՀՀՇՆ 20-04-2020) — все РА 8–9 баллов ----
+  // ---- seismic (ՀՀՇՆ 20.04-2020) — все РА 8–9 баллов ----
   if (p.system === 'aerated') {
     w.push({
       level: 'warning',
-      code: 'ГОСТ 31360-2024 / ՀՀՇՆ 20-04-2020',
+      code: 'ГОСТ 31360-2024 / ՀՀՇՆ 20.04-2020',
       ru: 'Несущий газоблок допустим (ГОСТ 31360-2024), но в сейсмозоне РА требует поверочного расчёта. Для частного дома обычно безопаснее ж/б каркас с газоблочным заполнением + армопояса/перемычки.',
       hy: 'Կրող գազաբլոկը թույլատրելի է (ГОСТ 31360-2024), սակայն ՀՀ սեյսմիկ գոտում պահանջում է հաշվարկ։ Մասնավոր տան համար սովորաբար ավելի ապահով է ե/բ կմախք գազաբլոկե լցվածքով + գոտիներ/հեծաններ։',
     })
@@ -62,7 +62,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (p.system === 'monolith') {
     w.push({
       level: 'info',
-      code: 'ՀՀՇՆ 20-04-2020',
+      code: 'ՀՀՇՆ 20.04-2020',
       ru: 'Полный монолит (несущие ж/б стены + перекрытия) — максимальная сейсмостойкость для зоны РА; ограничения по этажности кладки не действуют.',
       hy: 'Ամբողջական մոնոլիտ (կրող ե/բ պատեր + ծածկեր) — առավելագույն սեյսմակայունություն ՀՀ գոտու համար։',
     })
@@ -70,7 +70,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (p.floorSlab === 'precast') {
     w.push({
       level: 'info',
-      code: 'ՀՀՇՆ 20-04-2020',
+      code: 'ՀՀՇՆ 20.04-2020',
       ru: 'Сборные перекрытия (ПК) в сейсмозоне допустимы, но требуют монолитных обвязок/анкеровки. Монолитное перекрытие образует жёсткий диск и предпочтительнее.',
       hy: 'Հավաքովի ծածկերը (ПК) սեյսմիկ գոտում թույլատրելի են, բայց պահանջում են մոնոլիտ գոտիներ/խարսխում։ Մոնոլիտ ծածկը նախընտրելի է (կոշտ սկավառակ)։',
     })
@@ -79,7 +79,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (isMasonry && p.floors > maxMasonry) {
     w.push({
       level: 'error',
-      code: 'ՀՀՇՆ 20-04-2020',
+      code: 'ՀՀՇՆ 20.04-2020',
       ru: `Несущая кладка выше ${maxMasonry} эт. в зоне ${region.seismic} баллов требует каркаса/расчёта.`,
       hy: `${maxMasonry} հարկից բարձր կրող շարվածքը ${region.seismic} բալ գոտում պահանջում է կմախք/հաշվարկ։`,
     })
@@ -88,7 +88,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (grade > 0 && grade < n.minStructuralConcreteGrade) {
     w.push({
       level: 'error',
-      code: 'ՀՀՇՆ 20-04-2020',
+      code: 'ՀՀՇՆ 20.04-2020',
       ru: `Марка бетона несущих конструкций ниже B${n.minStructuralConcreteGrade} недопустима в сейсмозоне.`,
       hy: `Կրող կոնստրուկցիաների բետոնի դասը B${n.minStructuralConcreteGrade}-ից ցածր չի թույլատրվում սեյսմիկ գոտում։`,
     })
@@ -97,7 +97,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (aspect > n.maxAspectRatio) {
     w.push({
       level: 'warning',
-      code: 'ՀՀՇՆ 20-04-2020',
+      code: 'ՀՀՇՆ 20.04-2020',
       ru: `Соотношение сторон ${aspect.toFixed(1)} > ${n.maxAspectRatio} неблагоприятно для сейсмики.`,
       hy: `Կողմերի հարաբերությունը ${aspect.toFixed(1)} > ${n.maxAspectRatio} անբարենպաստ է սեյսմիկայի համար։`,
     })
@@ -106,7 +106,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (isMasonry && p.floorHeight > maxMasonryH) {
     w.push({
       level: 'error',
-      code: 'ՀՀՇՆ 20-04-2020',
+      code: 'ՀՀՇՆ 20.04-2020',
       ru: `Высота этажа несущей кладки ${p.floorHeight} м > ${maxMasonryH} м (зона ${region.seismic} баллов) — уменьшите или перейдите на каркас.`,
       hy: `Կրող շարվածքի հարկի բարձրությունը ${p.floorHeight} մ > ${maxMasonryH} մ (${region.seismic} բալ) — նվազեցրեք կամ անցեք կմախքի։`,
     })
@@ -114,7 +114,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (isMasonry && p.seismicReinforcementDisabled) {
     w.push({
       level: 'error',
-      code: 'ՀՀՇՆ 20-04-2020',
+      code: 'ՀՀՇՆ 20.04-2020',
       ru: 'Отключены сейсмосердечники/армопояс — нарушение сейсмических требований.',
       hy: 'Անջատված են սեյսմ. միջուկները/գոտին — սեյսմիկ պահանջների խախտում։',
     })
@@ -210,7 +210,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (wallMat === 'tuff' && p.wallThickness < n.tuffMinThickness && p.floors >= 2) {
     w.push({
       level: 'warning',
-      code: 'ՀՀՇՆ 20-04-2020',
+      code: 'ՀՀՇՆ 20.04-2020',
       ru: `Толщина несущей стены из туфа ${p.wallThickness} м < ${n.tuffMinThickness} м при ${p.floors} эт.`,
       hy: `Տուֆե կրող պատի հաստությունը ${p.wallThickness} մ < ${n.tuffMinThickness} մ։`,
     })
@@ -218,7 +218,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (wallMat === 'brick' && p.wallThickness < n.brickMinThickness) {
     w.push({
       level: 'warning',
-      code: 'ՀՀՇՆ 20-04-2020',
+      code: 'ՀՀՇՆ 20.04-2020',
       ru: `Толщина кирпичной несущей стены ${p.wallThickness} м < ${n.brickMinThickness} м.`,
       hy: `Աղյուսե կրող պատի հաստությունը ${p.wallThickness} մ < ${n.brickMinThickness} մ։`,
     })
@@ -226,7 +226,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (p.system === 'monolith' && p.wallThickness < 0.16) {
     w.push({
       level: 'warning',
-      code: 'ՀՀՇՆ 20-04-2020',
+      code: 'ՀՀՇՆ 20.04-2020',
       ru: `Толщина несущей монолитной ж/б стены ${p.wallThickness} м < 0.16 м — увеличьте.`,
       hy: `Կրող մոնոլիտ ե/բ պատի հաստությունը ${p.wallThickness} մ < 0.16 մ — ավելացրեք։`,
     })
@@ -291,7 +291,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (glazingPct > n.maxGlazingPct) {
     w.push({
       level: 'warning',
-      code: 'ՀՀՇՆ 20-04-2020',
+      code: 'ՀՀՇՆ 20.04-2020',
       ru: `Остекление ${glazingPct.toFixed(0)}% стен > ${n.maxGlazingPct}% — теплопотери и снижение жёсткости.`,
       hy: `Ապակեպատումը ${glazingPct.toFixed(0)}% > ${n.maxGlazingPct}% — ջերմակորուստ և կոշտության նվազում։`,
     })
@@ -338,7 +338,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (p.rebarGrade === 'rebar_a400') {
     w.push({
       level: 'info',
-      code: 'ՀՀՇՆ 20-04-2020',
+      code: 'ՀՀՇՆ 20.04-2020',
       ru: 'Арматура A400 допустима, но в сейсмозоне РА предпочтительна A500С.',
       hy: 'A400 արմատուրը թույլատրելի է, բայց ՀՀ սեյսմիկ գոտում նախընտրելի է A500С։',
     })
@@ -346,7 +346,7 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
 
   // ---- Инженерные параметры (ручной ввод) — проверка по нормам ----
   const eng = p.eng
-  const push = (level: NormLevel, ru: string, hy: string) => w.push({ level, code: 'ՀՀՇՆ 20-04-2020', ru, hy })
+  const push = (level: NormLevel, ru: string, hy: string) => w.push({ level, code: 'ՀՀՇՆ 20.04-2020', ru, hy })
 
   if (eng.stripWidth != null && eng.stripWidth < 30)
     push('error', `Ширина ленты ${eng.stripWidth} см < 30 см — увеличьте.`, `Ժապավենի լայնությունը ${eng.stripWidth} սմ < 30 սմ — ավելացրեք։`)
@@ -378,6 +378,84 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
     push('warning', `Проёмы ${eng.openingsPct}% > ${n.maxGlazingPct}% — теплопотери/жёсткость, уменьшите.`, `Բացվածքներ ${eng.openingsPct}% > ${n.maxGlazingPct}% — նվազեցրեք։`)
   if (eng.wastePct != null && eng.wastePct < 3)
     push('info', `Запас ${eng.wastePct}% мал — рекомендуется 5–10%.`, `Պահուստ ${eng.wastePct}% քիչ է — խորհուրդ է 5–10%։`)
+
+  // ---- новые инженерные параметры: границы здравого смысла ----
+  // Диапазоны взяты из практики малоэтажного строительства РА. Цель не заменить
+  // расчёт, а поймать опечатку: 3 см вместо 30, 500 кг/м³ вместо 50.
+  const range = (
+    v: number | undefined,
+    lo: number,
+    hi: number,
+    ru: string,
+    hy: string,
+    unit: string,
+    level: NormLevel = 'warning',
+  ) => {
+    if (v == null || v <= 0) return
+    if (v < lo) push(level, `${ru} ${v} ${unit} < ${lo} ${unit} — проверьте.`, `${hy} ${v} ${unit} < ${lo} ${unit}։`)
+    else if (v > hi) push('info', `${ru} ${v} ${unit} > ${hi} ${unit} — избыточно, проверьте.`, `${hy} ${v} ${unit} > ${hi} ${unit}։`)
+  }
+
+  range(eng.slabThickness, 20, 60, 'Плита фундамента', 'Հիմքի սալ', 'см', 'error')
+  range(eng.pileDiameter, 20, 120, 'Диаметр сваи', 'Ցցի տրամագիծ', 'см', 'error')
+  range(eng.pileLength, 2, 20, 'Длина сваи', 'Ցցի երկարություն', 'м')
+  range(eng.foundationAxisStep, 1, 6, 'Шаг свай/столбов', 'Ցցերի քայլ', 'м')
+  range(eng.columnFoundationHeight, 0.8, 4, 'Высота столбчатого фундамента', 'Սյունակային հիմքի բարձրություն', 'м')
+  range(eng.basementWorkingWidth, 30, 200, 'Рабочая зона у стен подвала', 'Աշխատանքային գոտի', 'см')
+  range(eng.sandBed, 5, 50, 'Подсыпка', 'Ենթալիցք', 'см')
+  range(eng.apronWidth, 0.5, 3, 'Отмостка', 'Հատակաշի', 'м')
+  range(eng.columnGridStep, 2, 9, 'Шаг колонн', 'Սյուների քայլ', 'м')
+  range(eng.ringBeamW, 15, 60, 'Армопояс, ширина', 'Գոտի, լայնություն', 'см')
+  range(eng.ringBeamH, 15, 50, 'Армопояс, высота', 'Գոտի, բարձրություն', 'см')
+  range(eng.seismicCoreSize, 20, 60, 'Сейсмосердечник', 'Սեյսմ. միջուկ', 'см', 'error')
+  range(eng.seismicCoreStep, 1.5, 6, 'Шаг сейсмосердечников', 'Միջուկների քայլ', 'м')
+  range(eng.lintelW, 12, 50, 'Перемычка, ширина', 'Հեծան, լայնություն', 'см')
+  range(eng.lintelH, 12, 50, 'Перемычка, высота', 'Հեծան, բարձրություն', 'см')
+  range(eng.partitionThickness, 6, 30, 'Перегородка', 'Միջնապատ', 'см')
+  range(eng.precastSlabArea, 2, 20, 'Площадь плиты ПК', 'ПК սալի մակերես', 'м²')
+  range(eng.stairVolume, 0.8, 10, 'Лестница', 'Աստիճան', 'м³')
+
+  // Армирование: ниже 40 кг/м³ несущий элемент в сейсмозоне не армируют,
+  // выше 300 — почти наверняка опечатка либо ошибка единиц.
+  const rebarChecks: [number | undefined, string, string][] = [
+    [eng.rebarStrip, 'ленты', 'ժապավենի'],
+    [eng.rebarSlab, 'плиты', 'սալի'],
+    [eng.rebarPile, 'свай', 'ցցերի'],
+    [eng.rebarColumn, 'колонн', 'սյուների'],
+    [eng.rebarFloor, 'перекрытий', 'ծածկերի'],
+    [eng.rebarRingBeam, 'армопояса', 'գոտու'],
+    [eng.rebarSeismicCore, 'сердечников', 'միջուկների'],
+    [eng.rebarLintel, 'перемычек', 'հեծանների'],
+    [eng.rebarBasementWall, 'стен подвала', 'նկուղի պատերի'],
+    [eng.rebarMonolithWall, 'монолитных стен', 'մոնոլիտ պատերի'],
+  ]
+  for (const [v, ru, hy] of rebarChecks) {
+    if (v == null || v <= 0) continue
+    if (v < 40) push('error', `Армирование ${ru} ${v} кг/м³ < 40 кг/м³ — недостаточно для сейсмозоны.`, `${hy} արմատուրը ${v} կգ/մ³ < 40։`)
+    else if (v > 300) push('warning', `Армирование ${ru} ${v} кг/м³ > 300 кг/м³ — проверьте единицы измерения.`, `${hy} արմատուրը ${v} կգ/մ³ > 300 — ստուգեք միավորները։`)
+  }
+  if (eng.rebarFloorPct != null && eng.rebarFloorPct > 30)
+    push('info', `Прирост армирования ${eng.rebarFloorPct}% на этаж завышен (> 30%).`, `Արմատուրի աճը ${eng.rebarFloorPct}% բարձր է (> 30%)։`)
+
+  // Класс бетона по элементам не должен быть ниже сейсмического минимума
+  for (const [g, ru, hy] of [
+    [eng.concreteFoundation, 'фундамента', 'հիմքի'],
+    [eng.concreteFrame, 'каркаса/стен', 'կմախքի/պատերի'],
+    [eng.concreteFloors, 'перекрытий', 'ծածկերի'],
+  ] as [string | undefined, string, string][]) {
+    if (!g) continue
+    const cls = gradeFromKey(g)
+    if (cls > 0 && cls < n.minStructuralConcreteGrade)
+      push('error', `Класс бетона ${ru} ниже B${n.minStructuralConcreteGrade} — недопустимо в сейсмозоне.`, `${hy} բետոնի դասը B${n.minStructuralConcreteGrade}-ից ցածր է։`)
+  }
+
+  // Доля внутренних несущих осей: 0% означает, что дом держится только контуром
+  if (eng.internalBearingPct != null) {
+    if (eng.internalBearingPct < 20 && p.system !== 'frame')
+      push('warning', `Внутренние несущие оси ${eng.internalBearingPct}% периметра — мало для несущей системы, проверьте.`, `Ներքին կրող առանցքները ${eng.internalBearingPct}% — քիչ է։`)
+    else if (eng.internalBearingPct > 150)
+      push('info', `Внутренние несущие оси ${eng.internalBearingPct}% периметра — необычно много.`, `Ներքին կրող առանցքները ${eng.internalBearingPct}% — անսովոր շատ է։`)
+  }
 
   // верхние границы инженерных параметров (нереалистично большие значения)
   if (eng.stripWidth != null && eng.stripWidth > 120)

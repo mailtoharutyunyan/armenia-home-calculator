@@ -33,6 +33,11 @@ export function NormsRef() {
               {NORMS[n.code]?.status === 'draft' && (
                 <span className="badge lvl-warning">{lang === 'hy' ? 'նախագիծ' : 'проект'}</span>
               )}
+              {NORMS[n.code]?.status === 'unconfirmed' && (
+                <span className="badge lvl-warning">
+                  {lang === 'hy' ? 'ինդեքսը հաստատված չէ' : lang === 'en' ? 'index unconfirmed' : 'индекс не подтверждён'}
+                </span>
+              )}
             </div>
             <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', lineHeight: 1.5, color: 'var(--color-ink)' }}>
               {lang !== 'hy' ? n.requirementRu : n.requirementHy}

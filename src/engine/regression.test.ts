@@ -196,3 +196,114 @@ describe('целостность сметы и графика работ', () =>
     expect(computeEstimate(computeQuantities(p), SEED_PRICES, p, 'typical').missing).toEqual([])
   })
 })
+
+describe('панель инженера — переопределения реально меняют расчёт', () => {
+  const eng = (e: HouseParams['eng'], patch: Partial<HouseParams> = {}) => house({ ...patch, eng: e })
+
+  it('пустая панель не меняет итог по умолчанию', () => {
+    // страховка от того, что новое поле случайно получит ненулевой дефолт
+    const a = computeEstimate(computeQuantities(house()), SEED_PRICES, house(), 'typical').turnkey.total
+    const b = computeEstimate(computeQuantities(eng({})), SEED_PRICES, eng({}), 'typical').turnkey.total
+    expect(b).toBe(a)
+    // Закреплённый итог базового дома. Менять только осознанно, вместе с
+    // объяснением: 65 375 272 -> 68 546 404 при добавлении опалубки и подачи
+    // бетона насосом (раньше этих статей в смете не было вовсе).
+    expect(Math.round(a)).toBe(68546404)
+  })
+
+  it('армирование по элементам масштабирует тоннаж линейно', () => {
+    const base = qty(house(), 'rebar_a500', 'floors')
+    expect(qty(eng({ rebarFloor: 220 }), 'rebar_a500', 'floors')).toBeCloseTo(base * 2, 5)
+  })
+
+  it('толщина плитного фундамента управляет объёмом бетона', () => {
+    const p = { foundation: 'slab' as const }
+    const b = qty(eng({}, p), 'concrete_b25', 'foundation')
+    expect(qty(eng({ slabThickness: 45 }, p), 'concrete_b25', 'foundation')).toBeCloseTo(b * 1.5, 4)
+  })
+
+  it('диаметр сваи входит в объём квадратично', () => {
+    const p = { foundation: 'pile' as const }
+    const q1 = computeQuantities(eng({ pileDiameter: 30 }, p))
+    const q2 = computeQuantities(eng({ pileDiameter: 60 }, p))
+    const vol = (q: ReturnType<typeof computeQuantities>) =>
+      q.lines.filter((l) => l.key === 'concrete_b25' && l.section === 'foundation').reduce((a, l) => a + l.quantity, 0)
+    // ростверк не зависит от диаметра, поэтому рост меньше четырёхкратного, но заметный
+    expect(vol(q2)).toBeGreaterThan(vol(q1) * 1.5)
+  })
+
+  it('класс бетона задаётся отдельно по элементам', () => {
+    const q = computeQuantities(eng({ concreteFoundation: 'concrete_b30', concreteFloors: 'concrete_b20' }))
+    const at = (s: SectionId) => q.lines.find((l) => l.key.startsWith('concrete_b') && l.section === s && l.key !== 'concrete_blinding')?.key
+    expect(at('foundation')).toBe('concrete_b30')
+    expect(at('floors')).toBe('concrete_b20')
+    expect(at('frame')).toBe('concrete_b25') // не задан — берётся общий класс
+  })
+
+  it('доля внутренних несущих осей управляет объёмом кладки', () => {
+    const p = { system: 'tuff' as const }
+    const less = qty(eng({ internalBearingPct: 0 }, p), 'tuff_block', 'walls')
+    const more = qty(eng({ internalBearingPct: 100 }, p), 'tuff_block', 'walls')
+    expect(more).toBeGreaterThan(less)
+  })
+
+  it('шаг сейсмосердечников: чаще — больше бетона', () => {
+    const p = { system: 'tuff' as const }
+    const rare = qty(eng({ seismicCoreStep: 6 }, p), 'concrete_b25', 'walls')
+    const dense = qty(eng({ seismicCoreStep: 2 }, p), 'concrete_b25', 'walls')
+    expect(dense).toBeGreaterThan(rare)
+  })
+
+  it('нулевая доля раствора убирает строку раствора', () => {
+    expect(qty(eng({ mortarSharePct: 0 }, { system: 'tuff' }), 'mortar')).toBe(0)
+    expect(qty(eng({}, { system: 'tuff' }), 'mortar')).toBeGreaterThan(0)
+  })
+
+  it('нормы ловят заниженное армирование и опечатку в единицах', () => {
+    const low = checkNorms(eng({ rebarColumn: 10 }), computeQuantities(eng({ rebarColumn: 10 })))
+    expect(low.some((w) => w.level === 'error' && w.ru.includes('Армирование'))).toBe(true)
+    const high = checkNorms(eng({ rebarColumn: 5000 }), computeQuantities(eng({ rebarColumn: 5000 })))
+    expect(high.some((w) => w.ru.includes('единицы'))).toBe(true)
+  })
+
+  it('нормы ловят класс бетона ниже сейсмического минимума по элементу', () => {
+    const p = eng({ concreteFloors: 'concrete_b15' })
+    expect(checkNorms(p, computeQuantities(p)).some((w) => w.level === 'error' && w.ru.includes('перекрытий'))).toBe(true)
+  })
+})
+
+describe('опалубка, подача бетона и толщина утеплителя', () => {
+  it('опалубка попадает в тот же раздел, где залит бетон', () => {
+    const q = computeQuantities(house())
+    const fw = q.lines.filter((l) => l.key === 'formwork')
+    // бетон есть в фундаменте, каркасе, стенах и перекрытиях — опалубка тоже
+    expect(new Set(fw.map((l) => l.section)).size).toBeGreaterThan(1)
+    expect(fw.some((l) => l.section === 'foundation')).toBe(true)
+    expect(fw.some((l) => l.section === 'floors')).toBe(true)
+  })
+
+  it('объём опалубки пропорционален объёму бетона', () => {
+    const q = computeQuantities(house())
+    const concrete = q.lines
+      .filter((l) => l.key === 'concrete_b25')
+      .reduce((a, l) => a + l.quantity, 0)
+    const formwork = q.lines.filter((l) => l.key === 'formwork').reduce((a, l) => a + l.quantity, 0)
+    expect(formwork).toBeCloseTo(concrete * C.formworkPerM3, 4)
+  })
+
+  it('норма опалубки настраивается инженером', () => {
+    const base = qty(house(), 'formwork')
+    expect(qty(house({ eng: { formworkPerM3: 10 } }), 'formwork')).toBeCloseTo(base * 2, 4)
+  })
+
+  it('подача насосом отключается и убирает строку', () => {
+    expect(qty(house({ concretePump: true }), 'concrete_pump')).toBeGreaterThan(0)
+    expect(qty(house({ concretePump: false }), 'concrete_pump')).toBe(0)
+  })
+
+  it('толщина утеплителя линейно меняет его количество', () => {
+    const base = qty(house(), 'insulation')
+    expect(qty(house({ eng: { insulationThickness: 20 } }), 'insulation')).toBeCloseTo(base * 2, 4)
+    expect(qty(house({ eng: { insulationThickness: 5 } }), 'insulation')).toBeCloseTo(base / 2, 4)
+  })
+})

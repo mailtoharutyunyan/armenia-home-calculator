@@ -62,7 +62,11 @@ export function computeQuantities(p: HouseParams): Quantities {
   const P = 2 * (p.length + p.width)
   const H = p.floors * p.floorHeight
   const totalFloorArea = A * p.floors
-  const Lb = P * (1 + C.internalBearingFactor) // несущие оси = 1.5 * P
+  // доля внутренних несущих осей задаётся инженером; по умолчанию 50% периметра
+  const internalBearing = p.eng.internalBearingPct != null && p.eng.internalBearingPct >= 0
+    ? p.eng.internalBearingPct / 100
+    : C.internalBearingFactor
+  const Lb = P * (1 + internalBearing)
   const region = REGIONS[p.region]
 
   // ---- effective engineering values (engineer overrides win) ----
@@ -81,6 +85,54 @@ export function computeQuantities(p: HouseParams): Quantities {
   const beamSectionArea = e.beamSection ?? colSize * colSize
   const waste = 1 + (e.wastePct != null ? e.wastePct / 100 : C.wasteFactor - 1)
   const floorOnGround = cm(e.floorOnGround) ?? 0
+  // pct(): доля задаётся в процентах, 0 — осмысленное значение (например, «без
+  // раствора»), поэтому проверяем только на отрицательные и пустые.
+  const pct = (v?: number) => (v != null && v >= 0 ? v / 100 : undefined)
+  // Фундамент
+  const fndSlabT = cm(e.slabThickness) ?? C.slabThickness
+  const pileD = cm(e.pileDiameter) ?? C.pile.d
+  const pileLen = ov(e.pileLength) ?? C.pile.length
+  const axisStep = ov(e.foundationAxisStep) ?? C.foundationAxisStep
+  const colFndH = ov(e.columnFoundationHeight) ?? C.columnFoundationHeight
+  const basementWorkW = cm(e.basementWorkingWidth) ?? C.basementWorkingWidth
+  const sandBedT = cm(e.sandBed) ?? C.sandBedThickness
+  const apronW = ov(e.apronWidth) ?? C.apronWidth
+  const backfillK = pct(e.backfillPct) ?? C.backfillFactor
+  // Каркас и стены
+  const gridStep = ov(e.columnGridStep) ?? C.columnGridStep
+  const ringBeamW = cm(e.ringBeamW) ?? C.ringBeam.w
+  const ringBeamH = cm(e.ringBeamH) ?? C.ringBeam.h
+  const coreSize = cm(e.seismicCoreSize) ?? C.seismicCore.w
+  const coreStep = ov(e.seismicCoreStep) ?? C.seismicCoreStep
+  const lintelW = cm(e.lintelW) ?? C.lintel.w
+  const lintelH = cm(e.lintelH) ?? C.lintel.h
+  const partitionT = cm(e.partitionThickness) ?? C.partitionThickness
+  const mortarShare = pct(e.mortarSharePct) ?? C.mortarShare
+  const glueShare = pct(e.glueSharePct) ?? C.glueShare
+  // Перекрытия
+  const precastArea = ov(e.precastSlabArea) ?? C.precastSlabArea
+  const formworkK = ov(e.formworkPerM3) ?? C.formworkPerM3
+  const insulT = cm(e.insulationThickness) ?? C.insulationBaseThickness
+  const stairVol = ov(e.stairVolume) ?? C.stairVolumePerFlight
+  // Армирование, кг/м³
+  const reb = {
+    strip: ov(e.rebarStrip) ?? C.rebar.strip,
+    slab: ov(e.rebarSlab) ?? C.rebar.slab,
+    pile: ov(e.rebarPile) ?? C.rebar.pile,
+    column: ov(e.rebarColumn) ?? C.rebar.column,
+    floor: ov(e.rebarFloor) ?? C.rebar.floor,
+    ringBeam: ov(e.rebarRingBeam) ?? C.rebar.ringBeam,
+    seismicCore: ov(e.rebarSeismicCore) ?? C.rebar.seismicCore,
+    lintel: ov(e.rebarLintel) ?? C.rebar.lintel,
+    basementWall: ov(e.rebarBasementWall) ?? C.rebar.basementWall,
+    monolithWall: ov(e.rebarMonolithWall) ?? C.rebar.monolithWall,
+  }
+  // Класс бетона по элементам; пусто => общий класс из основной формы
+  const grade = {
+    foundation: e.concreteFoundation || p.concreteGrade,
+    frame: e.concreteFrame || p.concreteGrade,
+    floors: e.concreteFloors || p.concreteGrade,
+  }
 
   // double-height hall: void in the 2nd-floor slab (perimeter walls already
   // span the full height H, so no extra wall volume is added here).
@@ -118,47 +170,47 @@ export function computeQuantities(p: HouseParams): Quantities {
   // Обратная засыпка: у подвала засыпается только рабочая зона вокруг стен —
   // сам подвал занимает котлован. У ленты — обычная доля объёма траншеи.
   const backfillVol = p.basement
-    ? P * C.basementWorkingWidth * (p.basementDepth + 0.3)
-    : excavationVol * C.backfillFactor
+    ? P * basementWorkW * (p.basementDepth + 0.3)
+    : excavationVol * backfillK
   add('backfill', 'earthworks', 'act', backfillVol)
   // Подсыпка: под подошву фундамента + под пол по грунту, если он задан.
   add(
     'sand_gravel',
     'earthworks',
     'act',
-    soleArea * C.sandBedThickness + (floorOnGround > 0 ? A * C.sandBedThickness : 0),
+    soleArea * sandBedT + (floorOnGround > 0 ? A * sandBedT : 0),
   )
   add('concrete_blinding', 'foundation', 'act', soleArea * blindingT)
   // Пол по грунту — бетонная плита с сеткой, а не песчано-гравийная подсыпка.
-  if (floorOnGround > 0) addStruct('foundation', A * floorOnGround, C.rebar.slab)
+  if (floorOnGround > 0) addStruct('foundation', A * floorOnGround, reb.slab)
 
   // ---- Foundation ----
   if (p.foundation === 'strip') {
-    addStruct('foundation', stripLen * stripW * stripH, C.rebar.strip)
+    addStruct('foundation', stripLen * stripW * stripH, reb.strip)
   } else if (p.foundation === 'slab') {
-    addStruct('foundation', A * C.slabThickness, C.rebar.slab)
+    addStruct('foundation', A * fndSlabT, reb.slab)
   } else if (p.foundation === 'pile') {
-    const n = stripLen / C.foundationAxisStep
-    const pileVol = n * (Math.PI / 4) * C.pile.d ** 2 * C.pile.length
+    const n = stripLen / axisStep
+    const pileVol = n * (Math.PI / 4) * pileD ** 2 * pileLen
     const grillage = stripLen * stripW * 0.4
-    addStruct('foundation', pileVol + grillage, C.rebar.pile)
+    addStruct('foundation', pileVol + grillage, reb.pile)
   } else {
     // column
-    const n = stripLen / C.foundationAxisStep
-    addStruct('foundation', n * colSize * colSize * C.columnFoundationHeight, C.rebar.pile)
+    const n = stripLen / axisStep
+    addStruct('foundation', n * colSize * colSize * colFndH, reb.pile)
   }
 
   // ---- Basement walls + floor slab ----
   if (p.basement) {
-    addStruct('foundation', P * basementWallT * p.basementDepth, C.rebar.basementWall)
-    addStruct('foundation', A * C.slabThickness, C.rebar.slab) // пол подвала
+    addStruct('foundation', P * basementWallT * p.basementDepth, reb.basementWall)
+    addStruct('foundation', A * fndSlabT, reb.slab) // пол подвала
     add('waterproofing', 'foundation', 'act', A) // гидроизоляция пола подвала
   }
 
   // ---- Foundation waterproofing (plinth, exterior only) + apron ----
   const plinthHeight = p.basement ? p.basementDepth : 0.5
   add('waterproofing', 'foundation', 'act', P * plinthHeight)
-  add('apron', 'foundation', 'act', P * C.apronWidth)
+  add('apron', 'foundation', 'act', P * apronW)
 
   // ---- Walls / frame ----
   // В каркасе вертикаль несут колонны: кладка заполняет только наружный контур,
@@ -172,63 +224,63 @@ export function computeQuantities(p: HouseParams): Quantities {
   const wallNet = Math.max(0, wallGross - openingsArea)
 
   // ring beam (masonry) — per floor
-  const ringBeamVol = isMasonry ? Lb * C.ringBeam.w * C.ringBeam.h * p.floors : 0
+  const ringBeamVol = isMasonry ? Lb * ringBeamW * ringBeamH * p.floors : 0
   // seismic cores (tuff/brick only) — full height
-  const coreCount = Math.ceil(Lb / C.seismicCoreStep)
+  const coreCount = Math.ceil(Lb / coreStep)
   const coresActive = isMasonry && (wallMat === 'tuff' || wallMat === 'brick') && !p.seismicReinforcementDisabled
-  const coreVol = coresActive ? coreCount * C.seismicCore.w * C.seismicCore.h * H : 0
+  const coreVol = coresActive ? coreCount * coreSize * coreSize * H : 0
 
   if (isMasonry) {
-    addStruct('walls', ringBeamVol, C.rebar.ringBeam)
-    if (coreVol > 0) addStruct('walls', coreVol, C.rebar.seismicCore)
+    addStruct('walls', ringBeamVol, reb.ringBeam)
+    if (coreVol > 0) addStruct('walls', coreVol, reb.seismicCore)
     // masonry volume minus embedded RC (avoid double count)
     let masonryVol = wallNet * wallT - ringBeamVol - coreVol
     masonryVol = Math.max(0, masonryVol) * waste
     add(masonryKey(wallMat), 'walls', 'act', masonryVol)
     // mortar / glue
-    if (wallMat === 'aerated') add('glue_aerated', 'walls', 'act', masonryVol * C.glueShare)
-    else add('mortar', 'walls', 'act', masonryVol * C.mortarShare)
+    if (wallMat === 'aerated') add('glue_aerated', 'walls', 'act', masonryVol * glueShare)
+    else add('mortar', 'walls', 'act', masonryVol * mortarShare)
   } else if (isMonolith) {
     // полный монолит: несущие ж/б стены (бетон + арматура), без кладки и заполнения
     const wallVol = Math.max(0, wallNet * wallT) * waste
-    addStruct('walls', wallVol, C.rebar.monolithWall)
+    addStruct('walls', wallVol, reb.monolithWall)
   } else {
     // frame: columns + beams + infill
-    const nx = Math.floor(p.length / C.columnGridStep) + 1
-    const ny = Math.floor(p.width / C.columnGridStep) + 1
+    const nx = Math.floor(p.length / gridStep) + 1
+    const ny = Math.floor(p.width / gridStep) + 1
     const nCol = ov(e.columns) ?? nx * ny
-    addStruct('frame', nCol * colSize * colSize * H, C.rebar.column)
+    addStruct('frame', nCol * colSize * colSize * H, reb.column)
     const beamsLen = ov(e.beamsLen) ?? Lb * p.floors
-    addStruct('frame', beamsLen * beamSectionArea, C.rebar.ringBeam)
+    addStruct('frame', beamsLen * beamSectionArea, reb.ringBeam)
     const infillVol = Math.max(0, wallNet * wallT) * waste
     add(masonryKey(wallMat), 'walls', 'act', infillVol)
-    if (wallMat === 'aerated') add('glue_aerated', 'walls', 'act', infillVol * C.glueShare)
-    else add('mortar', 'walls', 'act', infillVol * C.mortarShare)
+    if (wallMat === 'aerated') add('glue_aerated', 'walls', 'act', infillVol * glueShare)
+    else add('mortar', 'walls', 'act', infillVol * mortarShare)
   }
 
   // ---- Lintels over openings ----
   const openingCount = Math.ceil(p.windowAreaTotal / 3) + p.exteriorDoors
   const lintelLen = openingCount * (1.5 + 0.5)
-  addStruct('walls', lintelLen * C.lintel.w * C.lintel.h, C.rebar.lintel)
+  addStruct('walls', lintelLen * lintelW * lintelH, reb.lintel)
 
   // ---- Floors / ceilings ----
   const slabArea = Math.max(0, A * p.floors - hallVoid)
   if (p.floorSlab === 'monolith') {
-    addStruct('floors', slabArea * floorSlabT, C.rebar.floor)
+    addStruct('floors', slabArea * floorSlabT, reb.floor)
   } else {
-    const count = Math.ceil(slabArea / C.precastSlabArea)
+    const count = Math.ceil(slabArea / precastArea)
     add('precast_slab', 'floors', 'act', count)
   }
 
   // ---- Beams over the double-height hall ----
   if (hallVoid > 0 && p.beamsOverHall) {
     const beamLen = Math.sqrt(hallVoid) * 2 // пара балок через проём
-    addStruct('floors', beamLen * 0.3 * 0.4, C.rebar.floor)
+    addStruct('floors', beamLen * 0.3 * 0.4, reb.floor)
   }
 
   // ---- Stair ----
   if (p.floors >= 2) {
-    add('stair', 'stair', 'act', (p.floors - 1) * C.stairVolumePerFlight)
+    add('stair', 'stair', 'act', (p.floors - 1) * stairVol)
   }
 
   // ---- Rough screed (act) ----
@@ -238,14 +290,14 @@ export function computeQuantities(p: HouseParams): Quantities {
   if (p.roof === 'flat') {
     add('roof_flat', 'roof', 'act', A)
     add('waterproofing', 'roof', 'act', A)
-    add('insulation', 'roof', 'act', A)
+    add('insulation', 'roof', 'act', A * (insulT / C.insulationBaseThickness))
   } else {
     // real slope: footprint / cos(angle) + eaves overhang, ×shape factor
     const rad = (Math.min(Math.max(p.roofPitchDeg, 5), 75) * Math.PI) / 180
     const shape = p.roof === 'mansard' ? 1.15 : p.roof === 'hip' ? 1.05 : 1
     const roofArea = (A / Math.cos(rad) + P * 0.5) * shape
     add('roof_pitched', 'roof', 'act', roofArea)
-    add('insulation', 'roof', 'act', roofArea)
+    add('insulation', 'roof', 'act', roofArea * (insulT / C.insulationBaseThickness))
     // gable walls: full for a gable/pitched roof, half for mansard, none for hip
     const gableMult = p.roof === 'pitched' ? 1 : p.roof === 'mansard' ? 0.5 : 0
     if (gableMult > 0) {
@@ -268,7 +320,7 @@ export function computeQuantities(p: HouseParams): Quantities {
   // whether kitchen/living are separate; also scales with area, floors, height.
   const partitionWalls = Math.max(0, p.roomsPerFloor - 1) + (p.kitchenLivingCombined ? 0 : 1)
   const partitionArea = partitionWalls * Math.sqrt(A) * p.floorHeight * p.floors
-  add('aerated_block', 'partitions', 'turnkey', partitionArea * C.partitionThickness)
+  add('aerated_block', 'partitions', 'turnkey', partitionArea * partitionT)
 
   // Штукатурка: внутренняя грань наружных стен (одна сторона) + внутренние
   // несущие стены (две стороны) + перегородки (две стороны) + потолки.
@@ -281,7 +333,7 @@ export function computeQuantities(p: HouseParams): Quantities {
   // Facade (outer walls only) + facade insulation
   const facadeArea = Math.max(0, P * H - p.windowAreaTotal)
   add('facade', 'facade', 'turnkey', facadeArea)
-  add('insulation', 'facade', 'turnkey', facadeArea)
+  add('insulation', 'facade', 'turnkey', facadeArea * (insulT / C.insulationBaseThickness))
 
   // Engineering networks (per m2 total area)
   add('electrical', 'engineering', 'turnkey', totalFloorArea)
@@ -325,13 +377,37 @@ export function computeQuantities(p: HouseParams): Quantities {
     add('permit_supervision', 'permit', 'act', totalFloorArea)
   }
 
+  // ---- Опалубка и подача бетона ----
+  // Считаются от фактического объёма конструктивного бетона, поэтому стоят
+  // после того, как все addStruct() отработали.
+  // Опалубка ложится в тот же раздел, где залит бетон, иначе разбивка сметы по
+  // разделам врёт: вся опалубка оказалась бы «фундаментом».
+  let structConcrete = 0
+  for (const key of Object.keys(concreteBySection) as SectionId[]) {
+    const vol = concreteBySection[key] ?? 0
+    if (vol <= 0) continue
+    structConcrete += vol
+    add('formwork', key, 'act', vol * formworkK)
+  }
+  // Насос тарифицируется на весь объём разом, поэтому одной строкой.
+  if (p.concretePump && structConcrete > 0) add('concrete_pump', 'foundation', 'act', structConcrete)
+
   // ---- Aggregate structural concrete + rebar, per section ----
   // reinforcement grows with number of floors (seismic/loads)
-  const rebarFloorK = 1 + C.rebarFloorFactor * Math.max(0, p.floors - 1)
+  const rebarFloorK = 1 + (pct(e.rebarFloorPct) ?? C.rebarFloorFactor) * Math.max(0, p.floors - 1)
   let rebarKg = 0
   for (const key of Object.keys(concreteBySection) as SectionId[]) {
     const vol = concreteBySection[key] ?? 0
-    if (vol > 0) lines.push({ key: p.concreteGrade, section: key, stage: 'act', quantity: vol })
+    if (vol > 0) {
+      // класс бетона может отличаться по элементам: фундамент / каркас / перекрытия
+      const g =
+        key === 'foundation' || key === 'earthworks'
+          ? grade.foundation
+          : key === 'frame' || key === 'walls'
+            ? grade.frame
+            : grade.floors
+      lines.push({ key: g, section: key, stage: 'act', quantity: vol })
+    }
   }
   for (const key of Object.keys(rebarBySection) as SectionId[]) {
     const kg = (rebarBySection[key] ?? 0) * rebarFloorK

@@ -37,6 +37,32 @@ function Num({
   )
 }
 
+// Класс бетона по элементу; пустое значение => берётся общий класс из формы.
+const GRADES = ['concrete_b15', 'concrete_b20', 'concrete_b225', 'concrete_b25', 'concrete_b30']
+const GRADE_LABEL: Record<string, string> = {
+  concrete_b15: 'B15 / М200',
+  concrete_b20: 'B20 / М250',
+  concrete_b225: 'B22.5 / М300',
+  concrete_b25: 'B25 / М350',
+  concrete_b30: 'B30 / М400',
+}
+
+function GradeSel({ label, lang, value, onChange }: { label: string; lang: string; value?: string; onChange: (v: string | undefined) => void }) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <select className="input" value={value ?? ''} onChange={(e) => onChange(e.target.value || undefined)}>
+        <option value="">{t(lang as never, 'engf_sameAsMain')}</option>
+        {GRADES.map((g) => (
+          <option key={g} value={g}>
+            {GRADE_LABEL[g]}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
 export function Inputs() {
   const { house, lang, setHouse } = useProject()
   const set = (patch: Partial<HouseParams>) => setHouse(patch)
@@ -327,6 +353,10 @@ export function Inputs() {
           <Num label={t(lang, 'sitePavingArea')} value={house.sitePavingArea} step={5} onChange={(n) => set({ sitePavingArea: n })} />
         </div>
         <Num label={t(lang, 'balconyArea')} value={house.balconyArea} step={2} onChange={(n) => set({ balconyArea: n })} />
+        <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input type="checkbox" checked={house.concretePump} onChange={(e) => set({ concretePump: e.target.checked })} />
+          <span style={{ marginBottom: 0 }}>{t(lang, 'concretePump')}</span>
+        </label>
         <p style={{ fontSize: '0.72rem', color: 'var(--color-ink-soft)', margin: '0 0 0.6rem' }}>{t(lang, 'utilitiesHint')}</p>
 
           </div>
@@ -420,22 +450,88 @@ export function Inputs() {
               ? 'Любое значение вне норм РА подсветится в «Предупреждениях».'
               : 'ՀՀ նորմերից դուրս ցանկացած արժեք կնշվի «Նախազգուշացումներում»։'}
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginTop: '0.7rem' }}>
-            <Num label={t(lang, 'eng_stripLen')} value={eng.stripLen ?? Math.round(Lb)} onChange={(n) => setEng({ stripLen: n })} />
-            <Num label={t(lang, 'eng_stripWidth')} value={eng.stripWidth ?? 40} onChange={(n) => setEng({ stripWidth: n })} />
-            <Num label={t(lang, 'eng_stripHeight')} value={eng.stripHeight ?? 80} onChange={(n) => setEng({ stripHeight: n })} />
-            <Num label={t(lang, 'eng_floorOnGround')} value={eng.floorOnGround ?? 0} onChange={(n) => setEng({ floorOnGround: n })} />
-            <Num label={t(lang, 'eng_blinding')} value={eng.blinding ?? 5} onChange={(n) => setEng({ blinding: n })} />
-            <Num label={t(lang, 'eng_slab')} value={eng.slab ?? 17} onChange={(n) => setEng({ slab: n })} />
-            <Num label={t(lang, 'eng_extWall')} value={eng.extWall ?? Math.round(house.wallThickness * 100)} onChange={(n) => setEng({ extWall: n })} />
-            <Num label={t(lang, 'eng_columns')} value={eng.columns ?? colDefault} onChange={(n) => setEng({ columns: n })} />
-            <Num label={t(lang, 'eng_columnSize')} value={eng.columnSize ?? 40} onChange={(n) => setEng({ columnSize: n })} />
-            <Num label={t(lang, 'eng_beamsLen')} value={eng.beamsLen ?? Math.round(Lb * house.floors)} onChange={(n) => setEng({ beamsLen: n })} />
-            <Num label={t(lang, 'eng_beamSection')} value={eng.beamSection ?? 0.16} step={0.01} onChange={(n) => setEng({ beamSection: n })} />
-            <Num label={t(lang, 'eng_openingsPct')} value={eng.openingsPct ?? openingsDefault} onChange={(n) => setEng({ openingsPct: n })} />
-            <Num label={t(lang, 'eng_wastePct')} value={eng.wastePct ?? 5} onChange={(n) => setEng({ wastePct: n })} />
-            <Num label={t(lang, 'eng_basementWall')} value={eng.basementWall ?? 30} onChange={(n) => setEng({ basementWall: n })} />
-          </div>
+          <details className="group" open>
+            <summary><span className="eyebrow">{t(lang, 'engg_fnd')}</span></summary>
+            <div className="group-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+              <Num label={t(lang, 'engf_stripLen')} value={eng.stripLen ?? Math.round(Lb)} step={1} onChange={(n) => setEng({ stripLen: n })} />
+              <Num label={t(lang, 'engf_stripWidth')} value={eng.stripWidth ?? 40} step={1} onChange={(n) => setEng({ stripWidth: n })} />
+              <Num label={t(lang, 'engf_stripHeight')} value={eng.stripHeight ?? 80} step={1} onChange={(n) => setEng({ stripHeight: n })} />
+              <Num label={t(lang, 'engf_slabThickness')} value={eng.slabThickness ?? 30} step={1} onChange={(n) => setEng({ slabThickness: n })} />
+              <Num label={t(lang, 'engf_pileDiameter')} value={eng.pileDiameter ?? 30} step={1} onChange={(n) => setEng({ pileDiameter: n })} />
+              <Num label={t(lang, 'engf_pileLength')} value={eng.pileLength ?? 3} step={0.5} onChange={(n) => setEng({ pileLength: n })} />
+              <Num label={t(lang, 'engf_foundationAxisStep')} value={eng.foundationAxisStep ?? 2} step={0.5} onChange={(n) => setEng({ foundationAxisStep: n })} />
+              <Num label={t(lang, 'engf_columnFoundationHeight')} value={eng.columnFoundationHeight ?? 1.5} step={0.1} onChange={(n) => setEng({ columnFoundationHeight: n })} />
+              <Num label={t(lang, 'engf_floorOnGround')} value={eng.floorOnGround ?? 0} step={1} onChange={(n) => setEng({ floorOnGround: n })} />
+              <Num label={t(lang, 'engf_blinding')} value={eng.blinding ?? 5} step={1} onChange={(n) => setEng({ blinding: n })} />
+              <Num label={t(lang, 'engf_sandBed')} value={eng.sandBed ?? 10} step={1} onChange={(n) => setEng({ sandBed: n })} />
+              <Num label={t(lang, 'engf_apronWidth')} value={eng.apronWidth ?? 1} step={0.1} onChange={(n) => setEng({ apronWidth: n })} />
+              <Num label={t(lang, 'engf_backfillPct')} value={eng.backfillPct ?? 60} step={5} onChange={(n) => setEng({ backfillPct: n })} />
+              <Num label={t(lang, 'engf_basementWall')} value={eng.basementWall ?? 30} step={1} onChange={(n) => setEng({ basementWall: n })} />
+              <Num label={t(lang, 'engf_basementWorkingWidth')} value={eng.basementWorkingWidth ?? 60} step={5} onChange={(n) => setEng({ basementWorkingWidth: n })} />
+            </div>
+          </details>
+          <details className="group" >
+            <summary><span className="eyebrow">{t(lang, 'engg_frame')}</span></summary>
+            <div className="group-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+              <Num label={t(lang, 'engf_extWall')} value={eng.extWall ?? Math.round(house.wallThickness * 100)} step={1} onChange={(n) => setEng({ extWall: n })} />
+              <Num label={t(lang, 'engf_columns')} value={eng.columns ?? colDefault} step={1} onChange={(n) => setEng({ columns: n })} />
+              <Num label={t(lang, 'engf_columnSize')} value={eng.columnSize ?? 40} step={1} onChange={(n) => setEng({ columnSize: n })} />
+              <Num label={t(lang, 'engf_columnGridStep')} value={eng.columnGridStep ?? 4} step={0.5} onChange={(n) => setEng({ columnGridStep: n })} />
+              <Num label={t(lang, 'engf_beamsLen')} value={eng.beamsLen ?? Math.round(Lb * house.floors)} step={1} onChange={(n) => setEng({ beamsLen: n })} />
+              <Num label={t(lang, 'engf_beamSection')} value={eng.beamSection ?? 0.16} step={0.01} onChange={(n) => setEng({ beamSection: n })} />
+              <Num label={t(lang, 'engf_internalBearingPct')} value={eng.internalBearingPct ?? 50} step={5} onChange={(n) => setEng({ internalBearingPct: n })} />
+              <Num label={t(lang, 'engf_ringBeamW')} value={eng.ringBeamW ?? 30} step={1} onChange={(n) => setEng({ ringBeamW: n })} />
+              <Num label={t(lang, 'engf_ringBeamH')} value={eng.ringBeamH ?? 20} step={1} onChange={(n) => setEng({ ringBeamH: n })} />
+              <Num label={t(lang, 'engf_seismicCoreSize')} value={eng.seismicCoreSize ?? 25} step={1} onChange={(n) => setEng({ seismicCoreSize: n })} />
+              <Num label={t(lang, 'engf_seismicCoreStep')} value={eng.seismicCoreStep ?? 3} step={0.5} onChange={(n) => setEng({ seismicCoreStep: n })} />
+              <Num label={t(lang, 'engf_lintelW')} value={eng.lintelW ?? 25} step={1} onChange={(n) => setEng({ lintelW: n })} />
+              <Num label={t(lang, 'engf_lintelH')} value={eng.lintelH ?? 20} step={1} onChange={(n) => setEng({ lintelH: n })} />
+              <Num label={t(lang, 'engf_partitionThickness')} value={eng.partitionThickness ?? 10} step={1} onChange={(n) => setEng({ partitionThickness: n })} />
+              <Num label={t(lang, 'engf_mortarSharePct')} value={eng.mortarSharePct ?? 20} step={1} onChange={(n) => setEng({ mortarSharePct: n })} />
+              <Num label={t(lang, 'engf_glueSharePct')} value={eng.glueSharePct ?? 2.5} step={0.5} onChange={(n) => setEng({ glueSharePct: n })} />
+            </div>
+          </details>
+          <details className="group" >
+            <summary><span className="eyebrow">{t(lang, 'engg_slabs')}</span></summary>
+            <div className="group-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+              <Num label={t(lang, 'engf_slab')} value={eng.slab ?? 18} step={1} onChange={(n) => setEng({ slab: n })} />
+              <Num label={t(lang, 'engf_precastSlabArea')} value={eng.precastSlabArea ?? 5.4} step={0.1} onChange={(n) => setEng({ precastSlabArea: n })} />
+              <Num label={t(lang, 'engf_stairVolume')} value={eng.stairVolume ?? 2.5} step={0.1} onChange={(n) => setEng({ stairVolume: n })} />
+            </div>
+          </details>
+          <details className="group" >
+            <summary><span className="eyebrow">{t(lang, 'engg_rebar')}</span></summary>
+            <div className="group-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+              <Num label={t(lang, 'engf_rebarStrip')} value={eng.rebarStrip ?? 80} step={5} onChange={(n) => setEng({ rebarStrip: n })} />
+              <Num label={t(lang, 'engf_rebarSlab')} value={eng.rebarSlab ?? 100} step={5} onChange={(n) => setEng({ rebarSlab: n })} />
+              <Num label={t(lang, 'engf_rebarPile')} value={eng.rebarPile ?? 90} step={5} onChange={(n) => setEng({ rebarPile: n })} />
+              <Num label={t(lang, 'engf_rebarColumn')} value={eng.rebarColumn ?? 170} step={5} onChange={(n) => setEng({ rebarColumn: n })} />
+              <Num label={t(lang, 'engf_rebarFloor')} value={eng.rebarFloor ?? 110} step={5} onChange={(n) => setEng({ rebarFloor: n })} />
+              <Num label={t(lang, 'engf_rebarRingBeam')} value={eng.rebarRingBeam ?? 100} step={5} onChange={(n) => setEng({ rebarRingBeam: n })} />
+              <Num label={t(lang, 'engf_rebarSeismicCore')} value={eng.rebarSeismicCore ?? 150} step={5} onChange={(n) => setEng({ rebarSeismicCore: n })} />
+              <Num label={t(lang, 'engf_rebarLintel')} value={eng.rebarLintel ?? 120} step={5} onChange={(n) => setEng({ rebarLintel: n })} />
+              <Num label={t(lang, 'engf_rebarBasementWall')} value={eng.rebarBasementWall ?? 90} step={5} onChange={(n) => setEng({ rebarBasementWall: n })} />
+              <Num label={t(lang, 'engf_rebarMonolithWall')} value={eng.rebarMonolithWall ?? 130} step={5} onChange={(n) => setEng({ rebarMonolithWall: n })} />
+              <Num label={t(lang, 'engf_rebarFloorPct')} value={eng.rebarFloorPct ?? 7} step={1} onChange={(n) => setEng({ rebarFloorPct: n })} />
+            </div>
+          </details>
+          <details className="group" >
+            <summary><span className="eyebrow">{t(lang, 'engg_misc')}</span></summary>
+            <div className="group-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+              <Num label={t(lang, 'engf_openingsPct')} value={eng.openingsPct ?? openingsDefault} step={1} onChange={(n) => setEng({ openingsPct: n })} />
+              <Num label={t(lang, 'engf_wastePct')} value={eng.wastePct ?? 5} step={1} onChange={(n) => setEng({ wastePct: n })} />
+              <Num label={t(lang, 'engf_formworkPerM3')} value={eng.formworkPerM3 ?? 5} step={0.5} onChange={(n) => setEng({ formworkPerM3: n })} />
+              <Num label={t(lang, 'engf_insulationThickness')} value={eng.insulationThickness ?? 10} step={1} onChange={(n) => setEng({ insulationThickness: n })} />
+            </div>
+          </details>
+          <details className="group">
+            <summary><span className="eyebrow">{t(lang, 'engg_concrete')}</span></summary>
+            <div className="group-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+              <GradeSel label={t(lang, 'engf_concreteFoundation')} lang={lang} value={eng.concreteFoundation} onChange={(v) => setEng({ concreteFoundation: v })} />
+              <GradeSel label={t(lang, 'engf_concreteFrame')} lang={lang} value={eng.concreteFrame} onChange={(v) => setEng({ concreteFrame: v })} />
+              <GradeSel label={t(lang, 'engf_concreteFloors')} lang={lang} value={eng.concreteFloors} onChange={(v) => setEng({ concreteFloors: v })} />
+            </div>
+          </details>
           <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.6rem' }}>
             <input type="checkbox" checked={house.beamsOverHall} onChange={(e) => set({ beamsOverHall: e.target.checked })} />
             <span style={{ marginBottom: 0 }}>{t(lang, 'beamsOverHall')}</span>

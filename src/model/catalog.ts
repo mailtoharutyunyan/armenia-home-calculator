@@ -1,8 +1,21 @@
 import type { PriceMode } from './house'
 
-// A single price-list entry. Prices are stored as a min/typical/max band
-// aggregated from several suppliers — no single source is treated as truth.
+// Откуда взята цена. Нужно, чтобы интерфейс не выдавал прикидку за котировку:
+//   quoted     — сверено с прайсом поставщика, есть verifiedAt и рабочая ссылка
+//   unverified — ориентир правдоподобного порядка, с прайсом НЕ сверялось
+//   estimate   — оценка составителя (подключения, благоустройство и т.п.)
+//   official   — госпошлина или тариф, величина задана нормативно
+export type Provenance = 'quoted' | 'unverified' | 'estimate' | 'official'
+
+// A single price-list entry.
+//
+// ВАЖНО про вилку min/max: она НЕ является агрегатом котировок разных
+// поставщиков. Для provenance !== 'quoted' она выводится арифметически из
+// typical и показывает чувствительность результата, а не рыночный разброс.
 export interface PriceItem {
+  provenance: Provenance
+  verifiedAt?: string // дд.мм.гггг — когда человек сверил цену с источником
+  sourceUrls?: string[] // только рабочие адреса; битый источник хуже, чем никакого
   key: string
   labelRu: string
   labelHy: string
