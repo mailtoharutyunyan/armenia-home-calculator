@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useProject } from '../store/useProject'
 import { t } from '../i18n'
 import { computeQuantities } from '../engine/quantities'
-import { checkNorms } from '../engine/norms'
+import { checkNorms, warningText } from '../engine/norms'
 import type { NormLevel } from '../engine/norms'
 import { LevelIcon } from './icons'
 import { NormLink } from './NormLink'
@@ -43,7 +43,7 @@ export function Warnings() {
           >
             <LevelIcon level={w.level} />
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '0.86rem' }}>{lang !== 'hy' ? w.ru : w.hy}</div>
+              <div style={{ fontSize: '0.86rem' }}>{warningText(w, lang)}</div>
               {/* полное название нормы, кликабельное — ведёт на текст документа */}
               <div style={{ fontSize: '0.72rem', marginTop: '0.2rem', lineHeight: 1.35 }}>
                 <NormLink code={w.code} lang={lang} className={`lvl-${w.level}`} />

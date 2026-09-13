@@ -301,9 +301,23 @@ export const DICT: Dict = {
     hy: '2D հատակագիծ',
   },
 
+  // Юридический факт, который не зависит от точности расчёта.
   disclaimer: {
-    ru: 'Расчёт ориентировочный и не заменяет проект лицензированного инженера. Цены стартовые — проверяйте актуальные. Разрешение выдают госорганы РА.',
-    hy: 'Հաշվարկը մոտավոր է և չի փոխարինում լիցենզավորված ինժեների կողմից մշակված նախագծին։ Գները մեկնարկային են, խնդրում ենք ստուգել դրանց արդիականությունը։ Թույլտվությունները տրամադրում են ՀՀ պետական մարմինները։',
+    ru: 'Рабочий проект разрабатывает лицензированная организация — без него разрешение не выдадут. Этот расчёт даёт объёмы и бюджет для разговора с проектировщиком.',
+    hy: 'Աշխատանքային նախագիծը մշակում է լիցենզավորված կազմակերպությունը. առանց դրա թույլտվություն չի տրվում։ Այս հաշվարկը տալիս է ծավալներ և բյուջե նախագծողի հետ խոսելու համար։',
+  },
+  // Точность — зависит от того, сколько цен сверено.
+  prec_estimate: {
+    ru: 'Оценка порядка величины: ни одна цена не сверена с прайсом поставщика. Математика точная, приблизительны входные цены.',
+    hy: 'Կարգի գնահատական՝ ոչ մի գին ստուգված չէ մատակարարի գնացուցակով։ Հաշվարկը ճշգրիտ է, մոտավոր են մուտքային գները։',
+  },
+  prec_partial: {
+    ru: 'Частично на ваших ценах: сверено {q} из {t}. Остальные позиции — оценка.',
+    hy: 'Մասամբ ձեր գներով՝ ստուգված է {q} {t}-ից։ Մնացածը՝ գնահատական։',
+  },
+  prec_quoted: {
+    ru: 'Расчёт по вашим ценам: все {t} позиций сверены с прайсами. Приблизительности нет — итог точен на дату сверки.',
+    hy: 'Հաշվարկ ձեր գներով՝ բոլոր {t} դիրքերը ստուգված են։ Մոտավորություն չկա։',
   },
   warningsTitle: {
     ru: 'Предупреждения по нормам',
@@ -570,6 +584,28 @@ export const DICT: Dict = {
   engf_insulationThickness: { ru: 'Утеплитель, см', hy: 'Ջերմամեկուսիչ, սմ' },
   concretePump: { ru: 'Подача бетона насосом', hy: 'Բետոնի մատակարարում պոմպով' },
 
+  frontSide: { ru: 'Какая сторона выходит на улицу', hy: 'Ո՞ր կողմն է դեպի փողոց' },
+  meters: { ru: 'м', hy: 'մ' },
+
+  // --- Сметная развёртка ---
+  breakdownTitle: { ru: 'От затрат к цене договора', hy: 'Ծախսերից մինչև պայմանագրային գին' },
+  directCosts: { ru: 'Прямые затраты', hy: 'Ուղղակի ծախսեր' },
+  overhead: { ru: 'Накладные расходы', hy: 'Վերադիր ծախսեր' },
+  profit: { ru: 'Сметная прибыль подрядчика', hy: 'Կապալառուի շահույթ' },
+  temporary: { ru: 'Временные здания и сооружения', hy: 'Ժամանակավոր շինություններ' },
+  winter: { ru: 'Зимнее удорожание', hy: 'Ձմեռային թանկացում' },
+  works: { ru: 'СМР итого', hy: 'ՇՄԱ ընդամենը' },
+  contingency: { ru: 'Непредвиденные', hy: 'Չնախատեսված ծախսեր' },
+  permitLine: { ru: 'Документы и пошлины', hy: 'Փաստաթղթեր և տուրքեր' },
+  contractPrice: { ru: 'Цена договора', hy: 'Պայմանագրային գին' },
+  buildMode: { ru: 'Кто строит', hy: 'Ով է կառուցում' },
+  bm_self: { ru: 'Хозспособ (бригады напрямую)', hy: 'Ինքնուրույն (բրիգադներն ուղղակի)' },
+  bm_contractor: { ru: 'Генподрядчик по договору', hy: 'Գլխավոր կապալառու պայմանագրով' },
+  buildModeHint: {
+    ru: 'Хозспособ: нет прибыли подрядчика и НДС, но больше работы и рисков на вас. Подрядчик: цена выше, ответственность на нём.',
+    hy: 'Ինքնուրույն՝ չկա կապալառուի շահույթ և ԱԱՀ, բայց ռիսկերն ու աշխատանքը ձեր վրա են։ Կապալառու՝ գինը բարձր է, պատասխանատվությունը՝ նրա վրա։',
+  },
+
   // --- Постоянно видимый итог ---
   rb_turnkey: { ru: 'Под ключ', hy: 'Բանալի հանձնում' },
   rb_perM2: { ru: 'За м²', hy: 'Մեկ մ²' },
@@ -714,7 +750,12 @@ const EN: Record<string, string> = {
   exportDxf: 'Export DXF (AutoCAD)',
   plan2d: '2D plan',
   disclaimer:
-    'The estimate is approximate and does not replace a licensed engineer’s design. Prices are starting values — verify current ones. Permits are issued by RA authorities.',
+    'The working design is produced by a licensed organisation — no permit is issued without it. This calculation gives quantities and a budget to discuss with a designer.',
+  prec_estimate:
+    'Order-of-magnitude estimate: no price has been verified against a supplier list. The maths is exact; the input prices are not.',
+  prec_partial: 'Partly on your prices: {q} of {t} verified. The rest are estimates.',
+  prec_quoted:
+    'Calculated on your prices: all {t} items verified against supplier lists. Nothing is approximate — the total is exact as of the verification date.',
   warningsTitle: 'Code warnings',
   noWarnings: 'No obvious code violations found.',
   hasErrors: 'There are code violations — the estimate may be incorrect.',
@@ -845,6 +886,22 @@ const EN: Record<string, string> = {
   engf_formworkPerM3: 'Formwork, m² per m³ of concrete',
   engf_insulationThickness: 'Insulation, cm',
   concretePump: 'Concrete pumping',
+  frontSide: 'Which side faces the street',
+  meters: 'm',
+  breakdownTitle: 'From costs to contract price',
+  directCosts: 'Direct costs',
+  overhead: 'Overheads',
+  profit: "Contractor's profit",
+  temporary: 'Temporary works & site facilities',
+  winter: 'Winter surcharge',
+  works: 'Construction works total',
+  contingency: 'Contingency',
+  permitLine: 'Documents & state fees',
+  contractPrice: 'Contract price',
+  buildMode: 'Who builds',
+  bm_self: 'Self-managed (direct crews)',
+  bm_contractor: 'Main contractor under contract',
+  buildModeHint: 'Self-managed: no contractor profit or VAT, but the work and risk are yours. Contractor: higher price, responsibility is theirs.',
   rb_turnkey: 'Turnkey',
   rb_perM2: 'Per m²',
   rb_act: 'Shell',

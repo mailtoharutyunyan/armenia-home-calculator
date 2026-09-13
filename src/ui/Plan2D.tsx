@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { useProject, newRoomId } from '../store/useProject'
 import type { EditRoom } from '../store/useProject'
 import { t } from '../i18n'
+import type { HouseParams } from '../model/house'
 import { buildPlan } from '../engine/plan'
 import { downloadDxf } from '../engine/dxf'
 import { autoProgram, buildFloorPlan } from '../engine/floorplan'
 import type { RoomType } from '../engine/floorplan'
 import { FloorPlanSvg } from './FloorPlan'
+import { auditPlan, issueText } from '../engine/planAudit'
 
 const TYPE_LABEL: Record<RoomType, { ru: string; hy: string; en: string }> = {
   living_kitchen: { ru: 'Гостиная-кухня', hy: 'Հյուրասենյակ-խոհանոց', en: 'Living-kitchen' },
@@ -16,6 +18,10 @@ const TYPE_LABEL: Record<RoomType, { ru: string; hy: string; en: string }> = {
   bath: { ru: 'Санузел', hy: 'Սանհանգույց', en: 'Bathroom' },
   stair: { ru: 'Лестница', hy: 'Աստիճան', en: 'Staircase' },
   wardrobe: { ru: 'Гардеробная', hy: 'Հանդերձարան', en: 'Walk-in closet' },
+  dining: { ru: 'Кухня-столовая', hy: 'Խոհանոց-ճաշասենյակ', en: 'Kitchen-dining' },
+  hall: { ru: 'Прихожая', hy: 'Նախասրահ', en: 'Entry hall' },
+  corridor: { ru: 'Коридор', hy: 'Միջանցք', en: 'Corridor' },
+  office: { ru: 'Кабинет', hy: 'Աշխատասենյակ', en: 'Home office' },
 }
 
 export function Plan2D() {
@@ -45,10 +51,13 @@ export function Plan2D() {
           let label = pick(TYPE_LABEL[s.type])
           if (s.type === 'bath' && ground)
             label = lang === 'hy' ? 'Հյուրերի ս/հ' : lang === 'en' ? 'Guest WC' : 'Гостевой с/у'
+          else if (s.type === 'office')
+            label = lang === 'hy' ? 'Աշխատասենյակ' : lang === 'en' ? 'Home office' : 'Кабинет'
           else if (s.type === 'bedroom') {
             bed++
             const master = lang === 'hy' ? 'Գլխավոր ննջասենյակ' : lang === 'en' ? 'Master bedroom' : 'Мастер-спальня'
-            label = ground && bed === 1 ? master : `${pick(TYPE_LABEL.bedroom)} ${bed}`
+            const kid = lang === 'hy' ? 'Մանկական' : lang === 'en' ? 'Kids room' : 'Детская'
+            label = ground && bed === 1 ? master : `${kid} ${bed}`
           }
           return { type: s.type, label, weight: s.weight }
         })
@@ -61,6 +70,10 @@ export function Plan2D() {
     voidLabel: lang === 'hy' ? 'Բաց սրահ · երկրորդ լույս' : lang === 'en' ? 'Open to below · double height' : 'Второй свет · открыто вниз',
     corridorLabel: lang === 'hy' ? 'Միջանցք' : lang === 'en' ? 'Corridor' : 'Коридор',
     wardrobeLabel: lang === 'hy' ? 'Հանդերձ.' : lang === 'en' ? 'Closet' : 'Гардероб',
+    hallLabel: lang === 'hy' ? 'Նախասրահ' : lang === 'en' ? 'Entry hall' : 'Прихожая',
+    officeLabel: lang === 'hy' ? 'Աշխատասենյակ' : lang === 'en' ? 'Home office' : 'Кабинет',
+    diningLabel: lang === 'hy' ? 'Խոհանոց-ճաշասենյակ' : lang === 'en' ? 'Kitchen-dining' : 'Кухня-столовая',
+    livingLabel: lang === 'hy' ? 'Հյուրասենյակ' : lang === 'en' ? 'Living room' : 'Гостиная',
     ensuiteLabel: lang === 'hy' ? 'Անձնական ս/հ' : lang === 'en' ? 'Ensuite' : 'Мастер с/у',
   }
   // room-by-room areas for the active floor (same layout the plan renders)
@@ -75,7 +88,7 @@ export function Plan2D() {
           <div className="seg no-print">
             {Array.from({ length: house.floors }, (_, i) => (
               <button key={i} aria-pressed={activeFloor === i} onClick={() => setFloor(i)}>
-                {i + 1} {lang !== 'hy' ? 'эт.' : 'հարկ'}
+                {i + 1} {lang === 'hy' ? 'հարկ' : lang === 'en' ? 'fl.' : 'эт.'}
               </button>
             ))}
           </div>
@@ -84,13 +97,18 @@ export function Plan2D() {
         )}
       </div>
 
-      <div style={{ padding: '1rem' }}>
+      <div className="plan-wrap" style={{ padding: '1rem' }}>
         <FloorPlanSvg house={house} floorIndex={activeFloor} custom={custom} labels={planLabels} />
+
+        {/* Планировочный аудит: вход, проходные комнаты, пропорции, окна,
+            совпадение лестниц и проёма. Показывается сразу под планом, чтобы
+            дефект было видно без разглядывания чертежа. */}
+        <PlanAudit house={house} lang={lang} floor={activeFloor} />
 
         {/* room-by-room areas */}
         <div style={{ marginTop: '0.9rem' }}>
           <div className="eyebrow" style={{ marginBottom: '0.5rem' }}>
-            {lang === 'hy' ? 'Սենյակների մակերեսներ' : lang === 'en' ? 'Room areas' : 'Площади комнат'} · {activeFloor + 1} {lang !== 'hy' ? 'эт.' : 'հարկ'}
+            {lang === 'hy' ? 'Սենյակների մակերեսներ' : lang === 'en' ? 'Room areas' : 'Площади комнат'} · {activeFloor + 1} {lang === 'hy' ? 'հարկ' : lang === 'en' ? 'fl.' : 'эт.'}
           </div>
           {planRooms.map((r, i) => (
             <div className="spec-row" key={i}>
@@ -144,6 +162,35 @@ export function Plan2D() {
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+function PlanAudit({ house, lang, floor }: { house: HouseParams; lang: string; floor: number }) {
+  const issues = auditPlan(house).filter((i) => i.floor === floor)
+  const errs = issues.filter((i) => i.level === 'error')
+  const warns = issues.filter((i) => i.level === 'warning')
+  const ok = errs.length === 0 && warns.length === 0
+  const title =
+    lang === 'hy' ? 'Հատակագծի ստուգում' : lang === 'en' ? 'Layout check' : 'Проверка планировки'
+  return (
+    <div style={{ marginTop: '0.9rem' }}>
+      <div className="eyebrow" style={{ marginBottom: '0.5rem' }}>{title}</div>
+      {ok && (
+        <div style={{ fontSize: '0.82rem', color: 'var(--color-ok)' }}>
+          {lang === 'hy' ? 'Հատակագծային սխալներ չկան։' : lang === 'en' ? 'No layout problems found.' : 'Планировочных ошибок не найдено.'}
+        </div>
+      )}
+      {[...errs, ...warns].map((i, k) => (
+        <div key={k} className="spec-row" style={{ alignItems: 'flex-start', gap: '0.6rem' }}>
+          <span className={`badge lvl-${i.level}`} style={{ flex: 'none' }}>
+            {i.level === 'error'
+              ? lang === 'hy' ? 'սխալ' : lang === 'en' ? 'error' : 'ошибка'
+              : lang === 'hy' ? 'ուշադրություն' : lang === 'en' ? 'check' : 'внимание'}
+          </span>
+          <span style={{ fontSize: '0.82rem', lineHeight: 1.45 }}>{issueText(i, lang)}</span>
+        </div>
+      ))}
     </div>
   )
 }

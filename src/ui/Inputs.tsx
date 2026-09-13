@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useProject } from '../store/useProject'
 import { t } from '../i18n'
 import type { HouseParams } from '../model/house'
-import { defaultWallThickness } from '../model/house'
+import { defaultWallThickness, BUILD_PRESETS } from '../model/house'
 import { REGIONS } from '../data/regions'
 
 function Num({
@@ -67,6 +67,12 @@ export function Inputs() {
   const { house, lang, setHouse } = useProject()
   const set = (patch: Partial<HouseParams>) => setHouse(patch)
 
+  // Переключатель способа строительства подставляет типовые проценты,
+  // но каждый из них остаётся редактируемым вручную.
+  const applyBuildMode = (buildMode: HouseParams['buildMode']) => {
+    set({ buildMode, ...BUILD_PRESETS[buildMode] })
+  }
+
   const changeSystem = (system: HouseParams['system']) => {
     set({
       system,
@@ -105,9 +111,9 @@ export function Inputs() {
         <span>{t(lang, 'nav_calc')}</span>
         <span className="sub">{house.length}×{house.width} · {house.floors} {t(lang, 'floors').toLowerCase()}</span>
       </div>
-      <div style={{ padding: '1rem' }}>
+      <div className="side-body">
         {/* Step 1 — region + system */}
-        <details className="group" open>
+        <details className="group" name="calc-step" open>
           <summary><span className="eyebrow">01 · {t(lang, 'step_region')}</span></summary>
           <div className="group-body">
         <label className="field">
@@ -119,7 +125,7 @@ export function Inputs() {
           >
             {Object.values(REGIONS).map((r) => (
               <option key={r.key} value={r.key}>
-                {lang !== 'hy' ? r.nameRu : r.nameHy} · {r.seismic} {t(lang, 'points')}
+                {lang === 'hy' ? r.nameHy : lang === 'en' ? r.nameEn : r.nameRu} · {r.seismic} {t(lang, 'points')}
               </option>
             ))}
           </select>
@@ -167,7 +173,7 @@ export function Inputs() {
         {/* Step 2 — size */}
           </div>
         </details>
-        <details className="group" open>
+        <details className="group" name="calc-step">
           <summary><span className="eyebrow">02 · {t(lang, 'step_size')}</span></summary>
           <div className="group-body">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
@@ -176,6 +182,17 @@ export function Inputs() {
           <Num label={t(lang, 'floors')} value={house.floors} min={1} onChange={(n) => set({ floors: n })} />
           <Num label={t(lang, 'floorHeight')} value={house.floorHeight} step={0.1} onChange={(n) => set({ floorHeight: n })} />
         </div>
+        <label className="field">
+          <span>{t(lang, 'frontSide')}</span>
+          <div className="seg" role="group">
+            <button aria-pressed={house.frontSide === 'length'} onClick={() => set({ frontSide: 'length' })}>
+              {house.length} {t(lang, 'meters')}
+            </button>
+            <button aria-pressed={house.frontSide === 'width'} onClick={() => set({ frontSide: 'width' })}>
+              {house.width} {t(lang, 'meters')}
+            </button>
+          </div>
+        </label>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
           <Num label={t(lang, 'plotArea')} value={house.plotArea} step={50} onChange={(n) => set({ plotArea: n })} />
           <Num label={t(lang, 'auxBuildingArea')} value={house.auxBuildingArea} step={5} onChange={(n) => set({ auxBuildingArea: n })} />
@@ -184,7 +201,7 @@ export function Inputs() {
         {/* Step 3 — foundation */}
           </div>
         </details>
-        <details className="group" open>
+        <details className="group" name="calc-step">
           <summary><span className="eyebrow">03 · {t(lang, 'step_foundation')}</span></summary>
           <div className="group-body">
         <label className="field">
@@ -215,7 +232,7 @@ export function Inputs() {
         {/* Step 4 — roof */}
           </div>
         </details>
-        <details className="group">
+        <details className="group" name="calc-step">
           <summary><span className="eyebrow">04 · {t(lang, 'step_roof')}</span></summary>
           <div className="group-body">
         <label className="field">
@@ -234,7 +251,7 @@ export function Inputs() {
         {/* Step 5 — openings */}
           </div>
         </details>
-        <details className="group">
+        <details className="group" name="calc-step">
           <summary><span className="eyebrow">05 · {t(lang, 'step_openings')}</span></summary>
           <div className="group-body">
         <Num label={t(lang, 'windowArea')} value={house.windowAreaTotal} step={1} onChange={(n) => set({ windowAreaTotal: n })} disabled={house.windowAuto} />
@@ -275,7 +292,7 @@ export function Inputs() {
         {/* Step 7 — layout */}
           </div>
         </details>
-        <details className="group">
+        <details className="group" name="calc-step">
           <summary><span className="eyebrow">06 · {t(lang, 'step_layout')}</span></summary>
           <div className="group-body">
         <Num label={t(lang, 'roomsPerFloor')} value={house.roomsPerFloor} onChange={(n) => set({ roomsPerFloor: n })} />
@@ -294,7 +311,7 @@ export function Inputs() {
         {/* Step 6 — finish */}
           </div>
         </details>
-        <details className="group">
+        <details className="group" name="calc-step">
           <summary><span className="eyebrow">07 · {t(lang, 'step_finish')}</span></summary>
           <div className="group-body">
         <label className="field">
@@ -321,10 +338,35 @@ export function Inputs() {
         </label>
         <Num label={t(lang, 'laborPerM2')} value={house.laborPerM2} step={500} onChange={(n) => set({ laborPerM2: n })} />
 
+        {/* Кто строит — определяет накладные, прибыль и НДС */}
+        <details className="group" name="calc-step">
+          <summary><span className="eyebrow">{t(lang, 'buildMode')}</span></summary>
+          <div className="group-body">
+            <div className="seg" role="group" style={{ marginBottom: '0.6rem' }}>
+              <button aria-pressed={house.buildMode === 'self'} onClick={() => applyBuildMode('self')}>
+                {t(lang, 'bm_self')}
+              </button>
+              <button aria-pressed={house.buildMode === 'contractor'} onClick={() => applyBuildMode('contractor')}>
+                {t(lang, 'bm_contractor')}
+              </button>
+            </div>
+            <p style={{ fontSize: '0.74rem', color: 'var(--color-ink-soft)', margin: '0 0 0.7rem', lineHeight: 1.5 }}>
+              {t(lang, 'buildModeHint')}
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+              <Num label={t(lang, 'overhead') + ', %'} value={house.overheadPct} step={1} onChange={(n) => set({ overheadPct: n })} />
+              <Num label={t(lang, 'profit') + ', %'} value={house.profitPct} step={1} onChange={(n) => set({ profitPct: n })} />
+              <Num label={t(lang, 'temporary') + ', %'} value={house.temporaryPct} step={0.5} onChange={(n) => set({ temporaryPct: n })} />
+              <Num label={t(lang, 'winter') + ', %'} value={house.winterPct} step={0.5} onChange={(n) => set({ winterPct: n })} />
+              <Num label={t(lang, 'contingency') + ', %'} value={house.contingencyPct} step={1} onChange={(n) => set({ contingencyPct: n })} />
+            </div>
+          </div>
+        </details>
+
         {/* Step 08 — сети и участок */}
           </div>
         </details>
-        <details className="group">
+        <details className="group" name="calc-step">
           <summary><span className="eyebrow">08 · {t(lang, 'step_utilities')}</span></summary>
           <div className="group-body">
         <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -362,7 +404,7 @@ export function Inputs() {
           </div>
         </details>
         {/* Step 09 — optional premium systems */}
-        <details className="group">
+        <details className="group" name="calc-step">
           <summary><span className="eyebrow">09 · {lang === 'hy' ? 'Լրացուցիչ համակարգեր' : lang === 'en' ? 'Optional systems' : 'Дополнительные системы'}</span></summary>
           <div className="group-body">
         <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -437,13 +479,12 @@ export function Inputs() {
           </div>
         </details>
 
-        {/* Engineer overrides — prominent, open by default */}
-        <details
-          open
-          style={{ marginTop: '1rem', border: '1px solid var(--color-ink)', borderRadius: 3, padding: '0.8rem 0.9rem' }}
-        >
-          <summary className="eyebrow" style={{ cursor: 'pointer' }}>
-            {t(lang, 'engTitle')}
+        {/* Параметры инженера — такой же шаг аккордеона, как остальные.
+            Раньше это была отдельная рамка рядом со списком: два разных
+            паттерна в одной панели читались как сбой вёрстки. */}
+        <details className="group" name="calc-step">
+          <summary>
+            <span className="eyebrow">10 · {t(lang, 'engTitle')}</span>
           </summary>
           <p style={{ fontSize: '0.74rem', color: 'var(--color-ink-soft)', margin: '0.5rem 0 0.2rem' }}>
             {lang === 'ru'
@@ -536,14 +577,27 @@ export function Inputs() {
             <input type="checkbox" checked={house.beamsOverHall} onChange={(e) => set({ beamsOverHall: e.target.checked })} />
             <span style={{ marginBottom: 0 }}>{t(lang, 'beamsOverHall')}</span>
           </label>
-          <button
-            className="btn btn-ghost no-print"
-            style={{ marginTop: '0.6rem', padding: '0.3rem 0.7rem', fontSize: '0.76rem' }}
-            onClick={() => set({ eng: {} })}
-          >
-            {t(lang, 'engReset')}
-          </button>
         </details>
+      </div>
+
+      {/* Закреплённый низ сайдбара: список шагов прокручивается, действие
+          всегда на виду. Кнопка сброса инженерных параметров раньше была
+          спрятана внизу десятого шага — до неё надо было долистать. */}
+      <div className="side-foot">
+        <span className="side-foot-note">
+          {lang === 'hy'
+            ? 'Փոփոխությունները կիրառվում են անմիջապես'
+            : lang === 'en'
+              ? 'Changes apply instantly'
+              : 'Изменения применяются сразу'}
+        </span>
+        <button
+          className="btn btn-ghost no-print"
+          style={{ padding: '0.25rem 0', fontSize: '0.76rem', whiteSpace: 'nowrap' }}
+          onClick={() => set({ eng: {} })}
+        >
+          {t(lang, 'engReset')}
+        </button>
       </div>
     </div>
   )

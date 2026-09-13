@@ -13,6 +13,18 @@ export type RoofType = 'flat' | 'pitched' | 'hip' | 'mansard'
 export type FinishLevel = 'economy' | 'standard' | 'premium'
 export type Currency = 'AMD' | 'USD'
 export type PriceMode = 'min' | 'typical' | 'max'
+// Кто строит: сам хозяин (бригады напрямую) или генподрядчик по договору.
+// От этого зависит, платите ли вы накладные, прибыль подрядчика и НДС.
+export type BuildMode = 'self' | 'contractor'
+
+// Типовые проценты сметной развёртки. Хозспособ: подрядной прибыли и накладных
+// нет, но временные и непредвиденные остаются — они реальны при любом способе.
+export const BUILD_PRESETS: Record<BuildMode, {
+  overheadPct: number; profitPct: number; temporaryPct: number; contingencyPct: number; vatIncluded: boolean
+}> = {
+  self: { overheadPct: 0, profitPct: 0, temporaryPct: 1, contingencyPct: 10, vatIncluded: false },
+  contractor: { overheadPct: 15, profitPct: 8, temporaryPct: 1.5, contingencyPct: 10, vatIncluded: true },
+}
 
 export type RegionKey =
   | 'yerevan'
@@ -30,6 +42,9 @@ export interface HouseParams {
   infillMaterial: InfillMaterial // used when system === 'frame'
   length: number // m, outer axis
   width: number // m, outer axis
+  // Какая сторона выходит на улицу. Главный фасад рисуется внизу листа,
+  // входная дверь ставится в него.
+  frontSide: 'length' | 'width'
   plotArea: number // м², площадь земельного участка (для упрощённого порядка N 4.1)
   auxBuildingArea: number // м², вспомогательные постройки (гараж, хоз. блок) — критерий N 4.1 ≤ 50 м²
   floors: number // above-ground floors
@@ -69,6 +84,15 @@ export interface HouseParams {
   connectWater: boolean
   connectSewer: boolean // центральная канализация
   septic: boolean // локальное очистное, когда центральной канализации нет
+  // --- Сметная развёртка ---
+  // Прямые затраты — это ещё не цена стройки. Поверх них идут накладные,
+  // прибыль подрядчика, временные здания, зима и непредвиденные.
+  buildMode: BuildMode
+  overheadPct: number // накладные расходы, % от фонда оплаты труда
+  profitPct: number // сметная прибыль, % от прямых затрат
+  temporaryPct: number // временные здания и сооружения, % от прямых затрат
+  winterPct: number // зимнее удорожание, % от прямых затрат
+  contingencyPct: number // непредвиденные, % от СМР
   // Бетон подаётся насосом (иначе — вручную/краном; для монолита обычно насос)
   concretePump: boolean
   // Благоустройство участка и балконы
@@ -158,6 +182,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   infillMaterial: 'aerated', // стены — газоблок
   length: 13,
   width: 14,
+  frontSide: 'width', // фасад 14 м
   plotArea: 500,
   auxBuildingArea: 0,
   floors: 2,
@@ -176,7 +201,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   finishLevel: 'standard',
   currency: 'AMD',
   region: 'yerevan',
-  vatIncluded: false,
+  vatIncluded: true,
   concreteGrade: 'concrete_b25',
   rebarGrade: 'rebar_a500',
   excludedSections: [],
@@ -189,13 +214,21 @@ export const DEFAULT_HOUSE: HouseParams = {
   kitchenLivingCombined: true,
   laborPerM2: 11000,
   beamsOverHall: true,
-  // подключения: газ и электричество в РА нужны почти всегда, вода обычно тоже;
-  // центральная канализация есть не везде — по умолчанию считаем септик.
+  // Подключения по умолчанию соответствуют региону по умолчанию (Ереван), где
+  // центральная канализация есть. Для сёл и окраин снимите галочку
+  // «Центральная канализация» — септик включится и попадёт в смету.
   connectElectricity: true,
   connectGas: true,
   connectWater: true,
-  connectSewer: false,
-  septic: true,
+  connectSewer: true,
+  septic: false,
+  // По умолчанию — генподрядчик: так считает большинство и так цифра честнее.
+  buildMode: 'contractor',
+  overheadPct: 15,
+  profitPct: 8,
+  temporaryPct: 1.5,
+  winterPct: 0, // включите, если бетонные работы попадают на зиму
+  contingencyPct: 10,
   concretePump: true,
   fenceLength: 0,
   sitePavingArea: 0,

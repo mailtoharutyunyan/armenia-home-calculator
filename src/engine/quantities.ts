@@ -58,10 +58,16 @@ export function computeQuantities(p: HouseParams): Quantities {
     if (quantity > 0) lines.push({ key, section, stage, quantity })
   }
 
-  const A = p.length * p.width
-  const P = 2 * (p.length + p.width)
-  const H = p.floors * p.floorHeight
-  const totalFloorArea = A * p.floors
+  // Габариты приводим к неотрицательным: при отрицательном вводе периметр
+  // и площади уходили в минус и тянули за собой весь расчёт.
+  const L0 = Math.max(0, p.length)
+  const W0 = Math.max(0, p.width)
+  const floors0 = Math.max(0, p.floors)
+  const fh0 = Math.max(0, p.floorHeight)
+  const A = L0 * W0
+  const P = 2 * (L0 + W0)
+  const H = floors0 * fh0
+  const totalFloorArea = A * floors0
   // доля внутренних несущих осей задаётся инженером; по умолчанию 50% периметра
   const internalBearing = p.eng.internalBearingPct != null && p.eng.internalBearingPct >= 0
     ? p.eng.internalBearingPct / 100
@@ -288,6 +294,8 @@ export function computeQuantities(p: HouseParams): Quantities {
 
   // ---- Roof (flat / pitched / hip / mansard) ----
   if (p.roof === 'flat') {
+    // Уклонообразующий слой: без него вода не уходит к воронкам.
+    add('roof_slope', 'roof', 'act', A * C.roofSlopeLayer)
     add('roof_flat', 'roof', 'act', A)
     add('waterproofing', 'roof', 'act', A)
     add('insulation', 'roof', 'act', A * (insulT / C.insulationBaseThickness))

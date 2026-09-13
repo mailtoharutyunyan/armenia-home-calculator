@@ -4,6 +4,7 @@ export interface RegionInfo {
   key: RegionKey
   nameRu: string
   nameHy: string
+  nameEn: string
   // Балльность МСК-64 по картам ՀՀՇՆ II-2.02-94 / II-6.02-2006. ВНИМАНИЕ:
   // действующие ՀՀՇՆ 20.04-2020 зонируют по ускорению грунта (A = 0.3g / 0.4g),
   // а не по баллам. Значения ниже — приближение, требует сверки с картой 20.04-2020.
@@ -26,6 +27,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     key: 'yerevan',
     nameRu: 'Ереван',
     nameHy: 'Երևան',
+    nameEn: 'Yerevan',
     seismic: 8,
     frostDepth: 0.8,
     deliverySurcharge: 0,
@@ -35,6 +37,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     key: 'ararat_valley',
     nameRu: 'Араратская долина',
     nameHy: 'Արարատյան դաշտ',
+    nameEn: 'Ararat valley',
     seismic: 8,
     frostDepth: 0.8,
     deliverySurcharge: 0,
@@ -44,6 +47,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     key: 'kotayk',
     nameRu: 'Котайк',
     nameHy: 'Կոտայք',
+    nameEn: 'Kotayk',
     seismic: 8,
     frostDepth: 1.4,
     deliverySurcharge: 0,
@@ -53,6 +57,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     key: 'gyumri',
     nameRu: 'Гюмри',
     nameHy: 'Գյումրի',
+    nameEn: 'Gyumri',
     seismic: 9,
     frostDepth: 1.5,
     deliverySurcharge: 0,
@@ -62,6 +67,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     key: 'vanadzor',
     nameRu: 'Ванадзор',
     nameHy: 'Վանաձոր',
+    nameEn: 'Vanadzor',
     seismic: 9,
     frostDepth: 1.2,
     deliverySurcharge: 0,
@@ -71,6 +77,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     key: 'sevan',
     nameRu: 'Севан',
     nameHy: 'Սևան',
+    nameEn: 'Sevan',
     seismic: 9,
     frostDepth: 1.8,
     deliverySurcharge: 0,
@@ -80,6 +87,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     key: 'aparan',
     nameRu: 'Апаран',
     nameHy: 'Ապարան',
+    nameEn: 'Aparan',
     seismic: 9,
     frostDepth: 1.8,
     deliverySurcharge: 0,
@@ -89,6 +97,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     key: 'syunik',
     nameRu: 'Сюник',
     nameHy: 'Սյունիք',
+    nameEn: 'Syunik',
     seismic: 8,
     frostDepth: 1.4,
     deliverySurcharge: 0,
@@ -98,6 +107,7 @@ export const REGIONS: Record<RegionKey, RegionInfo> = {
     key: 'other',
     nameRu: 'Другой регион',
     nameHy: 'Այլ մարզ',
+    nameEn: 'Other region',
     seismic: 9,
     frostDepth: 1.2,
     deliverySurcharge: 0,

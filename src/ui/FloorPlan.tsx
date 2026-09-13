@@ -8,11 +8,17 @@ const LIGHT: Pal = { sheet: '#ffffff', wall: '#33383e', room: '#eef0f2', furn: '
 const DARK: Pal = { sheet: '#191b20', wall: '#d8d5cb', room: '#23262e', furn: '#8b8f99', txt: '#cdd0d6', grid: 'rgba(255,255,255,0.06)', hatch: '#3a3f49', voidFill: '#111318', furnFill: 'rgba(255,255,255,0.05)' }
 let PAL: Pal = LIGHT
 
+// Толщина перегородки на чертеже, м. Наружная стена рисуется вдвое толще —
+// это принятая иерархия: толстое и залитое = несущее, тонкое = перегородка.
+const PART = 0.12
+
 
 export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: HouseParams; floorIndex: number; custom?: Spec[]; labels?: import('../engine/floorplan').PlanLabels }) {
   PAL = useProject((st) => st.theme) === 'dark' ? DARK : LIGHT
   const plan = buildFloorPlan(house, floorIndex, custom, labels)
   const { L, W, wall, rooms, windows, doors } = plan
+  const ceil = plan.ceilingH ?? 0
+  const hallCeil = plan.hallCeilingH ?? ceil
   const pad = 1.6
   const wc = wall * 1.15 // opening cover width
 
@@ -21,7 +27,8 @@ export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: Hou
   return (
     <svg
       viewBox={`${-pad} ${-pad} ${L + 2 * pad} ${W + 2 * pad}`}
-      style={{ width: '100%', height: 'auto', display: 'block', background: PAL.sheet, borderRadius: 12 }}
+      className="plan-svg"
+      style={{ background: PAL.sheet, borderRadius: 12 }}
       role="img"
       aria-label="Планировка"
     >
@@ -33,6 +40,12 @@ export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: Hou
           <line x1="0" y1="0" x2="0" y2="0.7" stroke={PAL.hatch} strokeWidth="0.05" />
         </pattern>
       </defs>
+
+      {/* Поше перегородок: заливаем весь внутренний контур цветом стены.
+          Комнаты рисуются врезанными внутрь на половину толщины перегородки,
+          поэтому промежутки между ними читаются как настоящие стены нужной
+          толщины, а не как пунктирная линия. */}
+      <rect x={0} y={0} width={L} height={W} fill={PAL.wall} />
 
       {/* room fills + partitions + furniture + labels */}
       {rooms.map((r, i) =>
@@ -58,21 +71,71 @@ export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: Hou
           (() => {
             // fit the label to the room width; show dimensions only when there is room
             const fs = Math.max(0.15, Math.min(0.48, (r.w - 0.35) / Math.max(5, r.label.length * 0.62), r.h / 3.2))
-            const showDims = r.w > 2.8 && r.h > 2.6
+            // Размеры показываем и в маленьких помещениях. Прежний порог
+            // (ширина > 2.8 и глубина > 2.6 м) отсекал прихожую 4.7×2.3 и
+            // гостевой санузел 4.7×2.0 — именно те, где площадь и хочется
+            // видеть. Для тесных комнат формат сокращаем, чтобы строка влезла.
+            const showDims = r.w > 1.5 && r.h > 1.0
+            const compact = r.h < 2.4 || r.w < 2.4
+            const dimFs = Math.max(0.13, Math.min(compact ? 0.24 : 0.32, fs * 0.72, r.h / 6))
             const cx = r.x + r.w / 2
             const cy = r.y + r.h / 2
             return (
               <g key={i}>
-                <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={PAL.room} />
-                <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="url(#grid)" />
-                <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={PAL.wall} strokeWidth={0.09} />
+                <rect x={r.x + PART / 2} y={r.y + PART / 2} width={Math.max(0, r.w - PART)} height={Math.max(0, r.h - PART)} fill={PAL.room} />
+                <rect x={r.x + PART / 2} y={r.y + PART / 2} width={Math.max(0, r.w - PART)} height={Math.max(0, r.h - PART)} fill="url(#grid)" />
+                {/* Двусветный зал: пол есть, потолка нет — помечаем, иначе по
+                    чертежу не отличить его от обычной комнаты. */}
+                {r.doubleHeight && (
+                  <rect
+                    x={r.x + PART / 2}
+                    y={r.y + PART / 2}
+                    width={Math.max(0, r.w - PART)}
+                    height={Math.max(0, r.h - PART)}
+                    fill="url(#voidhatch)"
+                    opacity={0.5}
+                  />
+                )}
+                {/* Раздвижная стеклянная перегородка: две тонкие линии со
+                    сдвигом — так её отличают от глухой стены на чертеже. */}
+                {r.glassSide && <GlassPartition room={r} />}
                 <Furniture room={r} />
-                <text x={cx} y={cy - (showDims ? 0.12 : -0.06)} textAnchor="middle" fontSize={fs} fill={PAL.txt} fontFamily="Inter, sans-serif" fontWeight={600}>
+                {/* Подпись поверх мебели: обводка цветом листа не даёт тексту
+                    слиться со столом или кроватью, как было раньше. */}
+                <text
+                  x={cx}
+                  y={cy - (showDims ? dimFs * 0.75 : -0.06)}
+                  textAnchor="middle"
+                  fontSize={fs}
+                  fill={PAL.txt}
+                  stroke={PAL.room}
+                  strokeWidth={fs * 0.34}
+                  paintOrder="stroke"
+                  strokeLinejoin="round"
+                  fontFamily="Inter, sans-serif"
+                  fontWeight={600}
+                >
                   {r.label}
                 </text>
                 {showDims && (
-                  <text x={cx} y={cy + 0.48} textAnchor="middle" fontSize={Math.min(0.32, fs * 0.72)} fill={PAL.txt} opacity={0.62} fontFamily="Inter, sans-serif">
+                  <text
+                    x={cx}
+                    y={cy + dimFs * 1.45}
+                    textAnchor="middle"
+                    fontSize={dimFs}
+                    fill={PAL.txt}
+                    opacity={0.72}
+                    stroke={PAL.room}
+                    strokeWidth={fs * 0.24}
+                    paintOrder="stroke"
+                    strokeLinejoin="round"
+                    fontFamily="Inter, sans-serif"
+                  >
                     {r.w.toFixed(1)}×{r.h.toFixed(1)} = {(r.w * r.h).toFixed(1)} м²
+                    {/* Высота потолка: у двусветного зала она вдвое больше,
+                        и на плане это иначе никак не видно. В тесных комнатах
+                        высоту не пишем — строка не помещается. */}
+                    {ceil > 0 && !compact && ` · h ${r.doubleHeight ? hallCeil : ceil} м`}
                   </text>
                 )}
               </g>
@@ -119,7 +182,7 @@ export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: Hou
 }
 
 function DoorSymbol({ door, wc }: { door: Door; wc: number }) {
-  const s = { stroke: PAL.wall, strokeWidth: 0.05, fill: 'none' } as const
+  const s = { stroke: PAL.wall, strokeWidth: 0.038, fill: 'none' } as const
   if (door.orient === 'v') {
     const x = door.pos
     const y0 = door.start
@@ -146,16 +209,73 @@ function DoorSymbol({ door, wc }: { door: Door; wc: number }) {
   )
 }
 
-function DimLine({ L, W, pad }: { L: number; W: number; pad: number }) {
+// Размерная линия по чертёжной конвенции: выносные линии, засечки под 45°,
+// размер над линией. Тончайший вес — аннотации не спорят со стенами.
+// Раздвижная стеклянная перегородка на роликах: показывается парой тонких
+// линий с разрывом посередине — условное обозначение раздвижного заполнения.
+function GlassPartition({ room }: { room: Room }) {
+  const { x, y, w, h, glassSide } = room
+  const horiz = glassSide === 'top' || glassSide === 'bottom'
+  const x1 = x + PART / 2
+  const x2 = x + w - PART / 2
+  const y1 = y + PART / 2
+  const y2 = y + h - PART / 2
+  const py = glassSide === 'top' ? y1 : y2
+  const px = glassSide === 'left' ? x1 : x2
+  const g = 0.055 // разнос линий
+  const st = { stroke: PAL.furn, strokeWidth: 0.035, fill: 'none' } as const
+  if (horiz) {
+    const mid = (x1 + x2) / 2
+    return (
+      <g {...st}>
+        <line x1={x1} y1={py - g} x2={x2} y2={py - g} />
+        <line x1={x1} y1={py + g} x2={x2} y2={py + g} />
+        {/* стрелка сдвига створки */}
+        <line x1={mid - 0.7} y1={py} x2={mid + 0.7} y2={py} strokeDasharray="0.18 0.14" />
+      </g>
+    )
+  }
+  const mid = (y1 + y2) / 2
   return (
-    <g stroke={PAL.txt} strokeWidth={0.02} fill={PAL.txt} fontFamily="Inter, sans-serif">
-      <line x1={0} y1={W + pad * 0.55} x2={L} y2={W + pad * 0.55} />
-      <text x={L / 2} y={W + pad * 0.9} textAnchor="middle" fontSize={0.45} stroke="none">
-        {L.toFixed(1)} м
+    <g {...st}>
+      <line x1={px - g} y1={y1} x2={px - g} y2={y2} />
+      <line x1={px + g} y1={y1} x2={px + g} y2={y2} />
+      <line x1={px} y1={mid - 0.7} x2={px} y2={mid + 0.7} strokeDasharray="0.18 0.14" />
+    </g>
+  )
+}
+
+function DimLine({ L, W, pad }: { L: number; W: number; pad: number }) {
+  const off = pad * 0.6
+  const tick = 0.16
+  const th = 0.018
+  return (
+    <g stroke={PAL.txt} strokeWidth={th} fill={PAL.txt} fontFamily="Inter, sans-serif" opacity={0.85}>
+      {/* низ: главный фасад */}
+      <line x1={0} y1={W} x2={0} y2={W + off + tick} />
+      <line x1={L} y1={W} x2={L} y2={W + off + tick} />
+      <line x1={0} y1={W + off} x2={L} y2={W + off} />
+      <line x1={-tick} y1={W + off + tick} x2={tick} y2={W + off - tick} />
+      <line x1={L - tick} y1={W + off + tick} x2={L + tick} y2={W + off - tick} />
+      <text x={L / 2} y={W + off - 0.22} textAnchor="middle" fontSize={0.42} stroke="none" fontWeight={600}>
+        {L.toFixed(2).replace('.', ',')} м
       </text>
-      <line x1={-pad * 0.55} y1={0} x2={-pad * 0.55} y2={W} />
-      <text x={-pad * 0.85} y={W / 2} textAnchor="middle" fontSize={0.45} stroke="none" transform={`rotate(-90 ${-pad * 0.85} ${W / 2})`}>
-        {W.toFixed(1)} м
+      {/* левая сторона */}
+      <line x1={0} y1={0} x2={-off - tick} y2={0} />
+      <line x1={0} y1={W} x2={-off - tick} y2={W} />
+      <line x1={-off} y1={0} x2={-off} y2={W} />
+      <line x1={-off - tick} y1={-tick} x2={-off + tick} y2={tick} />
+      <line x1={-off - tick} y1={W - tick} x2={-off + tick} y2={W + tick} />
+      <text
+        x={-off - 0.22}
+        y={W / 2}
+        textAnchor="middle"
+        fontSize={0.42}
+        stroke="none"
+        fontWeight={600}
+        transform={`rotate(-90 ${-off - 0.22} ${W / 2})`}
+      >
+        {W.toFixed(2).replace('.', ',')} м
       </text>
     </g>
   )
@@ -165,8 +285,8 @@ function Furniture({ room }: { room: Room }) {
   const { x, y, w, h, type } = room
   if (w < 1.6 || h < 1.6) return null // too small to furnish cleanly
   const m = 0.4
-  const s = { stroke: PAL.furn, strokeWidth: 0.05, fill: 'none' } as const
-  const fill = { stroke: PAL.furn, strokeWidth: 0.05, fill: PAL.furnFill } as const
+  const s = { stroke: PAL.furn, strokeWidth: 0.032, fill: 'none' } as const
+  const fill = { stroke: PAL.furn, strokeWidth: 0.032, fill: PAL.furnFill } as const
 
   switch (type) {
     case 'bedroom': {
@@ -180,6 +300,16 @@ function Furniture({ room }: { room: Room }) {
           <rect x={bx + 0.12} y={by + 0.12} width={bw - 0.24} height={bh * 0.22} rx={0.06} {...s} />
           <line x1={bx} y1={by + bh * 0.3} x2={bx + bw} y2={by + bh * 0.3} {...s} />
           {bx - 0.5 > x + 0.1 && <rect x={bx - 0.5} y={by} width={0.4} height={0.4} {...s} />}
+        </g>
+      )
+    }
+    case 'office': {
+      // письменный стол у стены + кресло
+      const dw = Math.min(1.9, w - 2 * m)
+      return (
+        <g>
+          <rect x={x + m} y={y + m} width={dw} height={0.68} rx={0.05} {...fill} />
+          <circle cx={x + m + dw / 2} cy={y + m + 1.15} r={0.28} {...s} />
         </g>
       )
     }

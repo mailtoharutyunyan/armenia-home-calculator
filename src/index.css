@@ -53,7 +53,18 @@
   --shadow-soft: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 
-:root { color-scheme: light; }
+:root {
+  color-scheme: light;
+  /* Ширина рабочей области. Было 1200px — на широких экранах половина места
+     пустовала, а план и смета ужимались. Держим одну переменную, чтобы шапка,
+     полоса итога, контент и подвал не разъезжались. */
+  --page-w: 1600px;
+  /* Высоты липких элементов. Панель калькулятора закрепляется ниже них, иначе
+     уезжает под полосу итога: 56 + 71 = 127, а смещение было 70. */
+  --header-h: 56px;
+  --resultbar-h: 72px;
+  --sticky-top: calc(var(--header-h) + var(--resultbar-h) + 12px);
+}
 * { box-sizing: border-box; }
 
 body {
@@ -105,14 +116,14 @@ h1, h2, h3, h4 {
    Липнет под шапкой, чтобы сумма не уезжала под сгиб, пока крутят форму. */
 .resultbar {
   position: sticky;
-  top: 56px;
+  top: var(--header-h);
   z-index: 20;
   background: var(--color-footer-bg);
   color: var(--color-footer-fg);
   border-bottom: 1px solid var(--color-border);
 }
 .resultbar-inner {
-  max-width: 1200px;
+  max-width: var(--page-w);
   margin: 0 auto;
   padding: 0.85rem 2rem;
   display: flex;
@@ -139,6 +150,18 @@ h1, h2, h3, h4 {
   font-variant-numeric: tabular-nums;
   color: color-mix(in srgb, var(--color-footer-fg) 55%, transparent);
 }
+.rb-second {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding-left: 1.6rem;
+  border-left: 1px solid color-mix(in srgb, var(--color-footer-fg) 22%, transparent);
+}
+.rb-figure-sec {
+  font-size: 1.25rem;
+  color: var(--color-footer-fg);
+  opacity: 0.92;
+}
 .rb-stats { display: flex; gap: 1.8rem; margin-left: auto; flex-wrap: wrap; }
 .rb-stat { display: flex; flex-direction: column; gap: 0.15rem; }
 .rb-value { font-size: 0.95rem; font-weight: 600; }
@@ -155,10 +178,18 @@ h1, h2, h3, h4 {
 .rb-flag:hover { opacity: 0.8; }
 
 @media (max-width: 900px) {
-  .resultbar { position: static; }
-  .resultbar-inner { padding: 0.8rem 1rem; gap: 1rem; }
-  .rb-figure { font-size: 1.5rem; }
-  .rb-stats { margin-left: 0; gap: 1.1rem; width: 100%; }
+  /* Полоса итога остаётся закреплённой и на телефоне: цена — главный ответ
+     сайта, ради неё его и открывают. Убираем только второстепенные цифры,
+     чтобы полоса помещалась в одну строку. */
+  .resultbar-inner { padding: 0.6rem 1rem; gap: 0.9rem; flex-wrap: nowrap; }
+  .rb-figure { font-size: 1.3rem; }
+  .rb-figure-sec { font-size: 1.05rem; }
+  .rb-second { padding-left: 0.9rem; }
+  .rb-range { display: none; }
+  .rb-stats { display: none; }
+  .rb-flag { display: none; }
+  .rb-lead { flex-direction: column; align-items: flex-start; gap: 0.1rem; }
+  .rb-second { flex-direction: column; align-items: flex-start; gap: 0.1rem; }
 }
 
 /* ── Ссылка на текст нормы ──────────────────────────────────────────────
@@ -191,8 +222,10 @@ h1, h2, h3, h4 {
 /* ── Сворачиваемые группы формы ─────────────────────────────────────────
    40 полей одним столбцом не сканируются. Группы можно закрыть и держать
    открытым только то, что сейчас настраивают. */
-.group { border-bottom: 1px solid var(--color-border); }
-.group:last-of-type { border-bottom: none; }
+/* У шагов нет собственных разделительных линий: строку уже отделяют отступ,
+   фон при наведении и фон открытого шага. Линия поверх этого — четвёртый
+   уровень границ в одной панели, интерфейс начинает рябить. */
+.group { border-bottom: none; }
 .group > summary {
   list-style: none;
   padding: 0.85rem 0;
@@ -217,7 +250,147 @@ h1, h2, h3, h4 {
 .group > summary:focus-visible { outline: 2px solid var(--color-copper); outline-offset: 2px; }
 .group-body { padding-bottom: 0.6rem; }
 
+/* ── Сайдбар калькулятора ───────────────────────────────────────────────
+   Панель занимает всю высоту экрана и закреплена слева: шапка с итогом
+   этажности остаётся на месте, прокручивается только список параметров.
+   Так параметры и результат видны одновременно, без двух конкурирующих
+   полос прокрутки в одном столбце. */
+.side-fixed {
+  position: sticky;
+  top: var(--sticky-top);
+  align-self: start;
+  height: calc(100vh - var(--sticky-top));
+  /* Прижат к борту окна: панель приклеена к краю, а не висит с отступом.
+     Левые углы срезаем — скруглённый угол у самого края читается как брак. */
+  margin-left: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.side-fixed > .panel {
+  height: 100%;
+  border-radius: 0 12px 12px 0;
+  border-left: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* Шапка панели не уезжает: прокручивается только тело со списком шагов. */
+.side-fixed > .panel > .panel-head { flex: none; }
+.side-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 1rem;
+}
+.side-body::-webkit-scrollbar { width: 8px; }
+.side-body::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 8px; }
+.side-body { scrollbar-width: thin; scrollbar-color: var(--color-border) transparent; }
+
+.side-foot {
+  flex: none;
+  border-top: 1px solid var(--color-border);
+  padding: 0.65rem 1rem;
+  /* Колонкой, а не space-between: армянская подпись длиннее английской, и в
+     узкой колонке она наезжала на кнопку. Колонка выдерживает любой перевод. */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  background: var(--color-surface-2);
+}
+.side-foot-note { font-size: 0.7rem; line-height: 1.35; color: var(--color-ink-soft); }
+
+/* Шаг формы читается как строка меню: наведение подсвечивает всю строку. */
+.side-body .group > summary {
+  padding: 0.8rem 0.6rem;
+  margin: 0 -0.6rem;
+  border-radius: 8px;
+  transition: background 0.14s ease;
+}
+.side-body .group > summary:hover { background: var(--color-surface-2); }
+.side-body .group[open] > summary { background: var(--color-surface-2); }
+
+/* План не должен перерастать экран: иначе низ чертежа уходит под сгиб. */
+.plan-svg {
+  width: 100%;
+  height: auto;
+  /* Ограничение мягче: чертёж вписывается в колонку контента, а по высоте
+     не выходит за экран. Прежний жёсткий кап резал ширину и оставлял
+     половину панели пустой. */
+  max-height: calc(100vh - var(--sticky-top) - 90px);
+  display: block;
+  margin: 0 auto;
+}
+/* Панель плана не должна обрастать полем: чертёж и так внутри имеет отступ. */
+.plan-wrap { padding: 0.6rem !important; }
+
+/* Навигация в шапке: на узком экране прокручивается вбок, а не переносится
+   на три строки, съедая треть экрана. */
+.hdr-nav {
+  display: flex;
+  gap: 1.5rem;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.hdr-nav::-webkit-scrollbar { display: none; }
+
+/* ── Адаптив ────────────────────────────────────────────────────────────
+   Один сайдбар + поток контента. На узких экранах сайдбар перестаёт быть
+   липким и становится обычной карточкой над содержимым. */
+@media (max-width: 1100px) {
+  .workspace { grid-template-columns: 1fr; }
+  .side-fixed {
+    position: static;
+    height: auto;
+    margin: 0;
+  }
+  /* Возвращаем карточке обычные углы и левую границу: срезанный угол имеет
+     смысл только когда панель приклеена к борту окна. */
+  .side-fixed > .panel {
+    border-radius: 12px;
+    border-left: 1px solid var(--color-border);
+  }
+  .side-body { overflow: visible; max-height: none; }
+  .plan-svg { max-height: none; }
+  /* На десктопе левый отступ убран ради прижатого сайдбара — здесь вернуть. */
+  main.main-calc { padding-left: 1rem !important; padding-right: 1rem !important; }
+}
+
+@media (max-width: 640px) {
+  header > div { padding: 0.55rem 1rem !important; gap: 0.9rem !important; }
+  .hdr-nav { gap: 1rem; }
+  .rb-figure { font-size: 1.35rem; }
+  .rb-figure-sec { font-size: 1.05rem; }
+  .side-body { padding: 0 0.75rem; }
+  .panel-head { padding: 0.8rem 0.9rem; font-size: 1rem; }
+  /* Сетки полей в две колонки на телефоне не читаются */
+  .group-body[style*="1fr 1fr"] { grid-template-columns: 1fr !important; }
+}
+
+/* Контент справа от сайдбара — одним потоком.
+   План, предупреждения и смета имеют сильно разную высоту, поэтому ставить
+   их в колонки нельзя: короткая колонка заканчивается, и дальше половина
+   экрана пустует. Таблице сметы широкая строка идёт только на пользу. */
+.content-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  min-width: 0;
+}
+/* Текстовые блоки не должны растягиваться на всю ширину монитора:
+   строка длиннее ~110 символов перестаёт читаться. */
+.content-flow .panel p,
+.content-flow .panel li { max-width: 78ch; }
+
 /* panel = glass block: lifted surface, soft shadow, faint top highlight */
+/* Общая защита от обрезки: длинная ссылка или слово без пробелов не должны
+   уезжать за край панели, которая их скрывает. */
+.panel, .panel * { min-width: 0; }
+.panel a, .panel p, .panel span, .panel td, .panel th { overflow-wrap: anywhere; }
+
 .panel {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0) 42%),
@@ -239,7 +412,12 @@ h1, h2, h3, h4 {
   justify-content: space-between;
   align-items: baseline;
   gap: 0.6rem;
+  /* Шапка панели обязана переноситься. Без переноса управляющие элементы
+     (переключатель режима цен, кнопка PDF) не помещались и обрезались
+     панелью, у которой overflow: hidden — текст просто исчезал за краем. */
+  flex-wrap: wrap;
 }
+.panel-head > * { min-width: 0; }
 .panel-head .sub {
   font-family: var(--font-body);
   font-weight: 500;
@@ -310,6 +488,9 @@ select.input { padding-left: 0; }
   display: inline-flex;
   gap: 1rem;
   background: transparent;
+  /* Переключатели тоже переносятся: четыре режима цен на узкой панели
+     в одну строку не помещаются. */
+  flex-wrap: wrap;
 }
 .seg button {
   border: none;

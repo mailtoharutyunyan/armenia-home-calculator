@@ -13,7 +13,7 @@
 //   Lb = 1.5 × P = 81 м (несущие оси)
 
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_HOUSE } from '../model/house'
+import { DEFAULT_HOUSE, BUILD_PRESETS } from '../model/house'
 import type { HouseParams } from '../model/house'
 import { computeQuantities } from './quantities'
 import type { SectionId } from './quantities'
@@ -205,10 +205,15 @@ describe('панель инженера — переопределения ре�
     const a = computeEstimate(computeQuantities(house()), SEED_PRICES, house(), 'typical').turnkey.total
     const b = computeEstimate(computeQuantities(eng({})), SEED_PRICES, eng({}), 'typical').turnkey.total
     expect(b).toBe(a)
-    // Закреплённый итог базового дома. Менять только осознанно, вместе с
-    // объяснением: 65 375 272 -> 68 546 404 при добавлении опалубки и подачи
-    // бетона насосом (раньше этих статей в смете не было вовсе).
-    expect(Math.round(a)).toBe(68546404)
+    // Закреплённый итог базового дома — ЦЕНА ДОГОВОРА, а не прямые затраты.
+    // История изменений (менять только осознанно, с объяснением):
+    //   65 375 272  исходный расчёт после исправления трёх багов объёмов
+    //   68 546 404  + опалубка и подача бетона насосом
+    //   67 796 404  регион Ереван => центральная канализация вместо септика
+    //  103 405 190  + сметная развёртка: накладные, прибыль, временные,
+    //               непредвиденные и НДС; опалубка 5 -> 6.5 м²/м³;
+    //               разуклонка плоской кровли
+    expect(Math.round(a)).toBe(103405190)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {
@@ -292,8 +297,11 @@ describe('опалубка, подача бетона и толщина утеп
   })
 
   it('норма опалубки настраивается инженером', () => {
+    // отношение к дефолту, а не жёсткое ×2: коэффициент по умолчанию может
+    // уточняться, а пропорциональность должна сохраняться всегда
     const base = qty(house(), 'formwork')
-    expect(qty(house({ eng: { formworkPerM3: 10 } }), 'formwork')).toBeCloseTo(base * 2, 4)
+    const raised = qty(house({ eng: { formworkPerM3: 13 } }), 'formwork')
+    expect(raised / base).toBeCloseTo(13 / C.formworkPerM3, 6)
   })
 
   it('подача насосом отключается и убирает строку', () => {
@@ -305,5 +313,94 @@ describe('опалубка, подача бетона и толщина утеп
     const base = qty(house(), 'insulation')
     expect(qty(house({ eng: { insulationThickness: 20 } }), 'insulation')).toBeCloseTo(base * 2, 4)
     expect(qty(house({ eng: { insulationThickness: 5 } }), 'insulation')).toBeCloseTo(base / 2, 4)
+  })
+})
+
+describe('согласованность значений по умолчанию', () => {
+  it('регион по умолчанию и канализация не противоречат друг другу', () => {
+    // Ереван — есть центральная канализация, значит септик по умолчанию не нужен.
+    // Иначе смета по умолчанию платит за локальное очистное там, где есть сеть.
+    expect(DEFAULT_HOUSE.region).toBe('yerevan')
+    expect(DEFAULT_HOUSE.connectSewer).toBe(true)
+    expect(DEFAULT_HOUSE.septic).toBe(false)
+    expect(qty(house(), 'septic')).toBe(0)
+    expect(qty(house(), 'conn_sewer')).toBe(1)
+  })
+
+  it('снятие центральной канализации включает септик в смету', () => {
+    const p = house({ connectSewer: false, septic: true })
+    expect(qty(p, 'septic')).toBe(1)
+    expect(qty(p, 'conn_sewer')).toBe(0)
+  })
+
+  it('дом по умолчанию не нарушает норм', () => {
+    const w = checkNorms(house(), computeQuantities(house()))
+    expect(w.filter((x) => x.level === 'error')).toEqual([])
+    expect(w.filter((x) => x.level === 'warning')).toEqual([])
+  })
+
+  it('класс бетона по умолчанию проходит сейсмический минимум', () => {
+    expect(DEFAULT_HOUSE.concreteGrade).toBe('concrete_b25')
+  })
+
+  it('стена по умолчанию проходит по теплозащите без утепления', () => {
+    // газоблок 300 мм: R = 0.3 / 0.14 = 2.14 ≥ 2.0 м²·К/Вт
+    const R = DEFAULT_HOUSE.wallThickness / C.thermalLambda.aerated
+    expect(R).toBeGreaterThanOrEqual(C.norms.wallThermalRReq)
+  })
+})
+
+describe('сметная развёртка — от затрат к цене договора', () => {
+  it('прямые затраты не включают документы', () => {
+    const e = computeEstimate(computeQuantities(house()), SEED_PRICES, house(), 'typical')
+    // документы идут отдельной строкой: на них не начисляются накладные и НДС
+    expect(e.turnkey.permit).toBeGreaterThan(0)
+    expect(e.turnkey.direct).toBe(e.turnkey.material + e.turnkey.labor)
+    expect(e.turnkey.total).toBeCloseTo(
+      e.turnkey.works + e.turnkey.contingency + e.turnkey.permit + e.turnkey.vat,
+      4,
+    )
+  })
+
+  it('накладные считаются от работы, прибыль — от прямых затрат', () => {
+    const p = house({ overheadPct: 20, profitPct: 10 })
+    const e = computeEstimate(computeQuantities(p), SEED_PRICES, p, 'typical')
+    expect(e.turnkey.overhead).toBeCloseTo(e.turnkey.labor * 0.2, 4)
+    expect(e.turnkey.profit).toBeCloseTo(e.turnkey.direct * 0.1, 4)
+  })
+
+  it('хозспособ дешевле подряда: нет прибыли, накладных и НДС', () => {
+    const self = house({ ...BUILD_PRESETS.self, buildMode: 'self' as const })
+    const contractor = house({ ...BUILD_PRESETS.contractor, buildMode: 'contractor' as const })
+    const a = computeEstimate(computeQuantities(self), SEED_PRICES, self, 'typical').turnkey
+    const b = computeEstimate(computeQuantities(contractor), SEED_PRICES, contractor, 'typical').turnkey
+    expect(a.overhead).toBe(0)
+    expect(a.profit).toBe(0)
+    expect(a.vat).toBe(0)
+    expect(a.total).toBeLessThan(b.total)
+  })
+
+  it('непредвиденные считаются от СМР и не равны нулю по умолчанию', () => {
+    const e = computeEstimate(computeQuantities(house()), SEED_PRICES, house(), 'typical')
+    expect(DEFAULT_HOUSE.contingencyPct).toBeGreaterThan(0)
+    expect(e.turnkey.contingency).toBeCloseTo(e.turnkey.works * (DEFAULT_HOUSE.contingencyPct / 100), 4)
+  })
+
+  it('нулевые проценты дают ровно прямые затраты плюс документы', () => {
+    const p = house({ overheadPct: 0, profitPct: 0, temporaryPct: 0, winterPct: 0, contingencyPct: 0, vatIncluded: false })
+    const e = computeEstimate(computeQuantities(p), SEED_PRICES, p, 'typical')
+    expect(e.turnkey.total).toBeCloseTo(e.turnkey.direct + e.turnkey.permit, 4)
+  })
+
+  it('опалубка соответствует ручной проверке объёмов', () => {
+    // перекрытия + колонны + ригели + лента ≈ 780 м²; расчёт должен быть рядом
+    const fw = qty(house(), 'formwork')
+    expect(fw).toBeGreaterThan(700)
+    expect(fw).toBeLessThan(900)
+  })
+
+  it('плоская кровля получает уклонообразующий слой', () => {
+    expect(qty(house({ roof: 'flat' }), 'roof_slope')).toBeCloseTo(182 * C.roofSlopeLayer, 4)
+    expect(qty(house({ roof: 'pitched' }), 'roof_slope')).toBe(0)
   })
 })

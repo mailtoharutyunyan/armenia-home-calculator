@@ -37,9 +37,15 @@ export function ResultBar() {
           </div>
         </div>
 
+        {/* Коробка — вторая по важности цифра, а не мелкая подпись справа:
+            с неё начинают планировать бюджет и по ней сравнивают подрядчиков. */}
+        <div className="rb-second">
+          <div className="rb-label">{t(lang, 'rb_act')}</div>
+          <div className="rb-figure rb-figure-sec">{m(est.act.total)}</div>
+        </div>
+
         <div className="rb-stats">
           <Stat label={t(lang, 'rb_perM2')} value={m(est.perM2)} />
-          <Stat label={t(lang, 'rb_act')} value={m(est.act.total)} />
           <Stat label={t(lang, 'rb_area')} value={`${num(geo.netFloorArea, 0)} м²`} />
         </div>
 

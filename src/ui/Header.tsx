@@ -27,13 +27,12 @@ export function Header() {
     >
       <div
         style={{
-          maxWidth: 1200,
+          maxWidth: 'var(--page-w)',
           margin: '0 auto',
           padding: '0.7rem 2rem',
           display: 'flex',
           alignItems: 'center',
           gap: '1.6rem',
-          flexWrap: 'wrap',
         }}
       >
         <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
@@ -41,7 +40,7 @@ export function Header() {
           <span style={{ fontSize: '0.62rem', fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--color-ink-soft)' }}>РА</span>
         </span>
 
-        <nav style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+        <nav className="hdr-nav">
           {TABS.map((tb) => (
             <button
               key={tb.id}

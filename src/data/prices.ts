@@ -147,6 +147,7 @@ const items: PriceItem[] = [
   item('facade', 'Фасадная отделка', 'Ֆասադի հարդարում', 'м²', 9000, 6000, S.market),
 
   // --- Roof ---
+  item('roof_slope', 'Разуклонка кровли (керамзитобетон)', 'Տանիքի թեքաշերտ', 'м³', 22000, 9000, S.market),
   item('roof_flat', 'Кровля плоская', 'Հարթ տանիք', 'м²', 9000, 5000, S.market),
   item('roof_pitched', 'Кровля скатная', 'Թեք տանիք', 'м²', 14000, 8000, S.market),
 
@@ -164,6 +165,9 @@ const items: PriceItem[] = [
 
   // --- Stair ---
   item('stair', 'Лестница монолитная', 'Աստիճան մոնոլիտ', 'м³', 40000, 30000, S.market),
+
+  estimate('glass_partition', 'Раздвижная стеклянная перегородка', 'Շարժական ապակե միջնապատ', 'м²', 85000, 15000,
+    'ОЦЕНКА — зависит от системы, стекла и фурнитуры'),
 
   // --- Опалубка и подача бетона (ранее отсутствовали как статьи) ---
   // Опалубка считается по площади контакта с бетоном, а не по объёму.
@@ -235,6 +239,7 @@ const EN_LABELS: Record<string, string> = {
   plaster: 'Plaster / putty / paint',
   floor_finish: 'Floor covering',
   facade: 'Facade finish',
+  roof_slope: 'Roof slope screed (lightweight concrete)',
   roof_flat: 'Flat roof',
   roof_pitched: 'Pitched roof',
   electrical: 'Electrical',
@@ -246,6 +251,7 @@ const EN_LABELS: Record<string, string> = {
   opt_finish_premium: 'Turnkey finishing',
   opt_panel_ceiling: 'Panel ceiling',
   stair: 'Monolithic staircase',
+  glass_partition: 'Sliding glass partition',
   formwork: 'Formwork (rental + erection)',
   concrete_pump: 'Concrete pumping',
   ventilation: 'Ventilation',
@@ -292,6 +298,22 @@ export function priceAgeDays(updated: string = PRICES_UPDATED, now = new Date())
   const d = new Date(Date.UTC(+m[3], +m[2] - 1, +m[1]))
   if (Number.isNaN(d.getTime())) return null
   return Math.floor((now.getTime() - d.getTime()) / 86_400_000)
+}
+
+// Точность расчёта.
+//
+// Математика в калькуляторе точная и покрыта тестами. Приблизительными его
+// делают только входные цены. Поэтому формулировка не статичная: по мере того
+// как позиции получают реальные котировки, «оценка» превращается в «расчёт по
+// вашим ценам», и слово «приблизительный» уходит, когда перестаёт быть правдой.
+export type Precision = 'estimate' | 'partial' | 'quoted'
+
+export function precisionOf(catalog: Catalog): { level: Precision; quoted: number; total: number } {
+  const list = Object.values(catalog)
+  const quoted = list.filter((i) => i.provenance === 'quoted').length
+  const total = list.length
+  const level: Precision = quoted === 0 ? 'estimate' : quoted < total ? 'partial' : 'quoted'
+  return { level, quoted, total }
 }
 
 export function arePricesStale(updated: string = PRICES_UPDATED, now = new Date()): boolean {

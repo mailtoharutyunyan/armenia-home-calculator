@@ -5,7 +5,7 @@
 // Эти тесты не дают таким вещам вернуться незаметно.
 
 import { describe, it, expect } from 'vitest'
-import { SEED_PRICES, PRICES_UPDATED, priceAgeDays, arePricesStale } from './prices'
+import { SEED_PRICES, PRICES_UPDATED, priceAgeDays, arePricesStale, precisionOf } from './prices'
 
 const items = Object.values(SEED_PRICES)
 
@@ -69,5 +69,31 @@ describe('возраст прайса', () => {
     const now = new Date('2026-09-13T00:00:00Z')
     expect(arePricesStale('20.07.2026', now)).toBe(false)
     expect(arePricesStale('01.01.2026', now)).toBe(true)
+  })
+})
+
+describe('точность расчёта заявляется честно', () => {
+  it('без сверенных цен — оценка порядка величины', () => {
+    const p = precisionOf(SEED_PRICES)
+    expect(p.level).toBe('estimate')
+    expect(p.quoted).toBe(0)
+    expect(p.total).toBe(Object.keys(SEED_PRICES).length)
+  })
+
+  it('частичная сверка даёт промежуточный статус', () => {
+    const partial = structuredClone(SEED_PRICES)
+    const k = Object.keys(partial)[0]
+    partial[k] = { ...partial[k], provenance: 'quoted', verifiedAt: '13.09.2026', sourceUrls: ['https://example.am'] }
+    expect(precisionOf(partial).level).toBe('partial')
+  })
+
+  it('когда сверены все позиции, расчёт перестаёт быть приблизительным', () => {
+    const all = structuredClone(SEED_PRICES)
+    for (const k of Object.keys(all)) {
+      all[k] = { ...all[k], provenance: 'quoted', verifiedAt: '13.09.2026', sourceUrls: ['https://example.am'] }
+    }
+    const p = precisionOf(all)
+    expect(p.level).toBe('quoted')
+    expect(p.quoted).toBe(p.total)
   })
 })

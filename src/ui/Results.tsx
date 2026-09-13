@@ -10,7 +10,7 @@ import type { SectionId } from '../engine/quantities'
 import { labelFor } from '../model/catalog'
 import { money, num } from './format'
 import { openSmetaPdf } from './smetaPdf'
-import { PRICES_UPDATED } from '../data/prices'
+import { PRICES_UPDATED, precisionOf } from '../data/prices'
 
 const SECTION_LABEL: Record<SectionId, { ru: string; hy: string; en: string }> = {
   earthworks: { ru: 'Земляные работы', hy: 'Հողային աշխատանքներ', en: 'Earthworks' },
@@ -50,6 +50,8 @@ export function Results() {
   }, [house, prices, priceMode])
   // Упрощённый порядок N 4.1 — критерии живут в движке норм, не дублируются здесь
   const proc41 = simplified41Reasons(house, geo.netFloorArea).length === 0
+
+  const prec = precisionOf(prices)
 
   const m = (v: number) => money(v, house.currency, amdPerUsd)
 
@@ -258,19 +260,55 @@ export function Results() {
           })}
         </div>
 
-        {/* footer totals */}
+        {/* Сметная развёртка: от прямых затрат к договорной цене.
+            Без неё смета показывает только материалы и работу и занижает
+            бюджет примерно в полтора раза. */}
         <div style={{ marginTop: '0.8rem', borderTop: '2px solid var(--color-navy)', paddingTop: '0.6rem' }}>
+          <div className="eyebrow" style={{ marginBottom: '0.5rem' }}>{t(lang, 'breakdownTitle')}</div>
           <Row label={t(lang, 'material')} value={m(est.turnkey.material)} />
           <Row label={t(lang, 'labor')} value={m(est.turnkey.labor)} />
-          {est.turnkey.reserve > 0 && <Row label={t(lang, 'reserve')} value={m(est.turnkey.reserve)} />}
+          <div className="spec-row" style={{ fontWeight: 600 }}>
+            <span>{t(lang, 'directCosts')}</span>
+            <span className="num">{m(est.turnkey.direct)}</span>
+          </div>
+          {est.turnkey.overhead > 0 && <Row label={`${t(lang, 'overhead')} · ${house.overheadPct}%`} value={m(est.turnkey.overhead)} />}
+          {est.turnkey.profit > 0 && <Row label={`${t(lang, 'profit')} · ${house.profitPct}%`} value={m(est.turnkey.profit)} />}
+          {est.turnkey.temporary > 0 && <Row label={`${t(lang, 'temporary')} · ${house.temporaryPct}%`} value={m(est.turnkey.temporary)} />}
+          {est.turnkey.winter > 0 && <Row label={`${t(lang, 'winter')} · ${house.winterPct}%`} value={m(est.turnkey.winter)} />}
+          <div className="spec-row" style={{ fontWeight: 600 }}>
+            <span>{t(lang, 'works')}</span>
+            <span className="num">{m(est.turnkey.works)}</span>
+          </div>
+          {est.turnkey.contingency > 0 && <Row label={`${t(lang, 'contingency')} · ${house.contingencyPct}%`} value={m(est.turnkey.contingency)} />}
+          {est.turnkey.permit > 0 && <Row label={t(lang, 'permitLine')} value={m(est.turnkey.permit)} />}
           {house.vatIncluded && <Row label={t(lang, 'vatLine')} value={m(est.turnkey.vat)} />}
           <div className="spec-row" style={{ borderBottom: 'none', fontWeight: 700 }}>
-            <span style={{ fontFamily: 'var(--font-display)' }}>{t(lang, 'total')} ({t(lang, 'stageTurnkey')})</span>
+            <span style={{ fontFamily: 'var(--font-display)' }}>{t(lang, 'contractPrice')} ({t(lang, 'stageTurnkey')})</span>
             <span className="num" style={{ fontSize: '1.05rem', color: 'var(--color-copper)' }}>{m(est.turnkey.total)}</span>
+          </div>
+          <div className="spec-row" style={{ borderBottom: 'none' }}>
+            <span style={{ color: 'var(--color-ink-soft)' }}>{t(lang, 'contractPrice')} ({t(lang, 'stageAct')})</span>
+            <span className="num" style={{ color: 'var(--color-ink-soft)' }}>{m(est.act.total)}</span>
           </div>
         </div>
 
-        <p style={{ marginTop: '0.9rem', fontSize: '0.72rem', color: 'var(--color-ink-soft)', lineHeight: 1.5 }}>
+        {/* Точность зависит от того, сколько цен сверено, и меняется вместе
+            с прайсом. Юридический факт про лицензированный проект — отдельно,
+            он не зависит от точности расчёта. */}
+        <p
+          style={{
+            marginTop: '0.9rem',
+            fontSize: '0.76rem',
+            lineHeight: 1.5,
+            color: prec.level === 'quoted' ? 'var(--color-ok)' : 'var(--color-warn)',
+            fontWeight: 600,
+          }}
+        >
+          {t(lang, `prec_${prec.level}` as 'prec_estimate')
+            .replace('{q}', String(prec.quoted))
+            .replace('{t}', String(prec.total))}
+        </p>
+        <p style={{ marginTop: '0.4rem', fontSize: '0.72rem', color: 'var(--color-ink-soft)', lineHeight: 1.5 }}>
           {t(lang, 'disclaimer')}
         </p>
       </div>

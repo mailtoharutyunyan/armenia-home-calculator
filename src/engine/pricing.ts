@@ -23,13 +23,25 @@ export interface EstimateLine {
   total: number
 }
 
+// Сметная развёртка подрядчика.
+//
+// Прямые затраты (материалы + работа) — это ещё не цена стройки. Подрядчик
+// считает поверх них накладные, прибыль, временные здания, зимнее удорожание,
+// непредвиденные и НДС. Раньше калькулятор показывал только прямые затраты и
+// потому систематически занижал бюджет примерно в полтора раза.
 export interface Totals {
-  material: number
-  labor: number
-  base: number
-  reserve: number
+  material: number // материалы (без документов)
+  labor: number // работа (без документов)
+  direct: number // прямые затраты = материалы + работа
+  overhead: number // накладные расходы, % от ФОТ
+  profit: number // сметная прибыль, % от прямых затрат
+  temporary: number // временные здания и сооружения
+  winter: number // зимнее удорожание
+  works: number // СМР = прямые + накладные + прибыль + временные + зимнее
+  contingency: number // непредвиденные, % от СМР
+  permit: number // документы и пошлины — вне СМР, без наценок и НДС
   vat: number
-  total: number
+  total: number // договорная цена
 }
 
 export interface Estimate {
@@ -52,14 +64,38 @@ interface ModeResult {
   missing: string[]
 }
 
-// permitAmt = fixed state fees (документы): no contingency reserve, no VAT.
+// material/labor приходят уже без документов; permitAmt — госпошлины и проект.
+// Документы не попадают ни под накладные, ни под прибыль, ни под НДС: это
+// фиксированные платежи, подрядчик на них не зарабатывает.
 function finalize(material: number, labor: number, permitAmt: number, p: HouseParams): Totals {
-  const base = material + labor
-  const taxable = Math.max(0, base - permitAmt)
-  const reserve = taxable * C.contingency
-  const withReserve = base + reserve
-  const vat = p.vatIncluded ? taxable * (1 + C.contingency) * C.vatRate : 0
-  return { material, labor, base, reserve, vat, total: withReserve + vat }
+  const pc = (v: number) => Math.max(0, v) / 100
+  const direct = material + labor
+
+  // Накладные считаются от фонда оплаты труда — так их считает подрядчик.
+  const overhead = labor * pc(p.overheadPct)
+  const profit = direct * pc(p.profitPct)
+  const temporary = direct * pc(p.temporaryPct)
+  const winter = direct * pc(p.winterPct)
+  const works = direct + overhead + profit + temporary + winter
+
+  const contingency = works * pc(p.contingencyPct)
+  const taxable = works + contingency
+  const vat = p.vatIncluded ? taxable * C.vatRate : 0
+
+  return {
+    material,
+    labor,
+    direct,
+    overhead,
+    profit,
+    temporary,
+    winter,
+    works,
+    contingency,
+    permit: permitAmt,
+    vat,
+    total: taxable + permitAmt + vat,
+  }
 }
 
 function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: PriceMode): ModeResult {
@@ -109,6 +145,9 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
     })
     sectionTotals[ql.section] = (sectionTotals[ql.section] ?? 0) + total
 
+    // Документы копим отдельно (permitAmt): на них не начисляются накладные,
+    // прибыль и НДС, поэтому в прямые затраты они попадать не должны.
+    if (isPermit) continue
     if (ql.stage === 'act') {
       actMat += material
       actLabor += labor
