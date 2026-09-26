@@ -68,10 +68,14 @@ function priceOverrides(catalog: Catalog): Record<string, PriceOverride> {
   return out
 }
 const LANG_KEY = 'ahc_lang_v1'
-const HOUSE_KEY = 'ahc_house_v5'
-// v4 stored vatIncluded: true from the old default. v5 made VAT opt-in, so v4
-// inputs are carried over without their VAT flag.
-const LEGACY_HOUSE_KEY = 'ahc_house_v4'
+const HOUSE_KEY = 'ahc_house_v6'
+// Saves under older keys are carried over, newest first:
+// - v5 and v4 hold the main-contractor preset, the default until v6 made
+//   self-build the default (see dropOldContractorDefault);
+// - v4 also holds vatIncluded: true from the old default. v5 made VAT opt-in,
+//   so v4 inputs are carried over without their VAT flag.
+const HOUSE_V5_KEY = 'ahc_house_v5'
+const HOUSE_V4_KEY = 'ahc_house_v4'
 const THEME_KEY = 'ahc_theme_v1'
 const SCEN_KEY = 'ahc_scenarios_v2'
 // v1 scenarios were saved while VAT defaulted to on; like the v4 house they
@@ -118,14 +122,28 @@ function loadTheme(): Theme {
   }
 }
 
+// Before v6 every save held the main-contractor preset (overhead 15%, profit
+// 8%, temporary 1.5%) unless the visitor chose otherwise. Where it is still
+// untouched it gives way to the self-build default; a self-build save or a
+// changed percentage is kept.
+function dropOldContractorDefault(saved: Partial<HouseParams>) {
+  const { buildMode, overheadPct, profitPct, temporaryPct } = saved
+  if (buildMode === 'contractor' && overheadPct === 15 && profitPct === 8 && temporaryPct === 1.5) {
+    delete saved.buildMode
+    delete saved.overheadPct
+    delete saved.profitPct
+    delete saved.temporaryPct
+  }
+}
+
 function loadHouse(): HouseParams {
   try {
-    let raw = localStorage.getItem(HOUSE_KEY)
-    const legacy = raw == null
-    if (legacy) raw = localStorage.getItem(LEGACY_HOUSE_KEY)
+    const key = [HOUSE_KEY, HOUSE_V5_KEY, HOUSE_V4_KEY].find((k) => localStorage.getItem(k) != null)
+    const raw = key && localStorage.getItem(key)
     if (!raw) return { ...DEFAULT_HOUSE }
     const saved = JSON.parse(raw) as Partial<HouseParams>
-    if (legacy) delete saved.vatIncluded
+    if (key !== HOUSE_KEY) dropOldContractorDefault(saved)
+    if (key === HOUSE_V4_KEY) delete saved.vatIncluded
     // merge onto defaults so new fields always exist
     return withDefaults(saved)
   } catch {

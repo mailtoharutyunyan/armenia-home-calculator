@@ -66,6 +66,10 @@ export function Results() {
   // the PDF: the PDF used to skip every markup and VAT, so its rows did not add
   // up to its own total.
   const tk = est.turnkey
+  // Self-build has no contract, so the total is labelled as the build budget.
+  const selfBuild = house.buildMode === 'self'
+  const breakdownTitle = t(lang, selfBuild ? 'breakdownTitleSelf' : 'breakdownTitle')
+  const totalLabel = t(lang, selfBuild ? 'selfPrice' : 'contractPrice')
   const breakdown: { label: string; value: number; strong?: boolean }[] = [
     { label: t(lang, 'material'), value: tk.material },
     { label: t(lang, 'labor'), value: tk.labor },
@@ -91,6 +95,7 @@ export function Results() {
       perM2Act: m(est.perM2Act),
       sections: [...sections.keys()].map((sec) => ({ label: secLabel(sec, lang), value: m(est.sectionTotals[sec] ?? 0) })),
       sectionsTotal: m(Object.values(est.sectionTotals).reduce((a, v) => a + v, 0)),
+      breakdownTitle,
       breakdown: breakdown.map((r) => ({ label: r.label, value: m(r.value), strong: r.strong })),
       date: PRICES_UPDATED,
       disclaimer: t(lang, 'disclaimer'),
@@ -283,7 +288,7 @@ export function Results() {
             Без неё смета показывает только материалы и работу и занижает
             бюджет примерно в полтора раза. */}
         <div style={{ marginTop: '0.8rem', borderTop: '2px solid var(--color-navy)', paddingTop: '0.6rem' }}>
-          <div className="eyebrow" style={{ marginBottom: '0.5rem' }}>{t(lang, 'breakdownTitle')}</div>
+          <div className="eyebrow" style={{ marginBottom: '0.5rem' }}>{breakdownTitle}</div>
           {breakdown.map((r) =>
             r.strong ? (
               <div key={r.label} className="spec-row" style={{ fontWeight: 600 }}>
@@ -295,11 +300,11 @@ export function Results() {
             ),
           )}
           <div className="spec-row" style={{ borderBottom: 'none', fontWeight: 700 }}>
-            <span style={{ fontFamily: 'var(--font-display)' }}>{t(lang, 'contractPrice')} ({t(lang, 'stageTurnkey')})</span>
+            <span style={{ fontFamily: 'var(--font-display)' }}>{totalLabel} ({t(lang, 'stageTurnkey')})</span>
             <span className="num" style={{ fontSize: '1.05rem', color: 'var(--color-copper)' }}>{m(est.turnkey.total)}</span>
           </div>
           <div className="spec-row" style={{ borderBottom: 'none' }}>
-            <span style={{ color: 'var(--color-ink-soft)' }}>{t(lang, 'contractPrice')} ({t(lang, 'stageAct')})</span>
+            <span style={{ color: 'var(--color-ink-soft)' }}>{totalLabel} ({t(lang, 'stageAct')})</span>
             <span className="num" style={{ color: 'var(--color-ink-soft)' }}>{m(est.act.total)}</span>
           </div>
         </div>

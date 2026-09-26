@@ -292,7 +292,8 @@ describe('панель инженера — переопределения ре�
     const a = computeEstimate(computeQuantities(house()), SEED_PRICES, house(), 'typical').turnkey.total
     const b = computeEstimate(computeQuantities(eng({})), SEED_PRICES, eng({}), 'typical').turnkey.total
     expect(b).toBe(a)
-    // Закреплённый итог базового дома — ЦЕНА ДОГОВОРА, а не прямые затраты.
+    // Закреплённый итог базового дома — полная цена стройки, а не прямые
+    // затраты (с 26.09.2026 хозспособом: без накладных и прибыли подрядчика).
     // История изменений (менять только осознанно, с объяснением):
     //   65 375 272  исходный расчёт после исправления трёх багов объёмов
     //   68 546 404  + опалубка и подача бетона насосом
@@ -310,7 +311,9 @@ describe('панель инженера — переопределения ре�
     //               doors, finishes; see src/data/prices.ts)
     //   80 680 455  flat roof priced once: the membrane and insulation were also
     //               inside the 9 000 + 5 000 "flat roof" line
-    expect(Math.round(a)).toBe(80680455)
+    //   71 386 789  self-build is the default: no contractor overhead (15% of
+    //               labour) or profit (8%), temporary works 1.5% -> 1%
+    expect(Math.round(a)).toBe(71386789)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {
@@ -436,6 +439,15 @@ describe('согласованность значений по умолчани�
     const w = checkNorms(house(), computeQuantities(house()))
     expect(w.filter((x) => x.level === 'error')).toEqual([])
     expect(w.filter((x) => x.level === 'warning')).toEqual([])
+  })
+
+  it('self-build is the default, with the self-build percentages', () => {
+    expect(DEFAULT_HOUSE.buildMode).toBe('self')
+    const { vatIncluded: _vat, ...markups } = BUILD_PRESETS.self
+    expect(DEFAULT_HOUSE).toMatchObject(markups)
+    const e = computeEstimate(computeQuantities(house()), SEED_PRICES, house(), 'typical').turnkey
+    expect(e.overhead).toBe(0)
+    expect(e.profit).toBe(0)
   })
 
   it('VAT is opt-in: off by default and in both build presets', () => {

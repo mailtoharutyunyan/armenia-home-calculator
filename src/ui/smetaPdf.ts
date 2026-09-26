@@ -9,6 +9,7 @@ export interface SmetaData {
   perM2Act: string
   sections: { label: string; value: string }[] // direct costs by section, documents included
   sectionsTotal: string
+  breakdownTitle: string // "From costs to the contract price" or, self-built, "... to the build budget"
   breakdown: { label: string; value: string; strong?: boolean }[] // direct costs → contract price
   date: string
   disclaimer: string
@@ -55,7 +56,7 @@ export function openSmetaPdf(d: SmetaData) {
       <tr class="tot"><td>${L('Прямые затраты и документы', 'Ուղղակի ծախսեր և փաստաթղթեր', 'Direct costs and documents')}</td><td class="n">${esc(d.sectionsTotal)}</td></tr>
     </tbody>
   </table>
-  <h2>${L('От затрат к цене договора', 'Ծախսերից մինչև պայմանագրային գին', 'From costs to the contract price')}</h2>
+  <h2>${esc(d.breakdownTitle)}</h2>
   <table>
     <tbody>${markup}
       <tr class="tot"><td>${L('ИТОГО под ключ', 'ԸՆԴԱՄԵՆԸ', 'TOTAL turnkey')}</td><td class="n">${esc(d.turnkey)}</td></tr>

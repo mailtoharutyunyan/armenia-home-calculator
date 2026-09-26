@@ -224,11 +224,12 @@ export const DEFAULT_HOUSE: HouseParams = {
   connectWater: true,
   connectSewer: true,
   septic: false,
-  // По умолчанию — генподрядчик: так считает большинство и так цифра честнее.
-  buildMode: 'contractor',
-  overheadPct: 15,
-  profitPct: 8,
-  temporaryPct: 1.5,
+  // Self-build by default (BUILD_PRESETS.self): crews are hired directly, so
+  // there is no contractor overhead or profit. "Main contractor" adds them.
+  buildMode: 'self',
+  overheadPct: 0,
+  profitPct: 0,
+  temporaryPct: 1,
   winterPct: 0, // включите, если бетонные работы попадают на зиму
   contingencyPct: 10,
   concretePump: true,

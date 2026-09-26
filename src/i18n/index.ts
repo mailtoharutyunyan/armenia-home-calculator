@@ -598,6 +598,9 @@ export const DICT: Dict = {
   contingency: { ru: 'Непредвиденные', hy: 'Չնախատեսված ծախսեր' },
   permitLine: { ru: 'Документы и пошлины', hy: 'Փաստաթղթեր և տուրքեր' },
   contractPrice: { ru: 'Цена договора', hy: 'Պայմանագրային գին' },
+  // Self-build has no contract: the same total is the owner's budget.
+  breakdownTitleSelf: { ru: 'От затрат к бюджету стройки', hy: 'Ծախսերից մինչև շինարարության բյուջե' },
+  selfPrice: { ru: 'Бюджет стройки', hy: 'Շինարարության բյուջե' },
   buildMode: { ru: 'Кто строит', hy: 'Ով է կառուցում' },
   bm_self: { ru: 'Хозспособ (бригады напрямую)', hy: 'Ինքնուրույն (բրիգադներն ուղղակի)' },
   bm_contractor: { ru: 'Генподрядчик по договору', hy: 'Գլխավոր կապալառու պայմանագրով' },
@@ -898,6 +901,8 @@ const EN: Record<string, string> = {
   contingency: 'Contingency',
   permitLine: 'Documents & state fees',
   contractPrice: 'Contract price',
+  breakdownTitleSelf: 'From costs to the build budget',
+  selfPrice: 'Build budget',
   buildMode: 'Who builds',
   bm_self: 'Self-managed (direct crews)',
   bm_contractor: 'Main contractor under contract',
