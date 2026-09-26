@@ -285,7 +285,20 @@ export function computeQuantities(p: HouseParams): Quantities {
     addStruct('frame', nCol * colSize * colSize * H, reb.column)
     const beamsLen = ov(e.beamsLen) ?? Lb * p.floors
     addStruct('frame', beamsLen * beamSectionArea, reb.ringBeam)
-    const infillVol = Math.max(0, wallNet * wallT) * waste
+    // Columns and beams on the outer contour sit in the wall plane, so the
+    // infill only fills the panels between them (the masonry branch subtracts
+    // its ring beams and cores the same way). An overridden column count keeps
+    // the grid's share of edge columns.
+    const gridCols = nx * ny
+    const edgeCols = nx === 1 || ny === 1 ? gridCols : 2 * (nx + ny) - 4
+    const colsInWall = gridCols > 0 ? nCol * (edgeCols / gridCols) : 0
+    const beamDepth = colSize > 0 ? beamSectionArea / colSize : 0
+    const beamsInWall = Math.min(beamsLen, P * p.floors)
+    const frameInWall = Math.max(
+      0,
+      colsInWall * colSize * H + beamsInWall * beamDepth - colsInWall * colSize * beamDepth * p.floors,
+    )
+    const infillVol = Math.max(0, (wallNet - frameInWall) * wallT) * waste
     add(masonryKey(wallMat), 'walls', 'act', infillVol)
     if (wallMat === 'aerated') add('glue_aerated', 'walls', 'act', infillVol * glueShare)
     else add('mortar', 'walls', 'act', infillVol * mortarShare)

@@ -145,8 +145,18 @@ describe('баг B — подвал не засыпают обратно', () =>
 
 describe('баг C — внутренние стены не считаются дважды', () => {
   it('в каркасе кладка заполняет только наружный контур', () => {
-    // (P × H − проёмы) × 0.3 м × 1.05 запаса = (324 − 42) × 0.3 × 1.05
-    expect(qty(house(), 'aerated_block', 'walls')).toBeCloseTo(282 * 0.3 * 1.05, 6)
+    // (P × H − openings − frame in the wall plane) × 0.3 m × 1.05 waste.
+    // Frame in the wall: 12 edge columns of the 4 × 4 grid × 0.4 m × 6 m = 28.8 m²
+    // + edge beams 54 m × 2 levels × 0.4 m = 43.2 m² − 24 column/beam crossings
+    // × 0.4 × 0.4 = 3.84 m²  →  68.16 m²;  (324 − 42 − 68.16) × 0.3 × 1.05
+    expect(qty(house(), 'aerated_block', 'walls')).toBeCloseTo((282 - 68.16) * 0.3 * 1.05, 6)
+  })
+
+  it('an overridden column count keeps the share of columns in the wall', () => {
+    // 32 columns instead of 16: twice the edge columns, 24 instead of 12
+    const base = qty(house(), 'aerated_block', 'walls')
+    const moreCols = qty(house({ eng: { columns: 32 } }), 'aerated_block', 'walls')
+    expect(base - moreCols).toBeCloseTo((12 * 0.4 * 6 - 12 * 0.4 * 0.4 * 2) * 0.3 * 1.05, 6)
   })
 
   it('перегородки остаются отдельным разделом и не дублируют кладку', () => {
@@ -293,7 +303,8 @@ describe('панель инженера — переопределения ре�
     //               проёма двусветного зала (284 м² вместо 364)
     //   82 942 699  VAT is opt-in: the default estimate is without VAT
     //   84 673 234  10 cm slab on ground under the ground floor (strip foundation)
-    expect(Math.round(a)).toBe(84673234)
+    //   83 716 374  frame infill excludes the columns and beams in the wall plane
+    expect(Math.round(a)).toBe(83716374)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {
