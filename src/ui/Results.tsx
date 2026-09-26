@@ -62,6 +62,24 @@ export function Results() {
     sections.get(l.section)!.push(l)
   }
 
+  // From direct costs to the contract price. One list feeds both the screen and
+  // the PDF: the PDF used to skip every markup and VAT, so its rows did not add
+  // up to its own total.
+  const tk = est.turnkey
+  const breakdown: { label: string; value: number; strong?: boolean }[] = [
+    { label: t(lang, 'material'), value: tk.material },
+    { label: t(lang, 'labor'), value: tk.labor },
+    { label: t(lang, 'directCosts'), value: tk.direct, strong: true },
+    ...(tk.overhead > 0 ? [{ label: `${t(lang, 'overhead')} · ${house.overheadPct}%`, value: tk.overhead }] : []),
+    ...(tk.profit > 0 ? [{ label: `${t(lang, 'profit')} · ${house.profitPct}%`, value: tk.profit }] : []),
+    ...(tk.temporary > 0 ? [{ label: `${t(lang, 'temporary')} · ${house.temporaryPct}%`, value: tk.temporary }] : []),
+    ...(tk.winter > 0 ? [{ label: `${t(lang, 'winter')} · ${house.winterPct}%`, value: tk.winter }] : []),
+    { label: t(lang, 'works'), value: tk.works, strong: true },
+    ...(tk.contingency > 0 ? [{ label: `${t(lang, 'contingency')} · ${house.contingencyPct}%`, value: tk.contingency }] : []),
+    ...(tk.permit > 0 ? [{ label: t(lang, 'permitLine'), value: tk.permit }] : []),
+    ...(house.vatIncluded ? [{ label: t(lang, 'vatLine'), value: tk.vat }] : []),
+  ]
+
   const openPdf = () =>
     openSmetaPdf({
       lang,
@@ -72,8 +90,8 @@ export function Results() {
       perM2: m(est.perM2),
       perM2Act: m(est.perM2Act),
       sections: [...sections.keys()].map((sec) => ({ label: secLabel(sec, lang), value: m(est.sectionTotals[sec] ?? 0) })),
-      material: m(est.turnkey.material),
-      labor: m(est.turnkey.labor),
+      sectionsTotal: m(Object.values(est.sectionTotals).reduce((a, v) => a + v, 0)),
+      breakdown: breakdown.map((r) => ({ label: r.label, value: m(r.value), strong: r.strong })),
       date: PRICES_UPDATED,
       disclaimer: t(lang, 'disclaimer'),
     })
@@ -138,7 +156,8 @@ export function Results() {
           <div style={{ marginTop: '0.6rem' }}>
             <AreaRow label={t(lang, 'ab_builtup')} v={geo.footprint} />
             <AreaRow label={t(lang, 'ab_floor1')} v={geo.internalPerFloor} />
-            {house.floors > 1 && <AreaRow label={t(lang, 'ab_upper')} v={Math.max(0, geo.netFloorArea - geo.internalPerFloor)} />}
+            {/* upper floors in full: the hall void is subtracted by its own row below */}
+            {house.floors > 1 && <AreaRow label={t(lang, 'ab_upper')} v={geo.internalPerFloor * (house.floors - 1)} />}
             {geo.hallVoid > 0 && <AreaRow label={t(lang, 'ab_hall')} v={geo.hallVoid} minus />}
             <div className="spec-row" style={{ fontWeight: 700, borderBottom: 'none' }}>
               <span>{t(lang, 'ab_total')}</span>
@@ -265,23 +284,16 @@ export function Results() {
             бюджет примерно в полтора раза. */}
         <div style={{ marginTop: '0.8rem', borderTop: '2px solid var(--color-navy)', paddingTop: '0.6rem' }}>
           <div className="eyebrow" style={{ marginBottom: '0.5rem' }}>{t(lang, 'breakdownTitle')}</div>
-          <Row label={t(lang, 'material')} value={m(est.turnkey.material)} />
-          <Row label={t(lang, 'labor')} value={m(est.turnkey.labor)} />
-          <div className="spec-row" style={{ fontWeight: 600 }}>
-            <span>{t(lang, 'directCosts')}</span>
-            <span className="num">{m(est.turnkey.direct)}</span>
-          </div>
-          {est.turnkey.overhead > 0 && <Row label={`${t(lang, 'overhead')} · ${house.overheadPct}%`} value={m(est.turnkey.overhead)} />}
-          {est.turnkey.profit > 0 && <Row label={`${t(lang, 'profit')} · ${house.profitPct}%`} value={m(est.turnkey.profit)} />}
-          {est.turnkey.temporary > 0 && <Row label={`${t(lang, 'temporary')} · ${house.temporaryPct}%`} value={m(est.turnkey.temporary)} />}
-          {est.turnkey.winter > 0 && <Row label={`${t(lang, 'winter')} · ${house.winterPct}%`} value={m(est.turnkey.winter)} />}
-          <div className="spec-row" style={{ fontWeight: 600 }}>
-            <span>{t(lang, 'works')}</span>
-            <span className="num">{m(est.turnkey.works)}</span>
-          </div>
-          {est.turnkey.contingency > 0 && <Row label={`${t(lang, 'contingency')} · ${house.contingencyPct}%`} value={m(est.turnkey.contingency)} />}
-          {est.turnkey.permit > 0 && <Row label={t(lang, 'permitLine')} value={m(est.turnkey.permit)} />}
-          {house.vatIncluded && <Row label={t(lang, 'vatLine')} value={m(est.turnkey.vat)} />}
+          {breakdown.map((r) =>
+            r.strong ? (
+              <div key={r.label} className="spec-row" style={{ fontWeight: 600 }}>
+                <span>{r.label}</span>
+                <span className="num">{m(r.value)}</span>
+              </div>
+            ) : (
+              <Row key={r.label} label={r.label} value={m(r.value)} />
+            ),
+          )}
           <div className="spec-row" style={{ borderBottom: 'none', fontWeight: 700 }}>
             <span style={{ fontFamily: 'var(--font-display)' }}>{t(lang, 'contractPrice')} ({t(lang, 'stageTurnkey')})</span>
             <span className="num" style={{ fontSize: '1.05rem', color: 'var(--color-copper)' }}>{m(est.turnkey.total)}</span>

@@ -7,9 +7,9 @@ export interface SmetaData {
   turnkey: string // под ключ
   perM2: string
   perM2Act: string
-  sections: { label: string; value: string }[]
-  material: string
-  labor: string
+  sections: { label: string; value: string }[] // direct costs by section, documents included
+  sectionsTotal: string
+  breakdown: { label: string; value: string; strong?: boolean }[] // direct costs → contract price
   date: string
   disclaimer: string
 }
@@ -19,6 +19,9 @@ export function openSmetaPdf(d: SmetaData) {
   if (!w) return
   const L = (ru: string, hy: string, en: string) => (d.lang === 'hy' ? hy : d.lang === 'en' ? en : ru)
   const rows = d.sections.map((s) => `<tr><td>${esc(s.label)}</td><td class="n">${esc(s.value)}</td></tr>`).join('')
+  const markup = d.breakdown
+    .map((r) => `<tr${r.strong ? ' class="sub-tot"' : ''}><td>${esc(r.label)}</td><td class="n">${esc(r.value)}</td></tr>`)
+    .join('')
   const html = `<!doctype html><html lang="${d.lang}"><head><meta charset="utf-8">
 <title>${L('Смета · Тун РА', 'Նախահաշիվ · Տուն ՀՀ', 'Estimate · Tun RA')}</title>
 <style>
@@ -35,6 +38,8 @@ export function openSmetaPdf(d: SmetaData) {
   td { padding: 6px 4px; border-bottom: 1px solid #eee; }
   td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .tot td { border-top: 2px solid #1a1a1a; border-bottom: none; font-weight: 700; padding-top: 8px; }
+  .sub-tot td { font-weight: 600; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: #666; margin: 22px 0 6px; }
   .foot { margin-top: 22px; font-size: 10px; color: #888; line-height: 1.5; }
   @media print { body { padding: 0; } @page { margin: 16mm; } }
 </style></head>
@@ -47,8 +52,12 @@ export function openSmetaPdf(d: SmetaData) {
   </div>
   <table>
     <tbody>${rows}
-      <tr class="tot"><td>${L('Материалы', 'Նյութեր', 'Materials')}</td><td class="n">${esc(d.material)}</td></tr>
-      <tr><td>${L('Работа', 'Աշխատանք', 'Labour')}</td><td class="n">${esc(d.labor)}</td></tr>
+      <tr class="tot"><td>${L('Прямые затраты и документы', 'Ուղղակի ծախսեր և փաստաթղթեր', 'Direct costs and documents')}</td><td class="n">${esc(d.sectionsTotal)}</td></tr>
+    </tbody>
+  </table>
+  <h2>${L('От затрат к цене договора', 'Ծախսերից մինչև պայմանագրային գին', 'From costs to the contract price')}</h2>
+  <table>
+    <tbody>${markup}
       <tr class="tot"><td>${L('ИТОГО под ключ', 'ԸՆԴԱՄԵՆԸ', 'TOTAL turnkey')}</td><td class="n">${esc(d.turnkey)}</td></tr>
     </tbody>
   </table>
