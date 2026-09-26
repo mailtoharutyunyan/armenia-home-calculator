@@ -31,7 +31,7 @@ const STEP_COST: StepCost[] = [
 
 export function Permit() {
   const { house, prices, lang, priceMode, amdPerUsd } = useProject()
-  const area = useMemo(() => computeQuantities(house).geometry.totalFloorArea, [house])
+  const area = useMemo(() => computeQuantities(house).geometry.finishedFloorArea, [house])
   const m = (v: number) => money(v, house.currency, amdPerUsd)
 
   const costs = PERMIT_ITEMS.map(({ key, perArea }) => {

@@ -35,6 +35,7 @@ export interface Geometry {
   bearingLength: number // L_нес
   wallHeight: number // H
   totalFloorArea: number // A_общ по внешнему габариту (для объёмов материалов)
+  finishedFloorArea: number // A_общ − проём зала: реальный пол, база для работ «на м² пола»
   netFloorArea: number // нормативная общая площадь: внутр. поверхности − проём зала (ՀՀՇՆ 31-01-2014, Прил.2 п.4)
   internalPerFloor: number // площадь одного этажа по внутренним поверхностям наружных стен
   hallVoid: number // площадь двусветного проёма
@@ -143,6 +144,10 @@ export function computeQuantities(p: HouseParams): Quantities {
   // double-height hall: void in the 2nd-floor slab (perimeter walls already
   // span the full height H, so no extra wall volume is added here).
   const hallVoid = p.doubleHeightHall && p.floors >= 2 ? Math.max(0, Math.min(p.hallArea, A)) : 0
+  // Площадь реального пола: над двусветным залом перекрытия нет, поэтому всё,
+  // что считается «на м² пола» (стяжка, полы, электрика, водопровод, проект),
+  // берётся без проёма.
+  const finishedArea = Math.max(0, totalFloorArea - hallVoid)
 
   // нормативная общая площадь по внутренним поверхностям наружных стен (Прил.2 п.4)
   const netArea = Math.max(
@@ -290,7 +295,7 @@ export function computeQuantities(p: HouseParams): Quantities {
   }
 
   // ---- Rough screed (act) ----
-  add('screed', 'floors', 'act', Math.max(0, totalFloorArea - hallVoid))
+  add('screed', 'floors', 'act', finishedArea)
 
   // ---- Roof (flat / pitched / hip / mansard) ----
   if (p.roof === 'flat') {
@@ -334,18 +339,21 @@ export function computeQuantities(p: HouseParams): Quantities {
   // несущие стены (две стороны) + перегородки (две стороны) + потолки.
   const intBearingLen = Math.max(0, structLen - P)
   const plasterWalls = Math.max(0, P * H - openingsArea) + intBearingLen * H * 2
-  const plasterArea = plasterWalls + partitionArea * 2 + Math.max(0, totalFloorArea - hallVoid)
+  const plasterArea = plasterWalls + partitionArea * 2 + finishedArea
   add('plaster', 'finishing', 'turnkey', plasterArea)
-  add('floor_finish', 'finishing', 'turnkey', Math.max(0, totalFloorArea - hallVoid))
+  add('floor_finish', 'finishing', 'turnkey', finishedArea)
 
   // Facade (outer walls only) + facade insulation
   const facadeArea = Math.max(0, P * H - p.windowAreaTotal)
   add('facade', 'facade', 'turnkey', facadeArea)
   add('insulation', 'facade', 'turnkey', facadeArea * (insulT / C.insulationBaseThickness))
 
-  // Engineering networks (per m2 total area)
-  add('electrical', 'engineering', 'turnkey', totalFloorArea)
-  add('plumbing', 'engineering', 'turnkey', totalFloorArea)
+  // Engineering networks (per m²).
+  // Электрика и водопровод разводятся по полу — над проёмом зала их нет.
+  // Отопление и вентиляция зависят от объёма: двусветный зал греется и
+  // проветривается как два этажа, поэтому для них остаётся полная площадь.
+  add('electrical', 'engineering', 'turnkey', finishedArea)
+  add('plumbing', 'engineering', 'turnkey', finishedArea)
   add('heating', 'engineering', 'turnkey', totalFloorArea)
   add('ventilation', 'engineering', 'turnkey', totalFloorArea)
   add('lightning', 'engineering', 'turnkey', 1)
@@ -367,7 +375,6 @@ export function computeQuantities(p: HouseParams): Quantities {
   // ---- Optional premium systems (opt-in extras) ----
   // per-m² options use the finished floor area (gross minus the hall void) — same
   // base as screed/plaster/floor_finish above, so numbers stay consistent.
-  const finishedArea = Math.max(0, totalFloorArea - hallVoid)
   if (p.optHeating) add('opt_boiler_heating', 'options', 'turnkey', finishedArea)
   if (p.optHeatPump) add('opt_heat_pump', 'options', 'turnkey', 1)
   if (p.optSolarKw > 0) add('opt_solar', 'options', 'turnkey', p.optSolarKw)
@@ -377,12 +384,13 @@ export function computeQuantities(p: HouseParams): Quantities {
   // ---- Documents / permit (act) ----
   if (p.includePermitCost) {
     add('permit_apz', 'permit', 'act', 1)
-    add('permit_design', 'permit', 'act', totalFloorArea)
+    // проект и технадзор оплачиваются за м² дома, а проём зала — не площадь
+    add('permit_design', 'permit', 'act', finishedArea)
     add('permit_geology', 'permit', 'act', 1)
     add('permit_expertise', 'permit', 'act', 1)
     add('permit_fee', 'permit', 'act', 1)
     add('permit_address', 'permit', 'act', 1)
-    add('permit_supervision', 'permit', 'act', totalFloorArea)
+    add('permit_supervision', 'permit', 'act', finishedArea)
   }
 
   // ---- Опалубка и подача бетона ----
@@ -429,6 +437,7 @@ export function computeQuantities(p: HouseParams): Quantities {
     bearingLength: Lb,
     wallHeight: H,
     totalFloorArea,
+    finishedFloorArea: finishedArea,
     // нормативная общая площадь — по внутренним поверхностям наружных стен (Прил.2 п.4)
     netFloorArea: netArea,
     internalPerFloor: Math.max(0, p.length - 2 * wallT) * Math.max(0, p.width - 2 * wallT),
