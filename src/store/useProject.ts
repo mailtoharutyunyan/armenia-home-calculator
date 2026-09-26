@@ -52,6 +52,7 @@ const SEED_BEFORE_2026_09_26: Record<string, [number, number, number, number]> =
   door_interior: [40500, 45000, 51750, 10000],
   plaster: [2250, 2500, 2875, 3000],
   floor_finish: [7650, 8500, 9775, 6000],
+  roof_flat: [8100, 9000, 10350, 5000],
 }
 
 // the visitor's changes against the seed, the only thing worth storing

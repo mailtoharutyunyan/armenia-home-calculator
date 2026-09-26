@@ -75,6 +75,7 @@ const Q = {
   doorExterior: ['https://domus.am/category/exterior-doors'],
   laminate: ['https://www.laminat.am/product_detail/1950'],
   plaster: ['https://erkatproff.am/product/gipsonit-shen-30-kg', 'https://domus.am/product/shen-water-dispersion-paint-w-10l-155kg'],
+  roof: ['https://rmsgroup.am/en/price-list', 'https://www.list.am/category/389'],
 }
 
 type Band = { min: number; typical: number; max: number }
@@ -240,7 +241,12 @@ const items: PriceItem[] = [
 
   // --- Roof ---
   item('roof_slope', 'Разуклонка кровли (керамзитобетон)', 'Տանիքի թեքաշերտ', 'м³', 22000, 9000, S.market),
-  item('roof_flat', 'Кровля плоская', 'Հարթ տանիք', 'м²', 9000, 5000, S.market),
+  // The flat roof is priced by layers: the slope screed, insulation and the
+  // two-layer membrane are their own lines. This line is the rest of the roof
+  // build-up; it used to be priced (9 000 + 5 000) as the whole roof, so the
+  // membrane and insulation were paid twice.
+  derived('roof_flat', 'Кровля плоская', 'Հարթ տանիք', 'м²', { min: 2300, typical: 2800, max: 3500 }, 2500, Q.roof,
+    'ОЦЕНКА из сверенных цен: пароизоляция (~90 ֏/м²), защитная стяжка 4 см по утеплителю (~1 700 ֏/м²), воронки и примыкания (~800 ֏/м²); гидроизоляция, утеплитель и разуклонка — отдельными строками'),
   item('roof_pitched', 'Кровля скатная', 'Թեք տանիք', 'м²', 14000, 8000, S.market),
 
   // --- Engineering networks (per m2 of total floor area) ---

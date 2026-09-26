@@ -308,7 +308,9 @@ describe('панель инженера — переопределения ре�
     //   83 774 872  glue for the aerated-block partitions
     //   82 662 735  market prices of 26.09.2026 (concrete, rebar, blocks, windows,
     //               doors, finishes; see src/data/prices.ts)
-    expect(Math.round(a)).toBe(82662735)
+    //   80 680 455  flat roof priced once: the membrane and insulation were also
+    //               inside the 9 000 + 5 000 "flat roof" line
+    expect(Math.round(a)).toBe(80680455)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {
@@ -557,5 +559,20 @@ describe('double-height hall advice (practice, not a norm)', () => {
   it('a void within the usual share and with floor heating gets no advice', () => {
     expect(advice(house({ hallArea: 40, optHeating: true }))).toEqual([])
     expect(advice(house({ doubleHeightHall: false }))).toEqual([])
+  })
+})
+
+describe('flat roof', () => {
+  it('its layers add up to one roof, not two', () => {
+    // material per m² of footprint: slope screed 0.1 m³ + remaining build-up +
+    // two-layer membrane + 100 mm insulation — a real flat roof is ~8–12 k ֏/m²
+    const per = (k: string, qty: number) => SEED_PRICES[k].materialTypical * qty
+    const roof = per('roof_slope', C.roofSlopeLayer) + per('roof_flat', 1) + per('waterproofing', 1) + per('insulation', 1)
+    expect(roof).toBeGreaterThan(8000)
+    expect(roof).toBeLessThan(12000)
+    // and each layer appears once in the quantities
+    const q = computeQuantities(house({ roof: 'flat' })).lines.filter((l) => l.section === 'roof')
+    expect(q.filter((l) => l.key === 'waterproofing')).toHaveLength(1)
+    expect(q.filter((l) => l.key === 'insulation')).toHaveLength(1)
   })
 })
