@@ -227,3 +227,22 @@ describe('doors hang the way an architect draws them', () => {
     }
   })
 })
+
+describe('kitchen-dining and utility room', () => {
+  it('a long kitchen strip gives its end to a utility room that opens from the kitchen', () => {
+    const plan = buildFloorPlan(h(), 0)
+    const kitchen = plan.rooms.find((r) => r.type === 'dining')!
+    const utility = plan.rooms.find((r) => r.type === 'utility')!
+    // 43 m² would be mostly passage: 32 m² kitchen-dining + 10 m² boiler/laundry room
+    expect(roomClear(kitchen, plan).area).toBeCloseTo(7.5 * 4.3, 6)
+    expect(roomClear(utility, plan).area).toBeCloseTo(2.4 * 4.3, 6)
+    const doors = plan.doors.filter((d) => d.orient === 'v' && Math.abs(d.pos - utility.x) < 0.02)
+    expect(doors).toHaveLength(1) // from the kitchen, its only neighbour on that side
+    expect(auditPlan(h()).filter((i) => i.level === 'error')).toEqual([])
+  })
+
+  it('a compact kitchen keeps its whole strip', () => {
+    const plan = buildFloorPlan(h({ length: 11, width: 12, hallArea: 50 }), 0)
+    expect(plan.rooms.some((r) => r.type === 'utility')).toBe(false)
+  })
+})

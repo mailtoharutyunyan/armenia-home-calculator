@@ -22,6 +22,7 @@ const TYPE_LABEL: Record<RoomType, { ru: string; hy: string; en: string }> = {
   hall: { ru: 'Прихожая', hy: 'Նախասրահ', en: 'Entry hall' },
   corridor: { ru: 'Коридор', hy: 'Միջանցք', en: 'Corridor' },
   office: { ru: 'Кабинет', hy: 'Աշխատասենյակ', en: 'Home office' },
+  utility: { ru: 'Техпомещение', hy: 'Տեխնիկական սենյակ', en: 'Utility room' },
 }
 
 export function Plan2D() {
@@ -75,6 +76,7 @@ export function Plan2D() {
     diningLabel: lang === 'hy' ? 'Խոհանոց-ճաշասենյակ' : lang === 'en' ? 'Kitchen-dining' : 'Кухня-столовая',
     livingLabel: lang === 'hy' ? 'Հյուրասենյակ' : lang === 'en' ? 'Living room' : 'Гостиная',
     ensuiteLabel: lang === 'hy' ? 'Անձնական ս/հ' : lang === 'en' ? 'Ensuite' : 'Мастер с/у',
+    utilityLabel: lang === 'hy' ? 'Տեխնիկական սենյակ' : lang === 'en' ? 'Utility room' : 'Техпомещение',
   }
   // room-by-room areas for the active floor (same layout the plan renders)
   // areas clear of the partitions; the void is shown in full (it is the slab opening)

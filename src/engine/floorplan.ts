@@ -13,6 +13,7 @@ export type RoomType =
   | 'office' // кабинет / рабочая комната
   | 'hall' // прихожая / тамбур у входа
   | 'corridor' // коридор, связывает прихожую с комнатами
+  | 'utility' // техпомещение: газовый котёл, стиральная машина, кладовая
 
 export interface Room {
   x: number
@@ -100,6 +101,7 @@ export interface PlanLabels {
   officeLabel?: string
   diningLabel?: string
   livingLabel?: string
+  utilityLabel?: string
 }
 
 // Планировочные правила. Это не вкусовщина: каждое взято из практики
@@ -131,6 +133,11 @@ const PLAN = {
   minServiceColumn: 3.3, // м
   galleryWidth: 1.4, // м, gallery along the void: ≥ 1.2 m clear of the partition
   minRoomSide: 2.7, // м, shortest side of a bedroom or study
+  // A kitchen-dining past ~36 m² is a long strip that is mostly passage. The
+  // end by the service column becomes the utility room a gas-heated house
+  // needs anyway: boiler (with its window and vent), washer, storage.
+  maxKitchenDining: 36, // м², by axes
+  utilityWidth: 2.5, // м
 }
 
 // Прямоугольник двусветного объёма. Считается ОДИН раз и используется обоими
@@ -278,6 +285,7 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
       dining: labels.diningLabel ?? 'Кухня-столовая',
       wardrobe: labels.wardrobeLabel ?? 'Гардероб',
       ensuite: labels.ensuiteLabel ?? 'Мастер с/у',
+      utility: labels.utilityLabel ?? 'Техпомещение',
     })
   } else {
     layoutFloor(sliceRect, restSpecs, rooms, suite, {
@@ -393,7 +401,13 @@ function buildDoors(rooms: Room[], inset: number, L: number, W: number, withEntr
   // ensuite being the exception. Such a door is only a last resort.
   const LIVING = new Set<Room['type']>(['kitchen', 'dining', 'living', 'living_kitchen'])
   const service = (t: Room['type']) => t === 'bath' || t === 'wardrobe'
-  const badDoor = (a: Room, b: Room) => (service(a.type) && LIVING.has(b.type)) || (service(b.type) && LIVING.has(a.type))
+  // the utility room (boiler, washer) opens from the kitchen or a corridor only
+  const utilityOk = (t: Room['type']) => t === 'kitchen' || t === 'dining' || t === 'hall' || t === 'corridor' || t === 'stair'
+  const badDoor = (a: Room, b: Room) =>
+    (service(a.type) && LIVING.has(b.type)) ||
+    (service(b.type) && LIVING.has(a.type)) ||
+    (a.type === 'utility' && !utilityOk(b.type)) ||
+    (b.type === 'utility' && !utilityOk(a.type))
   // Which way the leaf opens, as on an architect's plan: into the habitable
   // room, out of a bath or wardrobe (a WC door opens outwards), and no leaf at
   // all between hall, corridor and stair, which are joined by open doorways.
@@ -402,9 +416,11 @@ function buildDoors(rooms: Room[], inset: number, L: number, W: number, withEntr
     if (circulation(a.type) && circulation(b.type)) return { ...d, kind: 'opening' }
     const plus = d.orient === 'v' ? (Math.abs(a.x - d.pos) < eps ? a : b) : Math.abs(a.y - d.pos) < eps ? a : b
     const minus = plus === a ? b : a
-    const into = service(plus.type)
+    // baths, wardrobes and the utility room open outwards
+    const outward = (t: Room['type']) => service(t) || t === 'utility'
+    const into = outward(plus.type)
       ? minus
-      : service(minus.type)
+      : outward(minus.type)
         ? plus
         : circulation(plus.type)
           ? minus
@@ -582,7 +598,7 @@ function layoutGroundWithHall(
   hall: Rect,
   specs: Spec[],
   out: Room[],
-  opts: { hall: string; corridor: string; dining: string; wardrobe: string; ensuite: string },
+  opts: { hall: string; corridor: string; dining: string; wardrobe: string; ensuite: string; utility: string },
 ) {
   const stair = specs.find((s) => s.type === 'stair')
   const bath = specs.find((s) => s.type === 'bath')
@@ -593,15 +609,19 @@ function layoutGroundWithHall(
   if (backH > 1.2) {
     // Кухня отделена от зала раздвижной стеклянной перегородкой: визуально
     // единое пространство, но запахи и шум отсекаются при необходимости.
+    const utilityW = hall.w * backH > PLAN.maxKitchenDining && hall.w - PLAN.utilityWidth >= 6 ? PLAN.utilityWidth : 0
     out.push({
       x: hall.x,
       y: inner.y,
-      w: hall.w,
+      w: hall.w - utilityW,
       h: backH,
       type: 'dining',
       label: kitchen?.label ?? opts.dining,
       glassSide: 'bottom',
     })
+    if (utilityW > 0) {
+      out.push({ x: hall.x + hall.w - utilityW, y: inner.y, w: utilityW, h: backH, type: 'utility', label: opts.utility })
+    }
   }
 
   // Правая полоса снизу вверх: прихожая → гостевой санузел → лестница →
