@@ -162,9 +162,12 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
   // system factor (full monolith is formwork-intensive → +25%).
   const heightFactor = p.floorHeight > 0 ? p.floorHeight / 3 : 1
   const sysFactor = p.system === 'monolith' ? C.monolithLabourFactor : 1
+  // The rate is the only labour on shell sections, so a basement (its walls,
+  // floor and the slab over it) has to be in the area, or it is built for free.
+  const shellArea = q.geometry.totalFloorArea + (p.basement ? q.geometry.footprint : 0)
   const brigade = p.excludedSections.includes('walls')
     ? 0
-    : Math.max(0, p.laborPerM2) * q.geometry.totalFloorArea * heightFactor * sysFactor
+    : Math.max(0, p.laborPerM2) * shellArea * heightFactor * sysFactor
   if (brigade > 0) {
     lines.push({
       key: 'brigade',
@@ -174,7 +177,7 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
       section: 'walls',
       stage: 'act',
       unit: 'м²',
-      quantity: q.geometry.totalFloorArea,
+      quantity: shellArea,
       material: 0,
       labor: brigade,
       total: brigade,

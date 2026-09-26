@@ -85,6 +85,24 @@ describe('баг B — подвал не засыпают обратно', () =>
     const p = house()
     expect(qty(p, 'backfill')).toBeCloseTo(qty(p, 'excavation') * C.backfillFactor, 6)
   })
+
+  it('a basement adds the slab over it and a stair flight down', () => {
+    const p = house({ basement: true })
+    // slab over the basement = footprint 182 m² × 0.18 m
+    expect(qty(p, 'concrete_b25', 'floors') - qty(house(), 'concrete_b25', 'floors')).toBeCloseTo(
+      182 * C.floorSlabThickness,
+      6,
+    )
+    // one flight between the two storeys + one down to the basement
+    expect(qty(p, 'stair')).toBeCloseTo(2 * C.stairVolumePerFlight, 6)
+  })
+
+  it('the shell labour rate covers the basement too', () => {
+    const brigadeArea = (p: HouseParams) =>
+      computeEstimate(computeQuantities(p), SEED_PRICES, p, 'typical').lines.find((l) => l.key === 'brigade')?.quantity ?? 0
+    expect(brigadeArea(house())).toBeCloseTo(364, 6)
+    expect(brigadeArea(house({ basement: true }))).toBeCloseTo(364 + 182, 6)
+  })
 })
 
 describe('баг C — внутренние стены не считаются дважды', () => {

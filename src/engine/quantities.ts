@@ -275,7 +275,10 @@ export function computeQuantities(p: HouseParams): Quantities {
   addStruct('walls', lintelLen * lintelW * lintelH, reb.lintel)
 
   // ---- Floors / ceilings ----
-  const slabArea = Math.max(0, A * p.floors - hallVoid)
+  // One slab over every storey. A basement adds the slab over it, i.e. the
+  // ground floor itself (the basement floor is counted with the foundation).
+  const slabLevels = p.floors + (p.basement ? 1 : 0)
+  const slabArea = Math.max(0, A * slabLevels - hallVoid)
   if (p.floorSlab === 'monolith') {
     addStruct('floors', slabArea * floorSlabT, reb.floor)
   } else {
@@ -290,9 +293,9 @@ export function computeQuantities(p: HouseParams): Quantities {
   }
 
   // ---- Stair ----
-  if (p.floors >= 2) {
-    add('stair', 'stair', 'act', (p.floors - 1) * stairVol)
-  }
+  // a flight between storeys, plus one down to the basement
+  const flights = Math.max(0, p.floors - 1) + (p.basement ? 1 : 0)
+  add('stair', 'stair', 'act', flights * stairVol)
 
   // ---- Rough screed (act) ----
   add('screed', 'floors', 'act', finishedArea)
