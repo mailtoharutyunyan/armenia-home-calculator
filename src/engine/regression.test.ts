@@ -17,6 +17,7 @@ import { DEFAULT_HOUSE, BUILD_PRESETS } from '../model/house'
 import type { HouseParams } from '../model/house'
 import { computeQuantities } from './quantities'
 import type { SectionId } from './quantities'
+import { buildFloorPlan, planTakeoff } from './floorplan'
 import { computeEstimate } from './pricing'
 import { checkNorms, simplified41Reasons } from './norms'
 import { SEED_PRICES } from '../data/prices'
@@ -163,10 +164,21 @@ describe('баг C — внутренние стены не считаются �
   })
 
   it('перегородки остаются отдельным разделом и не дублируют кладку', () => {
-    // 2 стены × sqrt(182) × 3 м × 2 этажа × 0.1 м
-    const expected = 2 * Math.sqrt(182) * 3 * 2 * C.partitionThickness
+    // measured on the drawn plans, one storey (3 m) high, 0.1 m thick
+    const len = [0, 1].reduce((a, f) => a + planTakeoff(buildFloorPlan(house(), f)).partitions, 0)
+    const expected = len * 3 * C.partitionThickness
     expect(qty(house(), 'aerated_block', 'partitions')).toBeCloseTo(expected, 6)
     expect(qty(house(), 'glue_aerated', 'partitions')).toBeCloseTo(expected * C.glueShare, 6)
+  })
+
+  it('doors, the glass partition and the railings are priced as the plans draw them', () => {
+    const take = [0, 1].map((f) => planTakeoff(buildFloorPlan(house(), f)))
+    expect(qty(house(), 'door_interior')).toBe(take[0].leafDoors + take[1].leafDoors)
+    expect(qty(house({ interiorDoors: 8 }), 'door_interior')).toBe(8) // a typed count still wins
+    // the kitchen side of the hall, one storey high
+    expect(qty(house(), 'glass_partition')).toBeCloseTo(take[0].glass * 3, 6)
+    // along the void, plus one flight of stairs
+    expect(qty(house(), 'railing')).toBeCloseTo(take[1].railing + C.stairRailingPerFlight, 6)
   })
 
   it('в несущей кладке внутренние несущие стены сохраняются', () => {
@@ -319,7 +331,9 @@ describe('панель инженера — переопределения ре�
     //   70 460 655  concrete poured once at the frame nodes (ГЭСН 81-02-06,
     //               2.2-2.4), slab on ground between the strips, no design
     //               expertise under the simplified procedure N 4.1
-    expect(Math.round(a)).toBe(70460655)
+    //   74 324 966  doors, partitions, the kitchen's sliding glass partition and
+    //               the gallery and stair railings measured on the plans
+    expect(Math.round(a)).toBe(74324966)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {

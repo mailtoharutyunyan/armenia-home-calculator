@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest'
 import { DEFAULT_HOUSE } from '../model/house'
 import type { HouseParams } from '../model/house'
 import { auditPlan } from './planAudit'
-import { buildFloorPlan, roomClear } from './floorplan'
+import { buildFloorPlan, planTakeoff, roomClear } from './floorplan'
 
 const h = (patch: Partial<HouseParams> = {}): HouseParams => ({ ...DEFAULT_HOUSE, ...patch })
 const errors = (p: HouseParams) => auditPlan(p).filter((i) => i.level === 'error')
@@ -244,5 +244,27 @@ describe('kitchen-dining and utility room', () => {
   it('a compact kitchen keeps its whole strip', () => {
     const plan = buildFloorPlan(h({ length: 11, width: 12, hallArea: 50 }), 0)
     expect(plan.rooms.some((r) => r.type === 'utility')).toBe(false)
+  })
+})
+
+describe('plan take-off, checked by hand on the default plans', () => {
+  it('ground floor: walls, the kitchen glass and the leaf doors', () => {
+    // walls: hall/utility 2.5, hall/column 8.05, kitchen/utility 4.35,
+    // utility/column 4.35, WC 2.05 + 1.6 + 2.05, stair/bedroom 3.35, ensuite and
+    // wardrobe 1.68 + 1.67 + 2.13; hall, corridor and stair are open to each other
+    const t = planTakeoff(buildFloorPlan(h(), 0))
+    expect(t.partitions).toBeCloseTo(33.78, 2)
+    expect(t.glass).toBeCloseTo(7.55, 2) // the kitchen side of the hall
+    expect(t.railing).toBe(0)
+    // living, WC, utility, ensuite, wardrobe, bedroom; the glass slides open itself
+    expect(t.leafDoors).toBe(6)
+  })
+
+  it('upper floor: rooms beside the void are walled, the gallery is railed', () => {
+    const t = planTakeoff(buildFloorPlan(h(), 1))
+    // gallery 10.05 + landing 1.25 along the void
+    expect(t.railing).toBeCloseTo(11.3, 2)
+    expect(t.glass).toBe(0)
+    expect(t.leafDoors).toBe(4)
   })
 })

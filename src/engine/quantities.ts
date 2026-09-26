@@ -1,6 +1,7 @@
 import type { HouseParams, InfillMaterial } from '../model/house'
 import { COEFF as C } from '../data/coefficients'
 import { REGIONS } from '../data/regions'
+import { buildFloorPlan, planTakeoff } from './floorplan'
 import { simplified41Reasons } from './norms'
 
 export type Stage = 'act' | 'turnkey'
@@ -53,6 +54,23 @@ export interface Quantities {
 
 const masonryKey = (m: InfillMaterial) =>
   m === 'tuff' ? 'tuff_block' : m === 'brick' ? 'brick' : 'aerated_block'
+
+// Doors, partitions, the kitchen's glass partition and railings are measured
+// on the floor plans the calculator draws, so the estimate pays for what the
+// plans show. The rule of thumb used before (two walls of √A per floor, one
+// door per room) gave 162 m² of partitions and 6 doors for plans with ~190 m²
+// and 10 doors, and left out the glass partition and the railings.
+export function planTake(p: HouseParams) {
+  const take = { partitions: 0, glass: 0, railing: 0, leafDoors: 0 }
+  for (let f = 0; f < Math.max(0, p.floors); f++) {
+    const t = planTakeoff(buildFloorPlan(p, f))
+    take.partitions += t.partitions
+    take.glass += t.glass
+    take.railing += t.railing
+    take.leafDoors += t.leafDoors
+  }
+  return take
+}
 
 export function computeQuantities(p: HouseParams): Quantities {
   const lines: QuantityLine[] = []
@@ -381,19 +399,20 @@ export function computeQuantities(p: HouseParams): Quantities {
   // Windows
   add('window_regular', 'openings', 'turnkey', p.windowAreaTotal * (1 - p.vitrageShare))
   add('window_vitrage', 'openings', 'turnkey', p.windowAreaTotal * p.vitrageShare)
+  const take = planTake(p)
   // Doors
   add('door_exterior', 'openings', 'turnkey', p.exteriorDoors)
-  // interior doors ≈ one per room (tied to the room count)
-  const interiorDoors = p.interiorDoors ?? p.roomsPerFloor * p.floors
+  const interiorDoors = p.interiorDoors ?? take.leafDoors
   add('door_interior', 'openings', 'turnkey', interiorDoors)
 
-  // Partitions (aerated block) + plaster — length tied to number of rooms and
-  // whether kitchen/living are separate; also scales with area, floors, height.
-  const partitionWalls = Math.max(0, p.roomsPerFloor - 1) + (p.kitchenLivingCombined ? 0 : 1)
-  const partitionArea = partitionWalls * Math.sqrt(A) * p.floorHeight * p.floors
+  // Partitions (aerated block) + plaster, one storey high
+  const partitionArea = take.partitions * p.floorHeight
   add('aerated_block', 'partitions', 'turnkey', partitionArea * partitionT)
   // aerated blocks are laid on thin-joint glue, as in the walls
   add('glue_aerated', 'partitions', 'turnkey', partitionArea * partitionT * glueShare)
+  add('glass_partition', 'partitions', 'turnkey', take.glass * p.floorHeight)
+  // railings: along the void (gallery, landing) and along each flight
+  add('railing', 'finishing', 'turnkey', take.railing + flights * C.stairRailingPerFlight)
 
   // Штукатурка: внутренняя грань наружных стен (одна сторона) + внутренние
   // несущие стены (две стороны) + перегородки (две стороны) + потолки.

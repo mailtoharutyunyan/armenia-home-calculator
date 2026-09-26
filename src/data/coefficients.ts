@@ -77,6 +77,9 @@ export const COEFF = {
 
   // engineering-network cost is priced per m2 of total floor area (see prices)
   stairVolumePerFlight: 2.5, // m3
+  // railing along a two-flight stair: the well side of both flights and the
+  // turn at the landing (~2 × 2.6 m sloped + 0.8 m)
+  stairRailingPerFlight: 6, // m
 
   // norm thresholds
   norms: {

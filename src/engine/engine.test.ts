@@ -161,10 +161,15 @@ describe('permit & hall', () => {
     expect(tall).toBeGreaterThan(low)
   })
 
-  it('separate kitchen/living costs more than combined (extra partition)', () => {
-    const combined = computeEstimate(computeQuantities(house({ kitchenLivingCombined: true })), SEED_PRICES, house({ kitchenLivingCombined: true }), 'typical').turnkey.total
-    const separate = computeEstimate(computeQuantities(house({ kitchenLivingCombined: false })), SEED_PRICES, house({ kitchenLivingCombined: false }), 'typical').turnkey.total
-    expect(separate).toBeGreaterThan(combined)
+  it('a separate kitchen gets a wall and a door instead of the sliding glass partition', () => {
+    const sum = (p: HouseParams, key: string) =>
+      computeQuantities(p).lines.filter((l) => l.key === key).reduce((a, l) => a + l.quantity, 0)
+    const open = house({ kitchenLivingCombined: true })
+    const closed = house({ kitchenLivingCombined: false })
+    expect(sum(open, 'glass_partition')).toBeGreaterThan(0)
+    expect(sum(closed, 'glass_partition')).toBe(0)
+    expect(sum(closed, 'aerated_block')).toBeGreaterThan(sum(open, 'aerated_block'))
+    expect(sum(closed, 'door_interior')).toBe(sum(open, 'door_interior') + 1)
   })
 
   it('roof pitch 90° does not blow up the estimate', () => {

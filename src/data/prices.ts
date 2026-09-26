@@ -266,6 +266,11 @@ const items: PriceItem[] = [
 
   estimate('glass_partition', 'Раздвижная стеклянная перегородка', 'Շարժական ապակե միջնապատ', 'м²', 85000, 15000,
     'ОЦЕНКА — зависит от системы, стекла и фурнитуры'),
+  // Railings along the void and the stair, 0.9-1.1 m high (see norms). Local
+  // smiths sell painted steel railings; list.am (26.09.2026) has used ones at
+  // ~13 000 ֏/m (three 5.5 m sections for 220 000 ֏), made to measure costs more.
+  estimate('railing', 'Ограждение галереи и лестницы', 'Աստիճանի և միջհարկի բազրիք', 'пог.м', 25000, 6000,
+    'ОЦЕНКА — стальное ограждение с поручнем под заказ, с монтажом; стекло или нержавейка дороже в 2–3 раза'),
 
   // --- Опалубка и подача бетона (ранее отсутствовали как статьи) ---
   // Опалубка считается по площади контакта с бетоном, а не по объёму.
@@ -350,6 +355,7 @@ const EN_LABELS: Record<string, string> = {
   opt_panel_ceiling: 'Panel ceiling',
   stair: 'Monolithic staircase',
   glass_partition: 'Sliding glass partition',
+  railing: 'Gallery and stair railings',
   formwork: 'Formwork (rental + erection)',
   concrete_pump: 'Concrete pumping',
   ventilation: 'Ventilation',

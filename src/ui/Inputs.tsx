@@ -5,6 +5,7 @@ import type { HouseParams } from '../model/house'
 import { defaultWallThickness, BUILD_PRESETS } from '../model/house'
 import { REGIONS } from '../data/regions'
 import { COEFF as C } from '../data/coefficients'
+import { planTake } from '../engine/quantities'
 
 function Num({
   label,
@@ -293,7 +294,7 @@ export function Inputs() {
           <Num label={t(lang, 'extDoors')} value={house.exteriorDoors} onChange={(n) => set({ exteriorDoors: n })} />
           <Num
             label={t(lang, 'intDoors')}
-            value={house.interiorDoors ?? house.roomsPerFloor * house.floors}
+            value={house.interiorDoors ?? planTake(house).leafDoors}
             onChange={(n) => set({ interiorDoors: n })}
           />
         </div>

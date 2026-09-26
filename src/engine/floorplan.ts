@@ -200,6 +200,60 @@ export function roomClear(r: Room, plan: Pick<FloorPlan, 'L' | 'W' | 'wall' | 'p
   return { w, h, area: w * h }
 }
 
+// What the estimate takes from a drawn floor, in running metres: partitions
+// (walls between rooms, and between a room and the void), the sliding glass
+// partition, railings along the void, and doors with a leaf. Hall, corridor and
+// stair run into each other through open doorways, so no wall is counted between
+// them; a gallery or landing is railed along the void; any other room is walled.
+export function planTakeoff(plan: FloorPlan): { partitions: number; glass: number; railing: number; leafDoors: number } {
+  const e = 0.02
+  const circulation = (t: RoomType) => t === 'hall' || t === 'corridor' || t === 'stair'
+  // the side of `a` that `b` touches, and the length they share
+  const shared = (a: Room, b: Room): { side: Room['glassSide']; len: number } | null => {
+    const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
+    const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)
+    if (oy > e && Math.abs(a.x + a.w - b.x) < e) return { side: 'right', len: oy }
+    if (oy > e && Math.abs(b.x + b.w - a.x) < e) return { side: 'left', len: oy }
+    if (ox > e && Math.abs(a.y + a.h - b.y) < e) return { side: 'bottom', len: ox }
+    if (ox > e && Math.abs(b.y + b.h - a.y) < e) return { side: 'top', len: ox }
+    return null
+  }
+  const opposite = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' } as const
+  let partitions = 0
+  let glass = 0
+  let railing = 0
+  const rooms = plan.rooms
+  for (let i = 0; i < rooms.length; i++) {
+    for (let j = i + 1; j < rooms.length; j++) {
+      const a = rooms[i]
+      const b = rooms[j]
+      const s = shared(a, b)
+      if (!s || (a.open && b.open)) continue
+      if (a.open || b.open) {
+        const room = a.open ? b : a
+        if (room.type === 'hall' || room.type === 'corridor') railing += s.len
+        else partitions += s.len
+      } else if (a.glassSide === s.side || (s.side && b.glassSide === opposite[s.side])) {
+        glass += s.len
+      } else if (!(circulation(a.type) && circulation(b.type))) {
+        partitions += s.len
+      }
+    }
+  }
+  // the sliding glass partition is itself the door between kitchen and hall
+  const inGlass = (d: Door) =>
+    rooms.some((r) => {
+      if (!r.glassSide) return false
+      const horizontal = r.glassSide === 'top' || r.glassSide === 'bottom'
+      if ((d.orient === 'h') !== horizontal) return false
+      const pos = r.glassSide === 'top' ? r.y : r.glassSide === 'bottom' ? r.y + r.h : r.glassSide === 'left' ? r.x : r.x + r.w
+      const [from, len] = horizontal ? [r.x, r.w] : [r.y, r.h]
+      return Math.abs(d.pos - pos) < e && d.start >= from - e && d.start + d.w <= from + len + e
+    })
+  const leafDoors = plan.doors.filter((d) => d.kind === 'interior' && !inGlass(d)).length
+  return { partitions, glass, railing, leafDoors }
+}
+
 export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], labels: PlanLabels = {}): FloorPlan {
   const voidLabel = labels.voidLabel ?? 'Второй свет'
   const corridorLabel = labels.corridorLabel ?? 'Коридор'
@@ -286,6 +340,7 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
       wardrobe: labels.wardrobeLabel ?? 'Гардероб',
       ensuite: labels.ensuiteLabel ?? 'Мастер с/у',
       utility: labels.utilityLabel ?? 'Техпомещение',
+      openKitchen: p.kitchenLivingCombined,
     })
   } else {
     layoutFloor(sliceRect, restSpecs, rooms, suite, {
@@ -598,7 +653,7 @@ function layoutGroundWithHall(
   hall: Rect,
   specs: Spec[],
   out: Room[],
-  opts: { hall: string; corridor: string; dining: string; wardrobe: string; ensuite: string; utility: string },
+  opts: { hall: string; corridor: string; dining: string; wardrobe: string; ensuite: string; utility: string; openKitchen: boolean },
 ) {
   const stair = specs.find((s) => s.type === 'stair')
   const bath = specs.find((s) => s.type === 'bath')
@@ -609,6 +664,7 @@ function layoutGroundWithHall(
   if (backH > 1.2) {
     // Кухня отделена от зала раздвижной стеклянной перегородкой: визуально
     // единое пространство, но запахи и шум отсекаются при необходимости.
+    // A kitchen asked to be separate gets a wall with a door instead.
     const utilityW = hall.w * backH > PLAN.maxKitchenDining && hall.w - PLAN.utilityWidth >= 6 ? PLAN.utilityWidth : 0
     out.push({
       x: hall.x,
@@ -617,7 +673,7 @@ function layoutGroundWithHall(
       h: backH,
       type: 'dining',
       label: kitchen?.label ?? opts.dining,
-      glassSide: 'bottom',
+      ...(opts.openKitchen ? { glassSide: 'bottom' as const } : {}),
     })
     if (utilityW > 0) {
       out.push({ x: hall.x + hall.w - utilityW, y: inner.y, w: utilityW, h: backH, type: 'utility', label: opts.utility })
