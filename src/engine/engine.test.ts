@@ -209,6 +209,17 @@ describe('compare', () => {
     expect(rows.some((r) => r.system === 'monolith')).toBe(true)
     expect(rows.every((r) => r.turnkeyTotal > 0)).toBe(true)
   })
+
+  it('the chosen system row equals the main estimate, even with a custom wall', () => {
+    const p = house({ wallThickness: 0.4, eng: { extWall: 45 } })
+    const main = computeEstimate(computeQuantities(p), SEED_PRICES, p, 'typical').turnkey.total
+    const rows = compareSystems(p, SEED_PRICES, 'typical')
+    expect(rows.find((r) => r.system === p.system)!.turnkeyTotal).toBeCloseTo(main, 4)
+    // the 45 cm override was for the chosen material; other systems use their own wall
+    const mono = house({ system: 'monolith', wallThickness: 0.2 })
+    const monoMain = computeEstimate(computeQuantities(mono), SEED_PRICES, mono, 'typical').turnkey.total
+    expect(rows.find((r) => r.system === 'monolith')!.turnkeyTotal).toBeCloseTo(monoMain, 4)
+  })
 })
 
 describe('dxf', () => {
@@ -219,6 +230,26 @@ describe('dxf', () => {
     for (const layer of ['FOUNDATION', 'WALLS', 'OPENINGS', 'DIMENSIONS']) {
       expect(dxf).toContain(layer)
     }
+  })
+
+  it('openings on a wall never overlap, and the entrance is not inside a window', () => {
+    const plan = buildPlan(house())
+    expect(plan.openings.filter((o) => o.type === 'door')).toHaveLength(1)
+    for (const side of ['top', 'bottom', 'left', 'right'] as const) {
+      const spans = plan.openings
+        .filter((o) => o.wall === side)
+        .map((o) => (side === 'top' || side === 'bottom' ? [o.x, o.x + o.w] : [o.y, o.y + o.w]))
+        .sort((a, b) => a[0] - b[0])
+      for (let i = 1; i < spans.length; i++) expect(spans[i][0], side).toBeGreaterThanOrEqual(spans[i - 1][1])
+    }
+  })
+
+  it('uses the real wall and the facade side, like the on-screen plan', () => {
+    const plan = buildPlan(house())
+    expect(plan.wallThickness).toBeCloseTo(0.3, 6)
+    // front side = width (14 m) → drawn along x
+    expect(plan.length).toBe(14)
+    expect(plan.width).toBe(13)
   })
 })
 

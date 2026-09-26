@@ -277,6 +277,19 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
   // doors connect the real rooms only; the void has no door (it is open) and the
   // exterior entrance belongs to the ground floor.
   const doors = buildDoors(rooms, inset, L, W, floorIndex === 0)
+  // The entrance door and a window cannot share the same piece of facade: the
+  // hall used to get a window centred exactly where its front door is.
+  const overlaps = (a: number, al: number, b: number, bl: number) => a < b + bl && b < a + al
+  const facadeWindows = windows.filter(
+    (wn) =>
+      !doors.some(
+        (d) =>
+          d.kind === 'entrance' &&
+          (d.orient === 'h'
+            ? wn.side === (d.pos > 0 ? 'bottom' : 'top') && overlaps(wn.x, wn.len, d.start, d.w)
+            : wn.side === (d.pos > 0 ? 'right' : 'left') && overlaps(wn.y, wn.len, d.start, d.w)),
+      ),
+  )
 
   if (openVoid) rooms.push(openVoid)
 
@@ -289,7 +302,7 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
     W,
     wall,
     rooms,
-    windows,
+    windows: facadeWindows,
     doors,
     glassPartitionLen,
     ceilingH: p.floorHeight,

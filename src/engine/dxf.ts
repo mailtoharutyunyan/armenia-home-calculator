@@ -52,6 +52,13 @@ export function planToDxf(plan: Plan): string {
       b.line('OPENINGS', o.x, y, o.x, o.wall === 'top' ? W - t : t)
       b.line('OPENINGS', o.x + o.w, y, o.x + o.w, o.wall === 'top' ? W - t : t)
       b.line('OPENINGS', o.x, o.wall === 'top' ? W - t / 2 : t / 2, o.x + o.w, o.wall === 'top' ? W - t / 2 : t / 2)
+    } else {
+      const x = o.wall === 'right' ? L : 0
+      const xi = o.wall === 'right' ? L - t : t
+      const xm = o.wall === 'right' ? L - t / 2 : t / 2
+      b.line('OPENINGS', x, o.y, xi, o.y)
+      b.line('OPENINGS', x, o.y + o.w, xi, o.y + o.w)
+      b.line('OPENINGS', xm, o.y, xm, o.y + o.w)
     }
   }
 

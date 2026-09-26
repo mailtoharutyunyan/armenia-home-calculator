@@ -24,11 +24,16 @@ export function compareSystems(
     // verification — compute it honestly and flag it with a caution.
     const caution = system === 'aerated'
     const infillMaterial = system === 'frame' ? base.infillMaterial : (system as HouseParams['infillMaterial'])
+    // The chosen system keeps the user's own wall, so its row equals the main
+    // estimate; the other systems get their typical wall, and an engineer's
+    // external-wall override (made for the chosen material) is not carried over.
+    const same = system === base.system
     const variant: HouseParams = {
       ...base,
       system,
       infillMaterial: base.infillMaterial,
-      wallThickness: defaultWallThickness({ system, infillMaterial }),
+      wallThickness: same ? base.wallThickness : defaultWallThickness({ system, infillMaterial }),
+      eng: same ? base.eng : { ...base.eng, extWall: undefined },
     }
     const q = computeQuantities(variant)
     const est = computeEstimate(q, catalog, variant, priceMode)
