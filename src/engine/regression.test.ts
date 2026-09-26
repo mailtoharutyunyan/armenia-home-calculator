@@ -506,3 +506,39 @@ describe('сметная развёртка — от затрат к цене д
     expect(qty(house({ roof: 'pitched' }), 'roof_slope')).toBe(0)
   })
 })
+
+describe('norm checks read the inputs the estimate uses', () => {
+  const warnings = (p: HouseParams) => checkNorms(p, computeQuantities(p))
+  const has = (p: HouseParams, text: string) => warnings(p).some((x) => x.ru.includes(text))
+
+  it('the thermal check follows the external-wall override', () => {
+    // aerated 20 cm: R = 0.2 / 0.14 = 1.43 < 2.0
+    expect(has(house({ eng: { extWall: 20 } }), 'Сопротивление стены')).toBe(true)
+    expect(has(house(), 'Сопротивление стены')).toBe(false)
+  })
+
+  it('tuff infill of an RC frame is not held to the bearing-wall minimum', () => {
+    expect(has(house({ system: 'frame', infillMaterial: 'tuff', wallThickness: 0.3 }), 'несущей стены из туфа')).toBe(false)
+    expect(has(house({ system: 'tuff', wallThickness: 0.3 }), 'несущей стены из туфа')).toBe(true)
+  })
+
+  it('room height is checked clear of the slab', () => {
+    // 2.8 m storey − 0.18 m slab = 2.62 m < 2.7 m
+    expect(has(house({ floorHeight: 2.8 }), 'Высота комнат в чистоте')).toBe(true)
+    expect(has(house({ floorHeight: 3 }), 'Высота комнат в чистоте')).toBe(false)
+  })
+
+  it('site coverage counts the outbuildings', () => {
+    // (182 + 40) / 500 = 44.4% > 40%
+    const p = house({ plotArea: 500, auxBuildingArea: 40 })
+    expect(warnings(p).some((x) => x.level === 'error' && x.ru.includes('Застройка участка 44.4%'))).toBe(true)
+  })
+
+  it('frost depth is compared with the depth of the chosen foundation', () => {
+    // Sevan frost 1.8 m: 3 m piles are deep enough, 1.5 m pad columns are not
+    expect(has(house({ region: 'sevan', foundation: 'pile' }), 'Глубина промерзания')).toBe(false)
+    expect(has(house({ region: 'sevan', foundation: 'column' }), 'недостаточным (1.5 м)')).toBe(true)
+    // the message shows the strip height actually entered
+    expect(has(house({ region: 'kotayk', eng: { stripHeight: 100 } }), 'недостаточным (1 м)')).toBe(true)
+  })
+})

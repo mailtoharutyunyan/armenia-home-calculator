@@ -50,6 +50,8 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   const region = REGIONS[p.region]
   const n = C.norms
   const isMasonry = p.system === 'tuff' || p.system === 'aerated' || p.system === 'brick'
+  // the wall the estimate uses: the engineer's external wall wins over the form
+  const wallT = p.eng.extWall != null && p.eng.extWall > 0 ? p.eng.extWall / 100 : p.wallThickness
 
   // ---- input validation ----
   if (p.floors < 1) {
@@ -138,13 +140,17 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   }
 
   // ---- residential building (ՀՀՇՆ 31-01-2014) ----
-  if (p.floorHeight < n.minRoomHeight) {
+  // The 2.7 m minimum is the clear room height; floorHeight is floor-to-floor,
+  // so the slab above comes off first (floor build-up is not modelled).
+  const slabT = p.eng.slab != null && p.eng.slab > 0 ? p.eng.slab / 100 : C.floorSlabThickness
+  const clearHeight = Math.round((p.floorHeight - slabT) * 100) / 100
+  if (clearHeight < n.minRoomHeight) {
     w.push({
       level: 'warning',
       code: 'ՀՀՇՆ 31-01-2014',
-      ru: `Высота этажа ${p.floorHeight} м ниже нормы жилой комнаты ${n.minRoomHeight} м.`,
-      hy: `Հարկի բարձրությունը ${p.floorHeight} մ ցածր է բնակելի սենյակի նորմայից ${n.minRoomHeight} մ։`,
-      en: `Storey height ${p.floorHeight} m is below the ${n.minRoomHeight} m minimum for a habitable room.`,
+      ru: `Высота комнат в чистоте ≈${clearHeight} м (этаж ${p.floorHeight} м минус перекрытие ${slabT} м) ниже нормы жилой комнаты ${n.minRoomHeight} м.`,
+      hy: `Սենյակների մաքուր բարձրությունը ≈${clearHeight} մ (հարկ ${p.floorHeight} մ − ծածկ ${slabT} մ) ցածր է բնակելի սենյակի նորմայից ${n.minRoomHeight} մ։`,
+      en: `Clear room height ≈${clearHeight} m (storey ${p.floorHeight} m minus the ${slabT} m slab) is below the ${n.minRoomHeight} m minimum for a habitable room.`,
     })
   } else if (p.floorHeight > n.maxRoomHeight) {
     w.push({
@@ -180,14 +186,16 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
 
   // ---- застройка участка и отступы (ՀՀՇՆ 30-01-2014) ----
   if (p.plotArea > 0 && q.geometry.footprint > 0) {
-    const coverage = (q.geometry.footprint / p.plotArea) * 100
+    // coverage counts every building on the plot: the house and the auxiliary ones
+    const builtUp = q.geometry.footprint + Math.max(0, p.auxBuildingArea)
+    const coverage = (builtUp / p.plotArea) * 100
     if (coverage > n.maxCoveragePct) {
       w.push({
         level: 'error',
         code: 'ՀՀՇՆ 30-01-2023',
-        ru: `Застройка участка ${coverage.toFixed(1)}% > ${n.maxCoveragePct}%: пятно ${Math.round(q.geometry.footprint)} м² на участке ${p.plotArea} м². Уменьшите габариты или возьмите больший участок.`,
-        hy: `Կառուցապատումը ${coverage.toFixed(1)}% > ${n.maxCoveragePct}%՝ ${Math.round(q.geometry.footprint)} մ² հետք ${p.plotArea} մ² հողամասում։`,
-        en: `Site coverage ${coverage.toFixed(1)}% > ${n.maxCoveragePct}%: footprint ${Math.round(q.geometry.footprint)} m² on a ${p.plotArea} m² plot. Reduce the footprint or take a larger plot.`,
+        ru: `Застройка участка ${coverage.toFixed(1)}% > ${n.maxCoveragePct}%: застроено ${Math.round(builtUp)} м² (дом и постройки) на участке ${p.plotArea} м². Уменьшите габариты или возьмите больший участок.`,
+        hy: `Կառուցապատումը ${coverage.toFixed(1)}% > ${n.maxCoveragePct}%՝ ${Math.round(builtUp)} մ² (տուն և շինություններ) ${p.plotArea} մ² հողամասում։`,
+        en: `Site coverage ${coverage.toFixed(1)}% > ${n.maxCoveragePct}%: ${Math.round(builtUp)} m² built up (house and outbuildings) on a ${p.plotArea} m² plot. Reduce the footprint or take a larger plot.`,
       })
     } else {
       w.push({
@@ -232,36 +240,37 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   }
 
   // ---- wall thickness ----
-  const wallMat = p.system === 'frame' ? p.infillMaterial : p.system
-  if (wallMat === 'tuff' && p.wallThickness < n.tuffMinThickness && p.floors >= 2) {
+  // Minimum thicknesses are for load-bearing walls. In an RC frame the frame
+  // carries the load and the tuff or brick is only infill, so they do not apply.
+  if (p.system === 'tuff' && wallT < n.tuffMinThickness && p.floors >= 2) {
     w.push({
       level: 'warning',
       code: 'ՀՀՇՆ 20.04-2020',
-      ru: `Толщина несущей стены из туфа ${p.wallThickness} м < ${n.tuffMinThickness} м при ${p.floors} эт.`,
-      hy: `Տուֆե կրող պատի հաստությունը ${p.wallThickness} մ < ${n.tuffMinThickness} մ։`,
+      ru: `Толщина несущей стены из туфа ${wallT} м < ${n.tuffMinThickness} м при ${p.floors} эт.`,
+      hy: `Տուֆե կրող պատի հաստությունը ${wallT} մ < ${n.tuffMinThickness} մ։`,
     })
   }
-  if (wallMat === 'brick' && p.wallThickness < n.brickMinThickness) {
+  if (p.system === 'brick' && wallT < n.brickMinThickness) {
     w.push({
       level: 'warning',
       code: 'ՀՀՇՆ 20.04-2020',
-      ru: `Толщина кирпичной несущей стены ${p.wallThickness} м < ${n.brickMinThickness} м.`,
-      hy: `Աղյուսե կրող պատի հաստությունը ${p.wallThickness} մ < ${n.brickMinThickness} մ։`,
+      ru: `Толщина кирпичной несущей стены ${wallT} м < ${n.brickMinThickness} м.`,
+      hy: `Աղյուսե կրող պատի հաստությունը ${wallT} մ < ${n.brickMinThickness} մ։`,
     })
   }
-  if (p.system === 'monolith' && p.wallThickness < 0.16) {
+  if (p.system === 'monolith' && wallT < 0.16) {
     w.push({
       level: 'warning',
       code: 'ՀՀՇՆ 20.04-2020',
-      ru: `Толщина несущей монолитной ж/б стены ${p.wallThickness} м < 0.16 м — увеличьте.`,
-      hy: `Կրող մոնոլիտ ե/բ պատի հաստությունը ${p.wallThickness} մ < 0.16 մ — ավելացրեք։`,
+      ru: `Толщина несущей монолитной ж/б стены ${wallT} м < 0.16 м — увеличьте.`,
+      hy: `Կրող մոնոլիտ ե/բ պատի հաստությունը ${wallT} մ < 0.16 մ — ավելացրեք։`,
     })
   }
 
   // ---- теплотехника стены (энергонорма РА) ----
   {
     const thermMat = p.system === 'monolith' ? 'concrete' : p.system === 'frame' ? p.infillMaterial : p.system
-    const wallR = p.wallThickness / (C.thermalLambda[thermMat] ?? 0.5)
+    const wallR = wallT / (C.thermalLambda[thermMat] ?? 0.5)
     if (wallR < n.wallThermalRReq) {
       w.push({
         level: 'info',
@@ -294,13 +303,21 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   }
 
   // ---- foundation depth vs frost ----
-  const stripHeightM = p.eng.stripHeight && p.eng.stripHeight > 0 ? p.eng.stripHeight / 100 : C.stripHeight
-  if (!p.basement && p.foundation !== 'slab' && region.frostDepth > stripHeightM) {
+  // how deep each foundation type actually goes: the strip by its height,
+  // piles by their length, pad columns by their height
+  const pos = (v: number | undefined, fallback: number) => (v != null && v > 0 ? v : fallback)
+  const foundationDepth =
+    p.foundation === 'pile'
+      ? pos(p.eng.pileLength, C.pile.length)
+      : p.foundation === 'column'
+        ? pos(p.eng.columnFoundationHeight, C.columnFoundationHeight)
+        : pos(p.eng.stripHeight, C.stripHeight * 100) / 100
+  if (!p.basement && p.foundation !== 'slab' && region.frostDepth > foundationDepth) {
     w.push({
       level: 'warning',
       code: 'ՀՀՇՆ 31-01-2014',
-      ru: `Глубина промерзания в регионе ${region.frostDepth} м — заглубление фундамента может быть недостаточным (${C.stripHeight} м).`,
-      hy: `Սառչման խորությունը ${region.frostDepth} մ — հիմքի խորությունը կարող է անբավարար լինել։`,
+      ru: `Глубина промерзания в регионе ${region.frostDepth} м — заглубление фундамента может быть недостаточным (${foundationDepth} м).`,
+      hy: `Սառչման խորությունը ${region.frostDepth} մ — հիմքի խորությունը կարող է անբավարար լինել (${foundationDepth} մ)։`,
     })
   }
 
@@ -414,7 +431,8 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
   if (eng.beamSection != null && eng.beamSection < 0.08)
     push('warning', `Сечение ригеля ${eng.beamSection} м² мало (< 0.08 м²), увеличьте.`, `Հեծանի կտրվածքը ${eng.beamSection} մ² փոքր է (< 0.08 մ²), ավելացրեք։`)
   if (eng.extWall != null) {
-    const minW = wallMat === 'tuff' ? 40 : wallMat === 'brick' ? 38 : 20
+    // bearing tuff / brick minimums; frame infill and other walls: 20 cm
+    const minW = p.system === 'tuff' ? 40 : p.system === 'brick' ? 38 : 20
     if (eng.extWall < minW)
       push('warning', `Наружная стена ${eng.extWall} см < ${minW} см для выбранного материала — увеличьте.`, `Արտաքին պատը ${eng.extWall} սմ < ${minW} սմ — ավելացրեք։`)
   }
