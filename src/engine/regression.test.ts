@@ -48,14 +48,17 @@ describe('геометрия по умолчанию', () => {
 })
 
 describe('баг A — пол по грунту это бетон, а не подсыпка', () => {
+  // explicit 0 = no slab on ground (e.g. a suspended floor)
+  const noGroundSlab = house({ eng: { floorOnGround: 0 } })
+
   it('без пола по грунту подсыпка только под подошву фундамента', () => {
     // soleArea = Lb × ширина ленты = 81 × 0.4 = 32.4 м²; × 0.1 = 3.24 м³
-    expect(qty(house(), 'sand_gravel')).toBeCloseTo(3.24, 6)
+    expect(qty(noGroundSlab, 'sand_gravel')).toBeCloseTo(3.24, 6)
   })
 
   it('пол по грунту 10 см добавляет бетон, а не песок с гравием', () => {
     const withFloor = house({ eng: { floorOnGround: 10 } })
-    const base = qty(house(), 'concrete_b25', 'foundation')
+    const base = qty(noGroundSlab, 'concrete_b25', 'foundation')
     // 182 м² × 0.10 м = 18.2 м³ бетона в разделе «фундамент»
     expect(qty(withFloor, 'concrete_b25', 'foundation')).toBeCloseTo(base + 18.2, 6)
     // подсыпка растёт только на слой под плитой (0.1 м), а не на толщину плиты
@@ -65,9 +68,44 @@ describe('баг A — пол по грунту это бетон, а не по�
   it('удвоение толщины пола по грунту удваивает бетон, но не подсыпку', () => {
     const t10 = house({ eng: { floorOnGround: 10 } })
     const t20 = house({ eng: { floorOnGround: 20 } })
-    const base = qty(house(), 'concrete_b25', 'foundation')
+    const base = qty(noGroundSlab, 'concrete_b25', 'foundation')
     expect(qty(t20, 'concrete_b25', 'foundation') - base).toBeCloseTo(36.4, 6)
     expect(qty(t20, 'sand_gravel')).toBeCloseTo(qty(t10, 'sand_gravel'), 6)
+  })
+
+  it('a strip, pile or column house gets a 10 cm slab on ground by default', () => {
+    for (const foundation of ['strip', 'pile', 'column'] as const) {
+      const d = qty(house({ foundation }), 'concrete_b25', 'foundation') -
+        qty(house({ foundation, eng: { floorOnGround: 0 } }), 'concrete_b25', 'foundation')
+      expect(d, foundation).toBeCloseTo(182 * C.floorOnGroundThickness, 6)
+    }
+  })
+
+  it('a slab foundation or a basement already has its ground slab', () => {
+    const slab = house({ foundation: 'slab' })
+    // the only foundation concrete is the slab itself: 182 m² × 0.3 m
+    expect(qty(slab, 'concrete_b25', 'foundation')).toBeCloseTo(182 * C.slabThickness, 6)
+    const basement = house({ basement: true })
+    expect(qty(basement, 'concrete_b25', 'foundation')).toBeCloseTo(
+      qty(house({ basement: true, eng: { floorOnGround: 0 } }), 'concrete_b25', 'foundation'),
+      6,
+    )
+  })
+})
+
+describe('formwork of concrete cast on or into the ground', () => {
+  it('the slab on ground adds concrete but no formwork', () => {
+    expect(qty(house(), 'formwork')).toBeCloseTo(qty(house({ eng: { floorOnGround: 0 } }), 'formwork'), 6)
+  })
+
+  it('a foundation slab is formed at its edges only', () => {
+    // perimeter 54 m × 0.3 m = 16.2 m², not 54.6 m³ × 6.5 = 355 m²
+    expect(qty(house({ foundation: 'slab' }), 'formwork', 'foundation')).toBeCloseTo(54 * C.slabThickness, 6)
+  })
+
+  it('bored piles need no formwork, their grillage does', () => {
+    // grillage = 81 m × 0.4 m × 0.4 m
+    expect(qty(house({ foundation: 'pile' }), 'formwork', 'foundation')).toBeCloseTo(81 * 0.4 * 0.4 * C.formworkPerM3, 6)
   })
 })
 
@@ -254,7 +292,8 @@ describe('панель инженера — переопределения ре�
     //   99 158 838  электрика, водопровод, проект и технадзор — по полу без
     //               проёма двусветного зала (284 м² вместо 364)
     //   82 942 699  VAT is opt-in: the default estimate is without VAT
-    expect(Math.round(a)).toBe(82942699)
+    //   84 673 234  10 cm slab on ground under the ground floor (strip foundation)
+    expect(Math.round(a)).toBe(84673234)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {
@@ -334,7 +373,9 @@ describe('опалубка, подача бетона и толщина утеп
       .filter((l) => l.key === 'concrete_b25')
       .reduce((a, l) => a + l.quantity, 0)
     const formwork = q.lines.filter((l) => l.key === 'formwork').reduce((a, l) => a + l.quantity, 0)
-    expect(formwork).toBeCloseTo(concrete * C.formworkPerM3, 4)
+    // the 10 cm slab on ground (182 m² × 0.1 m) is cast on the ground, unformed
+    const groundSlab = 182 * C.floorOnGroundThickness
+    expect(formwork).toBeCloseTo((concrete - groundSlab) * C.formworkPerM3, 4)
   })
 
   it('норма опалубки настраивается инженером', () => {

@@ -13,6 +13,9 @@ export const COEFF = {
   lintel: { w: 0.25, h: 0.2 },
   columnSection: { w: 0.4, h: 0.4 },
   columnFoundationHeight: 1.5,
+  // Slab on ground under the ground floor of a strip / pile / column house.
+  // Without it the screed and flooring of the ground floor lie on bare soil.
+  floorOnGroundThickness: 0.1,
   partitionThickness: 0.1,
   pile: { d: 0.3, length: 3 },
 

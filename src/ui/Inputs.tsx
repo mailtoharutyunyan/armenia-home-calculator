@@ -511,7 +511,7 @@ export function Inputs() {
               <Num label={t(lang, 'engf_pileLength')} value={eng.pileLength ?? 3} step={0.5} onChange={(n) => setEng({ pileLength: n })} />
               <Num label={t(lang, 'engf_foundationAxisStep')} value={eng.foundationAxisStep ?? 2} step={0.5} onChange={(n) => setEng({ foundationAxisStep: n })} />
               <Num label={t(lang, 'engf_columnFoundationHeight')} value={eng.columnFoundationHeight ?? 1.5} step={0.1} onChange={(n) => setEng({ columnFoundationHeight: n })} />
-              <Num label={t(lang, 'engf_floorOnGround')} value={eng.floorOnGround ?? 0} step={1} onChange={(n) => setEng({ floorOnGround: n })} />
+              <Num label={t(lang, 'engf_floorOnGround')} value={eng.floorOnGround ?? (house.basement || house.foundation === 'slab' ? 0 : Math.round(C.floorOnGroundThickness * 100))} step={1} onChange={(n) => setEng({ floorOnGround: n })} />
               <Num label={t(lang, 'engf_blinding')} value={eng.blinding ?? 5} step={1} onChange={(n) => setEng({ blinding: n })} />
               <Num label={t(lang, 'engf_sandBed')} value={eng.sandBed ?? 10} step={1} onChange={(n) => setEng({ sandBed: n })} />
               <Num label={t(lang, 'engf_apronWidth')} value={eng.apronWidth ?? 1} step={0.1} onChange={(n) => setEng({ apronWidth: n })} />

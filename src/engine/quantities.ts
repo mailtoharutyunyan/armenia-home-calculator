@@ -91,10 +91,16 @@ export function computeQuantities(p: HouseParams): Quantities {
   const colSize = cm(e.columnSize) ?? C.columnSection.w
   const beamSectionArea = e.beamSection ?? colSize * colSize
   const waste = 1 + (e.wastePct != null ? e.wastePct / 100 : C.wasteFactor - 1)
-  const floorOnGround = cm(e.floorOnGround) ?? 0
   // pct(): доля задаётся в процентах, 0 — осмысленное значение (например, «без
   // раствора»), поэтому проверяем только на отрицательные и пустые.
   const pct = (v?: number) => (v != null && v >= 0 ? v / 100 : undefined)
+  // Floor on ground, cm. A slab foundation or a basement floor already is the
+  // ground-floor slab; strip, pile and column foundations get one by default.
+  // 0 is a real choice here (e.g. a suspended timber floor), so only empty or
+  // negative input falls back to the default.
+  const groundSlabDefault = p.basement || p.foundation === 'slab' ? 0 : C.floorOnGroundThickness
+  const floorOnGround =
+    e.floorOnGround != null && e.floorOnGround >= 0 ? e.floorOnGround / 100 : groundSlabDefault
   // Фундамент
   const fndSlabT = cm(e.slabThickness) ?? C.slabThickness
   const pileD = cm(e.pileDiameter) ?? C.pile.d
@@ -163,6 +169,15 @@ export function computeQuantities(p: HouseParams): Quantities {
     concreteBySection[section] = (concreteBySection[section] ?? 0) + vol
     rebarBySection[section] = (rebarBySection[section] ?? 0) + vol * rebarPerM3
   }
+  // Foundation concrete cast onto or into the ground (slabs on ground, bored
+  // piles) is formed only at slab edges, not by the per-m³ ratio below.
+  let groundCastVol = 0
+  let groundCastEdgeForm = 0
+  const castOnGround = (vol: number, edgeFormArea: number) => {
+    if (vol <= 0) return
+    groundCastVol += vol
+    groundCastEdgeForm += edgeFormArea
+  }
 
   const isMasonry = p.system === 'tuff' || p.system === 'aerated' || p.system === 'brick'
   const isMonolith = p.system === 'monolith'
@@ -193,18 +208,24 @@ export function computeQuantities(p: HouseParams): Quantities {
   )
   add('concrete_blinding', 'foundation', 'act', soleArea * blindingT)
   // Пол по грунту — бетонная плита с сеткой, а не песчано-гравийная подсыпка.
-  if (floorOnGround > 0) addStruct('foundation', A * floorOnGround, reb.slab)
+  // It is poured between the strips / grillage, which act as its side form.
+  if (floorOnGround > 0) {
+    addStruct('foundation', A * floorOnGround, reb.slab)
+    castOnGround(A * floorOnGround, 0)
+  }
 
   // ---- Foundation ----
   if (p.foundation === 'strip') {
     addStruct('foundation', stripLen * stripW * stripH, reb.strip)
   } else if (p.foundation === 'slab') {
     addStruct('foundation', A * fndSlabT, reb.slab)
+    castOnGround(A * fndSlabT, P * fndSlabT)
   } else if (p.foundation === 'pile') {
     const n = stripLen / axisStep
     const pileVol = n * (Math.PI / 4) * pileD ** 2 * pileLen
     const grillage = stripLen * stripW * 0.4
     addStruct('foundation', pileVol + grillage, reb.pile)
+    castOnGround(pileVol, 0) // bored piles are cast in the hole; the grillage is formed
   } else {
     // column
     const n = stripLen / axisStep
@@ -215,6 +236,7 @@ export function computeQuantities(p: HouseParams): Quantities {
   if (p.basement) {
     addStruct('foundation', P * basementWallT * p.basementDepth, reb.basementWall)
     addStruct('foundation', A * fndSlabT, reb.slab) // пол подвала
+    castOnGround(A * fndSlabT, P * fndSlabT)
     add('waterproofing', 'foundation', 'act', A) // гидроизоляция пола подвала
   }
 
@@ -406,7 +428,8 @@ export function computeQuantities(p: HouseParams): Quantities {
     const vol = concreteBySection[key] ?? 0
     if (vol <= 0) continue
     structConcrete += vol
-    add('formwork', key, 'act', vol * formworkK)
+    const formed = key === 'foundation' ? Math.max(0, vol - groundCastVol) * formworkK + groundCastEdgeForm : vol * formworkK
+    add('formwork', key, 'act', formed)
   }
   // Насос тарифицируется на весь объём разом, поэтому одной строкой.
   if (p.concretePump && structConcrete > 0) add('concrete_pump', 'foundation', 'act', structConcrete)
