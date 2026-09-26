@@ -4,6 +4,7 @@ import { t } from '../i18n'
 import type { HouseParams } from '../model/house'
 import { defaultWallThickness, BUILD_PRESETS } from '../model/house'
 import { REGIONS } from '../data/regions'
+import { COEFF as C } from '../data/coefficients'
 
 function Num({
   label,
@@ -80,18 +81,26 @@ export function Inputs() {
     })
   }
 
-  // engineer-panel computed defaults (shown until overridden)
-  const P = 2 * (house.length + house.width)
-  const Lb = P * 1.5
-  const colDefault = (Math.floor(house.length / 4) + 1) * (Math.floor(house.width / 4) + 1)
-  const wallGross = Lb * house.floors * house.floorHeight
-  const openingsDefault =
-    wallGross > 0 ? Math.round(((house.windowAreaTotal + house.exteriorDoors * 2) / wallGross) * 100) : 15
   const eng = house.eng
   const setEng = (patch: Partial<HouseParams['eng']>) => set({ eng: { ...house.eng, ...patch } })
 
+  // Engineer-panel defaults, shown until overridden. They follow the same
+  // fallbacks as computeQuantities, so typing a shown value back in must not
+  // change the estimate.
+  const P = 2 * (house.length + house.width)
+  const bearingShare =
+    eng.internalBearingPct != null && eng.internalBearingPct >= 0 ? eng.internalBearingPct / 100 : C.internalBearingFactor
+  const Lb = P * (1 + bearingShare)
+  const gridStep = eng.columnGridStep != null && eng.columnGridStep > 0 ? eng.columnGridStep : C.columnGridStep
+  const colDefault = (Math.floor(house.length / gridStep) + 1) * (Math.floor(house.width / gridStep) + 1)
+  const colSizeM = eng.columnSize != null && eng.columnSize > 0 ? eng.columnSize / 100 : C.columnSection.w
+  // a frame is infilled on the outer contour only; bearing walls run along all axes
+  const wallGross = (house.system === 'frame' ? P : Lb) * house.floors * house.floorHeight
+  const openingsDefault =
+    wallGross > 0 ? Math.round(((house.windowAreaTotal + house.exteriorDoors * 2) / wallGross) * 100) : 15
+
   // --- окна по норме освещения (ՀՀՇՆ 31-01-2014): ≥ 1/8 пола, ≤ 40% стен ---
-  const wallT = house.wallThickness
+  const wallT = eng.extWall != null && eng.extWall > 0 ? eng.extWall / 100 : house.wallThickness
   const internalPerFloor = Math.max(0, house.length - 2 * wallT) * Math.max(0, house.width - 2 * wallT)
   const hallV = house.doubleHeightHall && house.floors >= 2 ? Math.min(house.hallArea, house.length * house.width) : 0
   const netA = Math.max(0, internalPerFloor * house.floors - hallV)
@@ -516,10 +525,10 @@ export function Inputs() {
             <div className="group-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
               <Num label={t(lang, 'engf_extWall')} value={eng.extWall ?? Math.round(house.wallThickness * 100)} step={1} onChange={(n) => setEng({ extWall: n })} />
               <Num label={t(lang, 'engf_columns')} value={eng.columns ?? colDefault} step={1} onChange={(n) => setEng({ columns: n })} />
-              <Num label={t(lang, 'engf_columnSize')} value={eng.columnSize ?? 40} step={1} onChange={(n) => setEng({ columnSize: n })} />
-              <Num label={t(lang, 'engf_columnGridStep')} value={eng.columnGridStep ?? 4} step={0.5} onChange={(n) => setEng({ columnGridStep: n })} />
+              <Num label={t(lang, 'engf_columnSize')} value={eng.columnSize ?? Math.round(colSizeM * 100)} step={1} onChange={(n) => setEng({ columnSize: n })} />
+              <Num label={t(lang, 'engf_columnGridStep')} value={eng.columnGridStep ?? C.columnGridStep} step={0.5} onChange={(n) => setEng({ columnGridStep: n })} />
               <Num label={t(lang, 'engf_beamsLen')} value={eng.beamsLen ?? Math.round(Lb * house.floors)} step={1} onChange={(n) => setEng({ beamsLen: n })} />
-              <Num label={t(lang, 'engf_beamSection')} value={eng.beamSection ?? 0.16} step={0.01} onChange={(n) => setEng({ beamSection: n })} />
+              <Num label={t(lang, 'engf_beamSection')} value={eng.beamSection ?? Math.round(colSizeM * colSizeM * 1000) / 1000} step={0.01} onChange={(n) => setEng({ beamSection: n })} />
               <Num label={t(lang, 'engf_internalBearingPct')} value={eng.internalBearingPct ?? 50} step={5} onChange={(n) => setEng({ internalBearingPct: n })} />
               <Num label={t(lang, 'engf_ringBeamW')} value={eng.ringBeamW ?? 30} step={1} onChange={(n) => setEng({ ringBeamW: n })} />
               <Num label={t(lang, 'engf_ringBeamH')} value={eng.ringBeamH ?? 20} step={1} onChange={(n) => setEng({ ringBeamH: n })} />
@@ -561,7 +570,7 @@ export function Inputs() {
             <div className="group-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
               <Num label={t(lang, 'engf_openingsPct')} value={eng.openingsPct ?? openingsDefault} step={1} onChange={(n) => setEng({ openingsPct: n })} />
               <Num label={t(lang, 'engf_wastePct')} value={eng.wastePct ?? 5} step={1} onChange={(n) => setEng({ wastePct: n })} />
-              <Num label={t(lang, 'engf_formworkPerM3')} value={eng.formworkPerM3 ?? 5} step={0.5} onChange={(n) => setEng({ formworkPerM3: n })} />
+              <Num label={t(lang, 'engf_formworkPerM3')} value={eng.formworkPerM3 ?? C.formworkPerM3} step={0.5} onChange={(n) => setEng({ formworkPerM3: n })} />
               <Num label={t(lang, 'engf_insulationThickness')} value={eng.insulationThickness ?? 10} step={1} onChange={(n) => setEng({ insulationThickness: n })} />
             </div>
           </details>
