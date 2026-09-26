@@ -33,7 +33,10 @@ export function Credit() {
   // Потолок для договоров с 01.01.2025 — 750 000 ֏ за квартал.
   const region = REGIONS[house.region]
   const refundEndsAt = region.taxRefundUntil
-  const refundActive = refundEndsAt != null && new Date(refundEndsAt) > new Date()
+  // 'YYYY-MM-DD' through new Date() is UTC midnight: the refund stayed active
+  // until 04:00 in Yerevan and the date showed a day early west of UTC.
+  const refundEnd = refundEndsAt != null ? localDate(refundEndsAt) : null
+  const refundActive = refundEnd != null && refundEnd > new Date()
   // Возврат идёт с фактически уплаченного подоходного налога, но не больше
   // процентов по кредиту и не больше потолка. Считаем ВЕРХНЮЮ ГРАНИЦУ: реальная
   // сумма ограничена ещё и зарплатой заёмщика, которую калькулятор не знает.
@@ -86,7 +89,7 @@ export function Credit() {
                 до {m(refund)}
               </div>
               <div style={{ fontSize: '0.72rem', color: 'var(--color-ink-soft)', marginTop: '0.3rem' }}>
-                {t(lang, 'taxRefundNote')} {refundEndsAt && `· ${t(lang, 'taxRefundUntil')} ${new Date(refundEndsAt).toLocaleDateString()}`}
+                {t(lang, 'taxRefundNote')} {refundEnd && `· ${t(lang, 'taxRefundUntil')} ${refundEnd.toLocaleDateString()}`}
               </div>
             </>
           ) : (
@@ -124,4 +127,10 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
       </div>
     </div>
   )
+}
+
+// 'YYYY-MM-DD' as a local calendar date (midnight where the user is)
+function localDate(iso: string): Date {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d)
 }
