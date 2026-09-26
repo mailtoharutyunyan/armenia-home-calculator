@@ -302,6 +302,34 @@ export function checkNorms(p: HouseParams, q: Quantities): Warning[] {
     })
   }
 
+  // ---- double-height hall: design practice, not a norm ----
+  // Architects keep the void within ~12–20% of the house area: past that it
+  // takes too much of the upper floor. A tall glazed volume also stratifies
+  // (4–7 °C colder at the floor with radiators), so it needs floor heating by
+  // the glazing, an extract at the top and low-e glazing.
+  if (q.geometry.hallVoid > 0) {
+    const share = q.geometry.netFloorArea > 0 ? (q.geometry.hallVoid / q.geometry.netFloorArea) * 100 : 0
+    const v = Math.round(q.geometry.hallVoid)
+    if (share > 20) {
+      w.push({
+        level: 'info',
+        code: 'practice',
+        ru: `Второй свет ${v} м² — ${Math.round(share)}% площади дома. Обычно его держат в пределах 12–20%: больше — и он забирает слишком много второго этажа.`,
+        hy: `Երկրորդ լույսը ${v} մ² է՝ տան մակերեսի ${Math.round(share)}%։ Սովորաբար այն պահում են 12–20%-ի սահմաններում. ավելին խլում է երկրորդ հարկի չափազանց շատ մակերես։`,
+        en: `The double-height void is ${v} m², ${Math.round(share)}% of the house area. It is usually kept within 12–20%: beyond that it takes too much of the upper floor.`,
+      })
+    }
+    if (!p.optHeating) {
+      w.push({
+        level: 'info',
+        code: 'practice',
+        ru: 'Двусветный зал: при радиаторах у пола на 4–7 °C холоднее, чем под потолком. Нужны тёплый пол в зоне остекления, вытяжка в верхней зоне и энергосберегающие стеклопакеты (на юг — солнцезащитные).',
+        hy: 'Երկլույս սրահ. ռադիատորներով հատակի մոտ 4–7 °C ավելի ցուրտ է, քան առաստաղի տակ։ Անհրաժեշտ են տաք հատակ ապակեպատման գոտում, օդահանում վերին գոտում և էներգախնայող ապակեփաթեթներ։',
+        en: 'Double-height hall: with radiators the floor is 4–7 °C colder than under the ceiling. It needs floor heating along the glazing, an extract at the top and low-e glazing (solar-control facing south).',
+      })
+    }
+  }
+
   // ---- foundation depth vs frost ----
   // how deep each foundation type actually goes: the strip by its height,
   // piles by their length, pad columns by their height

@@ -93,6 +93,14 @@ export const NORMS: Record<string, NormMeta> = {
     status: 'active',
     source: 'https://www.arlis.am',
   },
+  // architects' practice, not a legal norm: shown as advice, never as a violation
+  practice: {
+    code: 'practice',
+    fullHy: 'Նախագծման պրակտիկա (նորմ չէ)',
+    fullRu: 'Практика проектирования (не норма)',
+    status: 'active',
+    source: '',
+  },
   input: {
     code: 'input',
     fullHy: 'Մուտքային տվյալների ստուգում',

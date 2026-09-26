@@ -542,3 +542,18 @@ describe('norm checks read the inputs the estimate uses', () => {
     expect(has(house({ region: 'kotayk', eng: { stripHeight: 100 } }), 'недостаточным (1 м)')).toBe(true)
   })
 })
+
+describe('double-height hall advice (practice, not a norm)', () => {
+  const advice = (p: HouseParams) => checkNorms(p, computeQuantities(p)).filter((x) => x.code === 'practice')
+
+  it('an 80 m² void in a 252 m² house is flagged as over the usual share, as info only', () => {
+    const a = advice(house())
+    expect(a.some((x) => x.ru.includes('32% площади дома'))).toBe(true)
+    expect(a.every((x) => x.level === 'info')).toBe(true)
+  })
+
+  it('a void within the usual share and with floor heating gets no advice', () => {
+    expect(advice(house({ hallArea: 40, optHeating: true }))).toEqual([])
+    expect(advice(house({ doubleHeightHall: false }))).toEqual([])
+  })
+})
