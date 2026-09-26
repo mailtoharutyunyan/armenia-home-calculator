@@ -67,3 +67,31 @@ describe('factory reset and the exchange rate', () => {
     expect(useProject.getState().rateSource).toBe('cba')
   })
 })
+
+describe('saved prices after a seed update', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('an untouched v1 row takes the new market price; an edited field is kept', async () => {
+    const v1 = {
+      // saved with the old seed and never edited
+      aerated_block: { materialMin: 30600, materialTypical: 34000, materialMax: 39100, labor: 12000 },
+      // the visitor typed their own typical concrete price
+      concrete_b25: { materialMin: 30600, materialTypical: 36500, materialMax: 39100, labor: 18000 },
+    }
+    const s = await storeWith({ ahc_prices_v1: JSON.stringify(v1) })
+    expect(s.prices.aerated_block.materialTypical).toBe(35000)
+    expect(s.prices.concrete_b25.materialTypical).toBe(36500)
+    expect(s.prices.concrete_b25.materialMax).toBe(38000) // not edited → new seed
+  })
+
+  it('v2 stores only what the visitor changed', async () => {
+    const storage = memoryStorage({})
+    vi.stubGlobal('localStorage', storage)
+    vi.resetModules()
+    const { useProject } = await import('./useProject')
+    useProject.getState().setPriceItem('tuff_block', { materialTypical: 15000 })
+    expect(JSON.parse(storage.getItem('ahc_prices_v2')!)).toEqual({ tuff_block: { materialTypical: 15000 } })
+  })
+})

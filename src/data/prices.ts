@@ -48,6 +48,59 @@ function item(
   }
 }
 
+// Market check of 26.09.2026. Prices are what a private buyer pays per the
+// supplier's own price list or listing; a VAT-registered seller's VAT is
+// already inside them. min/max are the real spread across the sources read,
+// not a band around typical. Where no single price exists (mortar = cement +
+// sand), `derived` builds it from quoted inputs and stays an 'estimate'.
+const VERIFIED_AT = '26.09.2026'
+const Q = {
+  concrete: [
+    'https://www.yell.am/%D0%9F%D0%A0%D0%9E%D0%98%D0%97%D0%92%D0%9E%D0%94%D0%A1%D0%A2%D0%92%D0%9E-%D0%91%D0%95%D0%A2%D0%9E%D0%9D%D0%90-%D0%9C%D0%9C-%D0%9B%D0%98%D0%94%D0%95%D0%A0--81005',
+    'https://yerkir.am/hy/article/2026/09/14/318795',
+  ],
+  rebar: ['https://rmsgroup.am/en/price-list', 'https://stalmetural.am/catalog/armatura/'],
+  aerated: ['https://www.list.am/item/22643081', 'https://www.list.am/category/356'],
+  tuff: ['https://www.list.am/item/23131982', 'https://www.list.am/item/22147717'],
+  sand: ['https://www.list.am/item/24168492', 'https://www.list.am/item/24042170'],
+  cement: ['https://armenpress.am/ru/article/1260397', 'https://www.list.am/category/389'],
+  insulation: [
+    'https://totalarmenia.am/shinanyut/penoplast-prpraplast',
+    'https://www.list.am/item/23521471',
+    'https://rmsgroup.am/en/price-list',
+  ],
+  waterproofing: ['https://www.list.am/item/22289135'],
+  windows: ['https://flagma.am/ru/evro-patuhanner-drner-farmplast-o1764286.html'],
+  doorInterior: ['https://www.nortun.am/catalog/doors/Interior_doors/'],
+  doorExterior: ['https://domus.am/category/exterior-doors'],
+  laminate: ['https://www.laminat.am/product_detail/1950'],
+  plaster: ['https://erkatproff.am/product/gipsonit-shen-30-kg', 'https://domus.am/product/shen-water-dispersion-paint-w-10l-155kg'],
+}
+
+type Band = { min: number; typical: number; max: number }
+
+function quoted(key: string, labelRu: string, labelHy: string, unit: string, price: Band, labor: number, urls: string[], note: string): PriceItem {
+  return {
+    key,
+    labelRu,
+    labelHy,
+    unit,
+    provenance: 'quoted',
+    verifiedAt: VERIFIED_AT,
+    sourceUrls: urls,
+    materialMin: price.min,
+    materialTypical: price.typical,
+    materialMax: price.max,
+    labor,
+    sources: urls.map((u) => new URL(u).hostname),
+    note,
+  }
+}
+
+function derived(key: string, labelRu: string, labelHy: string, unit: string, price: Band, labor: number, urls: string[], note: string): PriceItem {
+  return { ...quoted(key, labelRu, labelHy, unit, price, labor, urls, note), provenance: 'estimate', verifiedAt: undefined }
+}
+
 // Documents/permit costs vary widely and are partly contract-based, so use a
 // wider band. Sources: Yerevan Municipality / urban.e-gov.am (2024–2025 data).
 function permit(key: string, labelRu: string, labelHy: string, unit: string, typical: number): PriceItem {
@@ -101,29 +154,51 @@ const items: PriceItem[] = [
   // поставщика. Дата сверки неизвестна, поэтому provenance = 'unverified'.
   // Товарный бетон в РА в открытых прайсах не публикуется: цена зависит от
   // марки, объёма, расстояния до узла и нужды в насосе — её дают по запросу.
-  item('concrete_b15', 'Бетон B15 / М200', 'Բետոն B15 / М200', 'м³', 29000, 18000, S.concrete),
-  item('concrete_b20', 'Бетон B20 / М250', 'Բետոն B20 / М250', 'м³', 30000, 18000, S.concrete),
-  item('concrete_b225', 'Бетон B22.5 / М300', 'Բետոն B22.5 / М300', 'м³', 32000, 18000, S.concrete),
-  item('concrete_b25', 'Бетон B25 / М350', 'Բետոն B25 / М350', 'м³', 34000, 18000, S.concrete),
+  // MM Leader price list (YELL.am, updated 10.07.2026). Mid-September 2026 a
+  // ~4 000 ֏/m³ rise was reported with the cement shortage (Araratcement
+  // denied raising its own price), so max carries that rise. Delivery and the
+  // pump are separate lines.
+  quoted('concrete_b15', 'Бетон B15 / М200', 'Բետոն B15 / М200', 'м³', { min: 29000, typical: 29000, max: 33000 }, 18000, Q.concrete,
+    'MM Leader: М200 — 29 000 ֏/м³ (10.07.2026); в сентябре 2026 сообщали о росте на ~4 000 ֏/м³'),
+  quoted('concrete_b20', 'Бетон B20 / М250', 'Բետոն B20 / М250', 'м³', { min: 30000, typical: 30000, max: 34000 }, 18000, Q.concrete,
+    'MM Leader: М250 — 30 000 ֏/м³ (10.07.2026); в сентябре 2026 сообщали о росте на ~4 000 ֏/м³'),
+  quoted('concrete_b225', 'Бетон B22.5 / М300', 'Բետոն B22.5 / М300', 'м³', { min: 32000, typical: 32000, max: 36000 }, 18000, Q.concrete,
+    'MM Leader: М300 — 32 000 ֏/м³ (10.07.2026); в сентябре 2026 сообщали о росте на ~4 000 ֏/м³'),
+  quoted('concrete_b25', 'Бетон B25 / М350', 'Բետոն B25 / М350', 'м³', { min: 34000, typical: 34000, max: 38000 }, 18000, Q.concrete,
+    'MM Leader: М350 — 34 000 ֏/м³ (10.07.2026); в сентябре 2026 сообщали о росте на ~4 000 ֏/м³'),
   item('concrete_b30', 'Бетон B30 / М400', 'Բետոն B30 / М400', 'м³', 36000, 18000, S.concrete),
-  item('concrete_blinding', 'Подбетонка М100', 'Ենթաբетон М100', 'м³', 25000, 8000, S.concrete),
+  quoted('concrete_blinding', 'Подбетонка М100', 'Ենթաբетон М100', 'м³', { min: 25000, typical: 25000, max: 29000 }, 8000, Q.concrete,
+    'MM Leader: М100 — 25 000 ֏/м³ (10.07.2026)'),
 
   // --- Rebar (AMD/т) ---
-  item('rebar_a500', 'Арматура А500С', 'Արմատուր А500С', 'т', 290000, 60000, S.rebar),
+  // RMS Group price list: A500C 12–32 mm 305 000, 8–10 mm 315 000 ֏/t; a house
+  // is ~70% main bars and ~30% ties. Stalmetgroup 12 mm: 300.72 ֏/m ≈ 339 000.
+  quoted('rebar_a500', 'Арматура А500С', 'Արմատուր А500С', 'т', { min: 305000, typical: 308000, max: 339000 }, 60000, Q.rebar,
+    'RMS Group: 12–32 мм — 305 000 ֏/т, 8–10 мм — 315 000 ֏/т; Стальметгрупп: 12 мм ≈ 339 000 ֏/т'),
   item('rebar_a400', 'Арматура А400 (A-III)', 'Արմատուր А400', 'т', 275000, 60000, S.rebar),
 
   // --- Masonry ---
-  item('tuff_block', 'Туф (кладка)', 'Տուֆ (շարվածք)', 'м³', 20000, 15000, S.market),
-  item('aerated_block', 'Газоблок', 'Գազաբլոկ', 'м³', 34000, 12000, S.block, 'list.am — проверить вручную'),
+  // Tuff is sold per stone: 150–250 ֏ for a 22×17×38 cm stone, ~64 per m³ of masonry.
+  quoted('tuff_block', 'Туф (кладка)', 'Տուֆ (շարվածք)', 'м³', { min: 10000, typical: 16000, max: 17500 }, 15000, Q.tuff,
+    'list.am: 150–250 ֏ за камень 22×17×38 см (Артик, Талин); ≈ 64 камня на м³ кладки'),
+  // Iranian autoclaved D600: good quality 35 000 wholesale (a house takes two
+  // 40 m³ trucks), medium quality 32 000; other listings up to 40 000 ֏/m³.
+  quoted('aerated_block', 'Газоблок', 'Գազաբլոկ', 'м³', { min: 32000, typical: 35000, max: 40000 }, 12000, Q.aerated,
+    'list.am (14.09.2026): D600 высокого качества — 35 000 ֏/м³ оптом, среднего — 32 000 ֏/м³'),
   item('brick', 'Кирпич (кладка)', 'Աղյուս (շարվածք)', 'м³', 45000, 18000, S.market),
-  item('mortar', 'Раствор кладочный', 'Շաղախ', 'м³', 18000, 0, S.market),
+  // 1:4 cement-sand mortar: ~6 bags of cement (2 550 at the plant, 2 700–3 500
+  // at resellers in September 2026) + 1.1 m³ of sand at ~7 000 ֏.
+  derived('mortar', 'Раствор кладочный', 'Շաղախ', 'м³', { min: 23000, typical: 24000, max: 28700 }, 0, Q.cement,
+    'ОЦЕНКА из сверенных цен: 6 мешков цемента (2 550–3 500 ֏) + 1.1 м³ песка (7 000 ֏/м³)'),
   item('glue_aerated', 'Клей для газоблока', 'Գազաբլոկի սոսինձ', 'м³', 120000, 0, S.market),
 
   // --- Floors ---
   item('precast_slab', 'Плита перекрытия ПК', 'Ծածկի սալ ПК', 'шт', 40000, 8000, S.market),
 
   // --- Aggregates / bedding ---
-  item('sand_gravel', 'Песок/щебень подсыпка', 'Ավազ/խիճ', 'м³', 7000, 3000, S.market),
+  // a ZIL truck of 7 m³: 45 000–55 000 ֏
+  quoted('sand_gravel', 'Песок/щебень подсыпка', 'Ավազ/խիճ', 'м³', { min: 6400, typical: 7000, max: 7900 }, 3000, Q.sand,
+    'list.am: машина ЗИЛ 7 м³ — 45 000–55 000 ֏'),
 
   // --- Earthworks ---
   item('excavation', 'Выемка грунта', 'Հողի փորում', 'м³', 0, 4000, S.market),
@@ -131,19 +206,36 @@ const items: PriceItem[] = [
   item('apron', 'Отмостка', 'Հատակաշի', 'м²', 6000, 4000, S.market),
 
   // --- Waterproofing / insulation / screed ---
-  item('waterproofing', 'Гидроизоляция', 'Հիդրոմեկուսացում', 'м²', 2000, 1500, S.market),
-  item('insulation', 'Утеплитель', 'Ջերմամեկուսիչ', 'м²', 2500, 2000, S.market),
-  item('screed', 'Стяжка пола', 'Հատակի շաղախ', 'м²', 3000, 2500, S.market),
+  // Technonikol Bikrost: 10 500 ֏ per 10 m² roll, two layers
+  quoted('waterproofing', 'Гидроизоляция', 'Հիդրոմեկուսացում', 'м²', { min: 1050, typical: 2100, max: 3000 }, 1500, Q.waterproofing,
+    'list.am: Технониколь Бикрост — 10 500 ֏ за рулон 10 м², в два слоя'),
+  // per m² at 100 mm: EPS grade I 1 556 (facade), stone wool 2 640, XPS 4 342
+  // (flat roof); the default house insulates both, which averages ~2 600.
+  quoted('insulation', 'Утеплитель', 'Ջերմամեկուսիչ', 'м²', { min: 1556, typical: 2600, max: 4342 }, 2000, Q.insulation,
+    'за м² при 100 мм: пенопласт I сорта 1 556 ֏ (фасад), каменная вата 2 640 ֏, XPS 4 342 ֏ (плоская кровля)'),
+  // 6 cm 1:3 screed: 0.54 bag of cement + 0.07 m³ of sand + fibre
+  derived('screed', 'Стяжка пола', 'Հատակի շաղախ', 'м²', { min: 1800, typical: 2100, max: 2600 }, 2500, Q.cement,
+    'ОЦЕНКА из сверенных цен: стяжка 6 см 1:3 — 0.54 мешка цемента + 0.07 м³ песка + фибра'),
 
   // --- Openings ---
-  item('window_regular', 'Окно обычное', 'Պատուհան սովորական', 'м²', 50000, 8000, S.market),
+  // FarmPlast (Flagma, 27.07.2026): windows from 25 000–35 000 ֏/m²
+  quoted('window_regular', 'Окно обычное', 'Պատուհան սովորական', 'м²', { min: 25000, typical: 35000, max: 50000 }, 8000, Q.windows,
+    'FarmPlast: металлопластиковые окна от 25 000–35 000 ֏/м² (27.07.2026)'),
   item('window_vitrage', 'Окно витражное', 'Վիտրաժ պատուհան', 'м²', 90000, 12000, S.market),
-  item('door_exterior', 'Дверь входная', 'Մուտքի դուռ', 'шт', 150000, 15000, S.market),
-  item('door_interior', 'Дверь межкомнатная', 'Ներսի դուռ', 'шт', 45000, 10000, S.market),
+  // Domus: steel entrance doors JW 49 900–73 400 ֏
+  quoted('door_exterior', 'Дверь входная', 'Մուտքի դուռ', 'шт', { min: 49900, typical: 73400, max: 150000 }, 15000, Q.doorExterior,
+    'Domus: металлические входные двери JW — 49 900–73 400 ֏; утеплённая с терморазрывом — до 150 000 ֏'),
+  // Nor Tun: Velldoris leaf 40 800–42 320 ֏ + frame, trims and hardware
+  quoted('door_interior', 'Дверь межкомнатная', 'Ներսի դուռ', 'шт', { min: 41000, typical: 55000, max: 70000 }, 10000, Q.doorInterior,
+    'Nor Tun: полотно Velldoris Alto 40 800–42 320 ֏ + коробка, наличники и фурнитура ≈ 14 000 ֏'),
 
   // --- Finishing ---
-  item('plaster', 'Штукатурка/шпаклёвка/покраска', 'Սվաղ/ներկ', 'м²', 2500, 3000, S.market),
-  item('floor_finish', 'Напольное покрытие', 'Հատակածածկ', 'м²', 8500, 6000, S.market),
+  // gypsum plaster ~2 cm (30 kg bag 1 900–2 350 ֏), putty, primer, two coats of SHEN W (8 700 ֏ / 10 l)
+  derived('plaster', 'Штукатурка/шпаклёвка/покраска', 'Սվաղ/ներկ', 'м²', { min: 1600, typical: 2000, max: 2500 }, 3000, Q.plaster,
+    'ОЦЕНКА из сверенных цен: гипсовая штукатурка ~2 см (мешок 30 кг — 1 900–2 350 ֏), шпаклёвка, грунт, 2 слоя краски SHEN W (8 700 ֏ за 10 л)'),
+  // laminate 8 mm 6 500 ֏/m² + underlay and skirting; porcelain tile in wet rooms
+  quoted('floor_finish', 'Напольное покрытие', 'Հատակածածկ', 'м²', { min: 6700, typical: 7800, max: 9800 }, 6000, Q.laminate,
+    'laminat.am: ламинат 8 мм Swiss Krono — 6 500 ֏/м² + подложка и плинтус; керамогранит в санузлах и кухне'),
   item('facade', 'Фасадная отделка', 'Ֆասադի հարդարում', 'м²', 9000, 6000, S.market),
 
   // --- Roof ---
@@ -285,7 +377,7 @@ export const AMD_PER_USD_DEFAULT = 363.28
 // Дата последней ручной сверки прайса. Это заявление составителя, а не
 // доказательство: записи о том, что и с чем сверялось, в проекте нет.
 // План сверки — docs/PRICE-VERIFICATION.md.
-export const PRICES_UPDATED = '20.07.2026'
+export const PRICES_UPDATED = '26.09.2026'
 
 // Через сколько дней прайс считается несвежим. Стройматериалы в РА заметно
 // двигаются за квартал, поэтому предупреждаем раньше.

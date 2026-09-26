@@ -306,7 +306,9 @@ describe('панель инженера — переопределения ре�
     //   84 673 234  10 cm slab on ground under the ground floor (strip foundation)
     //   83 716 374  frame infill excludes the columns and beams in the wall plane
     //   83 774 872  glue for the aerated-block partitions
-    expect(Math.round(a)).toBe(83774872)
+    //   82 662 735  market prices of 26.09.2026 (concrete, rebar, blocks, windows,
+    //               doors, finishes; see src/data/prices.ts)
+    expect(Math.round(a)).toBe(82662735)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {

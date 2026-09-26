@@ -24,7 +24,48 @@ export interface Scenario {
   house: HouseParams
 }
 
-const PRICE_KEY = 'ahc_prices_v1'
+// v2 keeps only the numbers a visitor changed, so later seed updates reach
+// them. v1 stored the whole catalog on every edit, which froze the old prices.
+const PRICE_KEY = 'ahc_prices_v2'
+const LEGACY_PRICE_KEY = 'ahc_prices_v1'
+const EDITABLE = ['materialMin', 'materialTypical', 'materialMax', 'labor'] as const
+type PriceOverride = Partial<Pick<PriceItem, (typeof EDITABLE)[number]>>
+// Seed numbers [min, typical, max, labor] replaced by the 26.09.2026 market
+// check. A v1 row still equal to them was never edited and takes the new seed;
+// rows not listed here are unchanged, so they compare with the current seed.
+const SEED_BEFORE_2026_09_26: Record<string, [number, number, number, number]> = {
+  concrete_b15: [26100, 29000, 33350, 18000],
+  concrete_b20: [27000, 30000, 34500, 18000],
+  concrete_b225: [28800, 32000, 36800, 18000],
+  concrete_b25: [30600, 34000, 39100, 18000],
+  concrete_blinding: [22500, 25000, 28750, 8000],
+  rebar_a500: [261000, 290000, 333500, 60000],
+  tuff_block: [18000, 20000, 23000, 15000],
+  aerated_block: [30600, 34000, 39100, 12000],
+  mortar: [16200, 18000, 20700, 0],
+  sand_gravel: [6300, 7000, 8050, 3000],
+  waterproofing: [1800, 2000, 2300, 1500],
+  insulation: [2250, 2500, 2875, 2000],
+  screed: [2700, 3000, 3450, 2500],
+  window_regular: [45000, 50000, 57500, 8000],
+  door_exterior: [135000, 150000, 172500, 15000],
+  door_interior: [40500, 45000, 51750, 10000],
+  plaster: [2250, 2500, 2875, 3000],
+  floor_finish: [7650, 8500, 9775, 6000],
+}
+
+// the visitor's changes against the seed, the only thing worth storing
+function priceOverrides(catalog: Catalog): Record<string, PriceOverride> {
+  const out: Record<string, PriceOverride> = {}
+  for (const [key, item] of Object.entries(catalog)) {
+    const seed = SEED_PRICES[key]
+    if (!seed) continue
+    const diff: PriceOverride = {}
+    for (const f of EDITABLE) if (item[f] !== seed[f]) diff[f] = item[f]
+    if (Object.keys(diff).length > 0) out[key] = diff
+  }
+  return out
+}
 const LANG_KEY = 'ahc_lang_v1'
 const HOUSE_KEY = 'ahc_house_v5'
 // v4 stored vatIncluded: true from the old default. v5 made VAT opt-in, so v4
@@ -92,15 +133,30 @@ function loadHouse(): HouseParams {
 }
 
 function loadPrices(): Catalog {
+  const merged = structuredClone(SEED_PRICES)
   try {
     const raw = localStorage.getItem(PRICE_KEY)
-    if (!raw) return structuredClone(SEED_PRICES)
-    const parsed = JSON.parse(raw) as Partial<Catalog>
-    // per-field merge onto seed so new seed fields/keys always exist (no NaN from old schema)
-    const merged = structuredClone(SEED_PRICES)
+    if (raw) {
+      const saved = JSON.parse(raw) as Record<string, PriceOverride>
+      for (const [key, o] of Object.entries(saved)) {
+        if (!merged[key]) continue
+        for (const f of EDITABLE) if (typeof o[f] === 'number') merged[key] = { ...merged[key], [f]: o[f] }
+      }
+      return merged
+    }
+    const legacy = localStorage.getItem(LEGACY_PRICE_KEY)
+    if (!legacy) return merged
+    // v1: keep only the fields the visitor actually changed
+    const old = JSON.parse(legacy) as Partial<Catalog>
     for (const key of Object.keys(merged)) {
-      const saved = parsed[key]
-      if (saved) merged[key] = { ...merged[key], ...saved }
+      const row = old[key]
+      if (!row) continue
+      const cur = merged[key]
+      const before = SEED_BEFORE_2026_09_26[key] ?? [cur.materialMin, cur.materialTypical, cur.materialMax, cur.labor]
+      EDITABLE.forEach((f, n) => {
+        const v = row[f]
+        if (typeof v === 'number' && v !== before[n]) merged[key] = { ...merged[key], [f]: v }
+      })
     }
     return merged
   } catch {
@@ -193,7 +249,7 @@ export const useProject = create<ProjectState>((set, get) => ({
     const prices = { ...get().prices, [key]: { ...get().prices[key], ...patch } }
     set({ prices })
     try {
-      localStorage.setItem(PRICE_KEY, JSON.stringify(prices))
+      localStorage.setItem(PRICE_KEY, JSON.stringify(priceOverrides(prices)))
     } catch {
       /* storage may be unavailable */
     }
@@ -204,6 +260,7 @@ export const useProject = create<ProjectState>((set, get) => ({
     set({ prices })
     try {
       localStorage.removeItem(PRICE_KEY)
+      localStorage.removeItem(LEGACY_PRICE_KEY)
     } catch {
       /* ignore */
     }
@@ -225,6 +282,7 @@ export const useProject = create<ProjectState>((set, get) => ({
     try {
       localStorage.setItem(HOUSE_KEY, JSON.stringify(house))
       localStorage.removeItem(PRICE_KEY)
+      localStorage.removeItem(LEGACY_PRICE_KEY)
     } catch {
       /* ignore */
     }

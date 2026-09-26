@@ -55,7 +55,7 @@ describe('источники', () => {
 
 describe('возраст прайса', () => {
   it('дата разбирается и даёт неотрицательный возраст', () => {
-    const age = priceAgeDays(PRICES_UPDATED, new Date('2026-09-13T00:00:00Z'))
+    const age = priceAgeDays(PRICES_UPDATED, new Date('2026-09-27T00:00:00Z'))
     expect(age).not.toBeNull()
     expect(age!).toBeGreaterThanOrEqual(0)
   })
@@ -73,11 +73,20 @@ describe('возраст прайса', () => {
 })
 
 describe('точность расчёта заявляется честно', () => {
-  it('без сверенных цен — оценка порядка величины', () => {
+  it('the 26.09.2026 market check verified part of the catalogue', () => {
     const p = precisionOf(SEED_PRICES)
-    expect(p.level).toBe('estimate')
-    expect(p.quoted).toBe(0)
+    expect(p.level).toBe('partial')
+    expect(p.quoted).toBe(15)
     expect(p.total).toBe(Object.keys(SEED_PRICES).length)
+  })
+
+  it('a quoted price is backed by real quotes: ordered band and a note naming them', () => {
+    for (const i of items.filter((x) => x.provenance === 'quoted')) {
+      expect(i.materialMin, i.key).toBeLessThanOrEqual(i.materialTypical)
+      expect(i.materialTypical, i.key).toBeLessThanOrEqual(i.materialMax)
+      expect(i.verifiedAt, i.key).toBe(PRICES_UPDATED)
+      expect(i.note, i.key).toBeTruthy()
+    }
   })
 
   it('частичная сверка даёт промежуточный статус', () => {
