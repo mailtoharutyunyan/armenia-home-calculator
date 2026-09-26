@@ -34,11 +34,36 @@ describe('saved house and the VAT default', () => {
     expect(s.house.vatIncluded).toBe(false)
   })
 
+  it('old scenarios get the fields they lack and lose the old VAT default', async () => {
+    const old = [{ id: 's0_a', name: 'a', house: { length: 11, vatIncluded: true, eng: {} } }]
+    const s = await storeWith({ ahc_scenarios_v1: JSON.stringify(old) })
+    expect(s.scenarios[0].house.length).toBe(11)
+    expect(s.scenarios[0].house.overheadPct).toBe(15) // absent in the save → default, not NaN
+    expect(s.scenarios[0].house.vatIncluded).toBe(false)
+  })
+
   it('VAT ticked after the switch to v5 stays ticked', async () => {
     const s = await storeWith({
       ahc_house_v4: JSON.stringify({ vatIncluded: false }),
       ahc_house_v5: JSON.stringify({ vatIncluded: true }),
     })
     expect(s.house.vatIncluded).toBe(true)
+  })
+})
+
+describe('factory reset and the exchange rate', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('returns to the loaded central-bank rate, not the built-in fallback', async () => {
+    vi.stubGlobal('localStorage', memoryStorage({}))
+    vi.resetModules()
+    const { useProject } = await import('./useProject')
+    useProject.getState().applyCbaRates({ currentDate: new Date().toISOString().slice(0, 10), rates: { USD: 400 } } as never)
+    useProject.getState().setAmdPerUsd(390)
+    useProject.getState().resetAll()
+    expect(useProject.getState().amdPerUsd).toBe(400)
+    expect(useProject.getState().rateSource).toBe('cba')
   })
 })

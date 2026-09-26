@@ -31,12 +31,28 @@ const HOUSE_KEY = 'ahc_house_v5'
 // inputs are carried over without their VAT flag.
 const LEGACY_HOUSE_KEY = 'ahc_house_v4'
 const THEME_KEY = 'ahc_theme_v1'
-const SCEN_KEY = 'ahc_scenarios_v1'
+const SCEN_KEY = 'ahc_scenarios_v2'
+// v1 scenarios were saved while VAT defaulted to on; like the v4 house they
+// are carried over without their VAT flag.
+const LEGACY_SCEN_KEY = 'ahc_scenarios_v1'
+
+// Saves made before a field existed lack it, so every saved house is merged
+// onto the defaults (a missing percentage priced a whole scenario as NaN).
+function withDefaults(saved: Partial<HouseParams>): HouseParams {
+  return { ...DEFAULT_HOUSE, ...saved, eng: { ...(saved.eng ?? {}) } }
+}
 
 function loadScenarios(): Scenario[] {
   try {
-    const raw = localStorage.getItem(SCEN_KEY)
-    return raw ? (JSON.parse(raw) as Scenario[]) : []
+    let raw = localStorage.getItem(SCEN_KEY)
+    const legacy = raw == null
+    if (legacy) raw = localStorage.getItem(LEGACY_SCEN_KEY)
+    if (!raw) return []
+    return (JSON.parse(raw) as Scenario[]).map((s) => {
+      const saved: Partial<HouseParams> = { ...s.house }
+      if (legacy) delete saved.vatIncluded
+      return { ...s, house: withDefaults(saved) }
+    })
   } catch {
     return []
   }
@@ -69,7 +85,7 @@ function loadHouse(): HouseParams {
     const saved = JSON.parse(raw) as Partial<HouseParams>
     if (legacy) delete saved.vatIncluded
     // merge onto defaults so new fields always exist
-    return { ...DEFAULT_HOUSE, ...saved, eng: { ...(saved.eng ?? {}) } }
+    return withDefaults(saved)
   } catch {
     return { ...DEFAULT_HOUSE }
   }
@@ -113,6 +129,7 @@ interface ProjectState {
   rateSource: 'default' | 'cba' | 'manual' // откуда взят курс — показывается в редакторе цен
   rateDate: string | null // дата, на которую ЦБ установил курс
   rateStale: boolean // курс давно не обновлялся
+  cbaUsd: number | null // last central-bank rate, kept so a reset can return to it
   applyCbaRates: (r: Rates) => void
   tab: string
   setTab: (t: string) => void
@@ -145,6 +162,7 @@ export const useProject = create<ProjectState>((set, get) => ({
   rateSource: 'default',
   rateDate: null,
   rateStale: false,
+  cbaUsd: null,
   tab: 'calc',
   setTab: (tab) => set({ tab }),
   editRooms: null,
@@ -194,7 +212,16 @@ export const useProject = create<ProjectState>((set, get) => ({
   // Заводской сброс: параметры дома, цены и режимы. Язык и тема (настройки вида) не трогаем.
   resetAll: () => {
     const house = { ...DEFAULT_HOUSE, eng: {} }
-    set({ house, prices: structuredClone(SEED_PRICES), priceMode: 'typical', amdPerUsd: AMD_PER_USD_DEFAULT, rateSource: 'default', editRooms: null })
+    // back to the central-bank rate when one was loaded, not to the built-in fallback
+    const cba = get().cbaUsd
+    set({
+      house,
+      prices: structuredClone(SEED_PRICES),
+      priceMode: 'typical',
+      amdPerUsd: cba ?? AMD_PER_USD_DEFAULT,
+      rateSource: cba != null ? 'cba' : 'default',
+      editRooms: null,
+    })
     try {
       localStorage.setItem(HOUSE_KEY, JSON.stringify(house))
       localStorage.removeItem(PRICE_KEY)
@@ -256,12 +283,13 @@ export const useProject = create<ProjectState>((set, get) => ({
   applyCbaRates: (r) =>
     set((s) =>
       s.rateSource === 'manual'
-        ? { rateDate: r.currentDate, rateStale: isRateStale(r.currentDate) }
+        ? { rateDate: r.currentDate, rateStale: isRateStale(r.currentDate), cbaUsd: r.rates.USD }
         : {
             amdPerUsd: r.rates.USD,
             rateSource: 'cba',
             rateDate: r.currentDate,
             rateStale: isRateStale(r.currentDate),
+            cbaUsd: r.rates.USD,
           },
     ),
 }))
