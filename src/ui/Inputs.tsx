@@ -338,7 +338,7 @@ export function Inputs() {
         </label>
         <Num label={t(lang, 'laborPerM2')} value={house.laborPerM2} step={500} onChange={(n) => set({ laborPerM2: n })} />
 
-        {/* Кто строит — определяет накладные, прибыль и НДС */}
+        {/* Who builds — sets overhead and profit; VAT has its own checkbox above */}
         <details className="group" name="calc-step">
           <summary><span className="eyebrow">{t(lang, 'buildMode')}</span></summary>
           <div className="group-body">

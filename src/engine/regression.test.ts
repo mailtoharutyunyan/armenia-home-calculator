@@ -235,7 +235,8 @@ describe('панель инженера — переопределения ре�
     //               разуклонка плоской кровли
     //   99 158 838  электрика, водопровод, проект и технадзор — по полу без
     //               проёма двусветного зала (284 м² вместо 364)
-    expect(Math.round(a)).toBe(99158838)
+    //   82 942 699  VAT is opt-in: the default estimate is without VAT
+    expect(Math.round(a)).toBe(82942699)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {
@@ -359,6 +360,13 @@ describe('согласованность значений по умолчани�
     const w = checkNorms(house(), computeQuantities(house()))
     expect(w.filter((x) => x.level === 'error')).toEqual([])
     expect(w.filter((x) => x.level === 'warning')).toEqual([])
+  })
+
+  it('VAT is opt-in: off by default and in both build presets', () => {
+    expect(DEFAULT_HOUSE.vatIncluded).toBe(false)
+    expect(BUILD_PRESETS.self.vatIncluded).toBe(false)
+    expect(BUILD_PRESETS.contractor.vatIncluded).toBe(false)
+    expect(computeEstimate(computeQuantities(house()), SEED_PRICES, house(), 'typical').turnkey.vat).toBe(0)
   })
 
   it('класс бетона по умолчанию проходит сейсмический минимум', () => {

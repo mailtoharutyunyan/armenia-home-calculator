@@ -14,16 +14,18 @@ export type FinishLevel = 'economy' | 'standard' | 'premium'
 export type Currency = 'AMD' | 'USD'
 export type PriceMode = 'min' | 'typical' | 'max'
 // Кто строит: сам хозяин (бригады напрямую) или генподрядчик по договору.
-// От этого зависит, платите ли вы накладные, прибыль подрядчика и НДС.
+// It decides whether you pay overhead and contractor profit; VAT is a separate opt-in.
 export type BuildMode = 'self' | 'contractor'
 
 // Типовые проценты сметной развёртки. Хозспособ: подрядной прибыли и накладных
 // нет, но временные и непредвиденные остаются — они реальны при любом способе.
+// VAT is opt-in: neither preset switches it on, the "Prices incl. VAT 20%"
+// checkbox does.
 export const BUILD_PRESETS: Record<BuildMode, {
   overheadPct: number; profitPct: number; temporaryPct: number; contingencyPct: number; vatIncluded: boolean
 }> = {
   self: { overheadPct: 0, profitPct: 0, temporaryPct: 1, contingencyPct: 10, vatIncluded: false },
-  contractor: { overheadPct: 15, profitPct: 8, temporaryPct: 1.5, contingencyPct: 10, vatIncluded: true },
+  contractor: { overheadPct: 15, profitPct: 8, temporaryPct: 1.5, contingencyPct: 10, vatIncluded: false },
 }
 
 export type RegionKey =
@@ -201,7 +203,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   finishLevel: 'standard',
   currency: 'AMD',
   region: 'yerevan',
-  vatIncluded: true,
+  vatIncluded: false, // opt-in: prices are shown without VAT unless the checkbox is ticked
   concreteGrade: 'concrete_b25',
   rebarGrade: 'rebar_a500',
   excludedSections: [],

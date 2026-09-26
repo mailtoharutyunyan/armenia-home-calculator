@@ -26,7 +26,10 @@ export interface Scenario {
 
 const PRICE_KEY = 'ahc_prices_v1'
 const LANG_KEY = 'ahc_lang_v1'
-const HOUSE_KEY = 'ahc_house_v4'
+const HOUSE_KEY = 'ahc_house_v5'
+// v4 stored vatIncluded: true from the old default. v5 made VAT opt-in, so v4
+// inputs are carried over without their VAT flag.
+const LEGACY_HOUSE_KEY = 'ahc_house_v4'
 const THEME_KEY = 'ahc_theme_v1'
 const SCEN_KEY = 'ahc_scenarios_v1'
 
@@ -59,9 +62,12 @@ function loadTheme(): Theme {
 
 function loadHouse(): HouseParams {
   try {
-    const raw = localStorage.getItem(HOUSE_KEY)
+    let raw = localStorage.getItem(HOUSE_KEY)
+    const legacy = raw == null
+    if (legacy) raw = localStorage.getItem(LEGACY_HOUSE_KEY)
     if (!raw) return { ...DEFAULT_HOUSE }
     const saved = JSON.parse(raw) as Partial<HouseParams>
+    if (legacy) delete saved.vatIncluded
     // merge onto defaults so new fields always exist
     return { ...DEFAULT_HOUSE, ...saved, eng: { ...(saved.eng ?? {}) } }
   } catch {
