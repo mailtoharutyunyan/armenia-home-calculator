@@ -153,7 +153,7 @@ export function Results() {
                   ? 'By outer axes (−hall), for reference'
                   : 'По наружным осям (−зал), справочно'}
               </span>
-              <span className="num" style={{ color: 'var(--color-ink-soft)' }}>{num(Math.max(0, geo.totalFloorArea - geo.hallVoid), 0)} м²</span>
+              <span className="num" style={{ color: 'var(--color-ink-soft)' }}>{num(geo.finishedFloorArea, 0)} м²</span>
             </div>
             <p style={{ margin: '0.5rem 0 0', fontSize: '0.7rem', color: 'var(--color-ink-soft)', lineHeight: 1.5 }}>
               {lang === 'hy'

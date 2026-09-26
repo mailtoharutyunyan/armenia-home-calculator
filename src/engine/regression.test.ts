@@ -36,6 +36,7 @@ describe('геометрия по умолчанию', () => {
     expect(g.perimeter).toBe(54)
     expect(g.wallHeight).toBe(6)
     expect(g.totalFloorArea).toBe(364)
+    expect(g.finishedFloorArea).toBe(284) // 364 − 80 (проём двусветного зала)
     expect(g.bearingLength).toBeCloseTo(81, 6)
   })
 
@@ -166,6 +167,25 @@ describe('новые разделы сметы', () => {
     expect(qty(house(), 'ventilation')).toBeCloseTo(364, 6)
   })
 
+  it('электрика и водопровод — по полу, без проёма двусветного зала', () => {
+    // над залом перекрытия нет — разводки там тоже нет: 364 − 80 = 284 м².
+    // Отопление зависит от объёма, зал греется как два этажа — остаётся 364.
+    expect(qty(house(), 'electrical')).toBeCloseTo(284, 6)
+    expect(qty(house(), 'plumbing')).toBeCloseTo(284, 6)
+    expect(qty(house(), 'heating')).toBeCloseTo(364, 6)
+  })
+
+  it('без двусветного зала электрика и водопровод — по всей площади', () => {
+    const p = house({ doubleHeightHall: false })
+    expect(qty(p, 'electrical')).toBeCloseTo(364, 6)
+    expect(qty(p, 'plumbing')).toBeCloseTo(364, 6)
+  })
+
+  it('проект и технадзор оплачиваются за м² дома без проёма зала', () => {
+    expect(qty(house(), 'permit_design')).toBeCloseTo(284, 6)
+    expect(qty(house(), 'permit_supervision')).toBeCloseTo(284, 6)
+  })
+
   it('забор и балконы попадают в смету по заданной величине', () => {
     const p = house({ fenceLength: 80, balconyArea: 12, sitePavingArea: 40 })
     expect(qty(p, 'fence')).toBe(80)
@@ -213,7 +233,9 @@ describe('панель инженера — переопределения ре�
     //  103 405 190  + сметная развёртка: накладные, прибыль, временные,
     //               непредвиденные и НДС; опалубка 5 -> 6.5 м²/м³;
     //               разуклонка плоской кровли
-    expect(Math.round(a)).toBe(103405190)
+    //   99 158 838  электрика, водопровод, проект и технадзор — по полу без
+    //               проёма двусветного зала (284 м² вместо 364)
+    expect(Math.round(a)).toBe(99158838)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {
