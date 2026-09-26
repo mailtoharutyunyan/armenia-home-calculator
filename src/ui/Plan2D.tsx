@@ -5,7 +5,7 @@ import { t } from '../i18n'
 import type { HouseParams } from '../model/house'
 import { buildPlan } from '../engine/plan'
 import { downloadDxf } from '../engine/dxf'
-import { autoProgram, buildFloorPlan } from '../engine/floorplan'
+import { autoProgram, buildFloorPlan, roomClear } from '../engine/floorplan'
 import type { RoomType } from '../engine/floorplan'
 import { FloorPlanSvg } from './FloorPlan'
 import { auditPlan, issueText } from '../engine/planAudit'
@@ -77,8 +77,11 @@ export function Plan2D() {
     ensuiteLabel: lang === 'hy' ? 'Անձնական ս/հ' : lang === 'en' ? 'Ensuite' : 'Мастер с/у',
   }
   // room-by-room areas for the active floor (same layout the plan renders)
-  const planRooms = buildFloorPlan(house, activeFloor, custom, planLabels).rooms
-  const usableFloorArea = planRooms.filter((r) => !r.open).reduce((a, r) => a + r.w * r.h, 0)
+  // areas clear of the partitions; the void is shown in full (it is the slab opening)
+  const floorPlan = buildFloorPlan(house, activeFloor, custom, planLabels)
+  const planRooms = floorPlan.rooms
+  const roomArea = (r: (typeof planRooms)[number]) => (r.open ? r.w * r.h : roomClear(r, floorPlan).area)
+  const usableFloorArea = planRooms.filter((r) => !r.open).reduce((a, r) => a + roomArea(r), 0)
 
   return (
     <div className="panel">
@@ -116,7 +119,7 @@ export function Plan2D() {
                 {r.label}
                 {r.open && <span style={{ fontSize: '0.72rem', color: 'var(--color-ink-soft)' }}> · {lang === 'hy' ? 'չի հաշվվում' : lang === 'en' ? 'not counted' : 'вне площади'}</span>}
               </span>
-              <span className="num" style={{ color: r.open ? 'var(--color-ink-soft)' : undefined }}>{(r.w * r.h).toFixed(1)} м²</span>
+              <span className="num" style={{ color: r.open ? 'var(--color-ink-soft)' : undefined }}>{roomArea(r).toFixed(1)} м²</span>
             </div>
           ))}
           <div className="spec-row" style={{ fontWeight: 700, borderBottom: 'none' }}>

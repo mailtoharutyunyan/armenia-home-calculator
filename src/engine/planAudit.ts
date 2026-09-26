@@ -10,7 +10,7 @@
 // проверка, а не только точечная правка. Иначе дефект вернётся.
 
 import type { HouseParams } from '../model/house'
-import { buildFloorPlan } from './floorplan'
+import { buildFloorPlan, roomClear } from './floorplan'
 import type { Door, FloorPlan, Room } from './floorplan'
 
 export type AuditLevel = 'error' | 'warning' | 'info'
@@ -80,7 +80,6 @@ const DIM = {
   gasAirGap: 0.02, // м², приток воздуха снизу двери/перегородки
 }
 
-const area = (r: Room) => r.w * r.h
 const ratio = (r: Room) => (Math.min(r.w, r.h) > 0 ? Math.max(r.w, r.h) / Math.min(r.w, r.h) : Infinity)
 
 // Дверь лежит на общей стене двух комнат?
@@ -161,8 +160,10 @@ function auditFloor(p: HouseParams, floor: number, issues: PlanIssue[]) {
     if (NEEDS_LIGHT.has(r.type) && ratio(r) > limit) {
       push('warning', 'proportion', `«${r.label}» ${r.w.toFixed(1)}×${r.h.toFixed(1)} м — 1:${ratio(r).toFixed(2)}. Слишком вытянуто: мебель встаёт только вдоль одной стены.`, `«${r.label}» ${r.w.toFixed(1)}×${r.h.toFixed(1)} մ — 1:${ratio(r).toFixed(2)}։ Չափազանց ձգված է՝ կահույքը տեղավորվում է միայն մեկ պատի երկայնքով։`, `“${r.label}” ${r.w.toFixed(1)}×${r.h.toFixed(1)} m — 1:${ratio(r).toFixed(2)}. Too elongated: furniture only fits along one wall.`)
     }
-    if (r.type === 'bedroom' && area(r) < DIM.roomMinArea) {
-      push('error', 'min-area', `«${r.label}» ${area(r).toFixed(1)} м² — меньше нормативных ${DIM.roomMinArea} м² для жилой комнаты.`, `«${r.label}» ${area(r).toFixed(1)} մ² — պակաս է բնակելի սենյակի ${DIM.roomMinArea} մ² նորմայից։`, `“${r.label}” ${area(r).toFixed(1)} m² — below the ${DIM.roomMinArea} m² minimum for a habitable room.`)
+    // areas are checked clear of the partitions, as the norm measures them
+    const clear = roomClear(r, plan)
+    if (r.type === 'bedroom' && clear.area < DIM.roomMinArea) {
+      push('error', 'min-area', `«${r.label}» ${clear.area.toFixed(1)} м² — меньше нормативных ${DIM.roomMinArea} м² для жилой комнаты.`, `«${r.label}» ${clear.area.toFixed(1)} մ² — պակաս է բնակելի սենյակի ${DIM.roomMinArea} մ² նորմայից։`, `“${r.label}” ${clear.area.toFixed(1)} m² — below the ${DIM.roomMinArea} m² minimum for a habitable room.`)
     }
     if (r.type === 'corridor' && Math.min(r.w, r.h) < DIM.corridorMinWidth && Math.min(r.w, r.h) > 0) {
       push('warning', 'corridor-width', `«${r.label}» шириной ${Math.min(r.w, r.h).toFixed(2)} м — уже нормативных ${DIM.corridorMinWidth} м.`, `«${r.label}» ${Math.min(r.w, r.h).toFixed(2)} մ լայնությամբ — նեղ է ${DIM.corridorMinWidth} մ նորմայից։`, `“${r.label}” is ${Math.min(r.w, r.h).toFixed(2)} m wide — narrower than the ${DIM.corridorMinWidth} m minimum.`)
@@ -170,11 +171,24 @@ function auditFloor(p: HouseParams, floor: number, issues: PlanIssue[]) {
     // Санузел: и площадь, и ширина. Узкий длинный санузел непригоден, даже
     // если площадь формально набирается.
     if (r.type === 'bath') {
-      const wmin = Math.min(r.w, r.h)
-      if (area(r) < DIM.wcMinArea || wmin < DIM.wcMinWidth) {
-        push('error', 'bath-too-small', `«${r.label}» ${r.w.toFixed(1)}×${r.h.toFixed(1)} м (${area(r).toFixed(1)} м²) — меньше минимума для уборной: ${DIM.wcMinArea} м² и ширина ${DIM.wcMinWidth} м.`, `«${r.label}» ${area(r).toFixed(1)} մ² — պակաս է զուգարանի նվազագույնից՝ ${DIM.wcMinArea} մ² և ${DIM.wcMinWidth} մ լայնություն։`, `“${r.label}” ${area(r).toFixed(1)} m² — below the WC minimum of ${DIM.wcMinArea} m² and ${DIM.wcMinWidth} m width.`)
-      } else if (area(r) < DIM.bathMinArea || wmin < DIM.bathMinWidth) {
-        push('warning', 'bath-narrow', `«${r.label}» ${area(r).toFixed(1)} м², ширина ${wmin.toFixed(2)} м — хватает только на уборную. Ванная требует ${DIM.bathMinArea} м² и ширины ${DIM.bathMinWidth} м.`, `«${r.label}» ${area(r).toFixed(1)} մ² — բավարար է միայն զուգարանի համար։ Լոգարանը պահանջում է ${DIM.bathMinArea} մ²։`, `“${r.label}” ${area(r).toFixed(1)} m² fits a WC only. A bathroom needs ${DIM.bathMinArea} m² and ${DIM.bathMinWidth} m width.`)
+      const wmin = Math.min(clear.w, clear.h)
+      if (clear.area < DIM.wcMinArea || wmin < DIM.wcMinWidth) {
+        push('error', 'bath-too-small', `«${r.label}» ${clear.w.toFixed(1)}×${clear.h.toFixed(1)} м (${clear.area.toFixed(1)} м²) — меньше минимума для уборной: ${DIM.wcMinArea} м² и ширина ${DIM.wcMinWidth} м.`, `«${r.label}» ${clear.area.toFixed(1)} մ² — պակաս է զուգարանի նվազագույնից՝ ${DIM.wcMinArea} մ² և ${DIM.wcMinWidth} մ լայնություն։`, `“${r.label}” ${clear.area.toFixed(1)} m² — below the WC minimum of ${DIM.wcMinArea} m² and ${DIM.wcMinWidth} m width.`)
+      } else if (clear.area < DIM.bathMinArea || wmin < DIM.bathMinWidth) {
+        push('warning', 'bath-narrow', `«${r.label}» ${clear.area.toFixed(1)} м², ширина ${wmin.toFixed(2)} м — хватает только на уборную. Ванная требует ${DIM.bathMinArea} м² и ширины ${DIM.bathMinWidth} м.`, `«${r.label}» ${clear.area.toFixed(1)} մ² — բավարար է միայն զուգարանի համար։ Լոգարանը պահանջում է ${DIM.bathMinArea} մ²։`, `“${r.label}” ${clear.area.toFixed(1)} m² fits a WC only. A bathroom needs ${DIM.bathMinArea} m² and ${DIM.bathMinWidth} m width.`)
+      }
+    }
+  }
+
+  // --- санузел не открывается в кухню и жилые комнаты ---
+  // Entry to a WC straight from a kitchen or a habitable room is not allowed;
+  // a bedroom's own ensuite is the exception, so bedrooms are not in this set.
+  const livingOrFood: ReadonlySet<Room['type']> = new Set(['kitchen', 'dining', 'living', 'living_kitchen'])
+  for (const d of plan.doors) {
+    for (const wet of rooms.filter((r) => r.type === 'bath')) {
+      const other = rooms.find((o) => o !== wet && !o.open && livingOrFood.has(o.type) && doorJoins(d, wet, o))
+      if (other) {
+        push('error', 'bath-door-living', `«${wet.label}» открывается в «${other.label}». Вход в санузел из кухни или жилой комнаты не допускается — только из прихожей, коридора или, для личного санузла, из спальни.`, `«${wet.label}»-ը բացվում է «${other.label}»-ի մեջ։ Սանհանգույց մուտքը խոհանոցից կամ բնակելի սենյակից չի թույլատրվում։`, `“${wet.label}” opens into “${other.label}”. A WC must not open straight into a kitchen or a habitable room — only from a hall, a corridor or, for an ensuite, a bedroom.`)
       }
     }
   }
@@ -206,7 +220,7 @@ function auditFloor(p: HouseParams, floor: number, issues: PlanIssue[]) {
       (r) => !r.open && (r.type === 'kitchen' || r.type === 'dining' || r.type === 'living_kitchen'),
     )
     for (const k of kitchens) {
-      const vol = area(k) * p.floorHeight
+      const vol = roomClear(k, plan).area * p.floorHeight
       const need = DIM.gasKitchenVolPerBurner[DIM.gasBurnersAssumed] ?? 15
       if (p.floorHeight < DIM.gasKitchenMinHeight) {
         push('error', 'gas-height', `«${k.label}»: высота ${p.floorHeight} м ниже ${DIM.gasKitchenMinHeight} м — для газифицированной кухни недопустимо.`, `«${k.label}»՝ բարձրությունը ${p.floorHeight} մ ցածր է ${DIM.gasKitchenMinHeight} մ-ից — գազիֆիկացված խոհանոցի համար անթույլատրելի է։`, `“${k.label}”: height ${p.floorHeight} m is below ${DIM.gasKitchenMinHeight} m — not allowed for a gas kitchen.`)

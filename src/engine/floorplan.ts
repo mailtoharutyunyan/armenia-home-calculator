@@ -34,7 +34,8 @@ export interface Door {
   start: number // opening start along the wall
   w: number // opening width
   swing: 1 | -1 // direction the leaf opens
-  kind: 'entrance' | 'interior'
+  // 'opening': a doorway with no leaf, between two circulation spaces
+  kind: 'entrance' | 'interior' | 'opening'
 }
 
 export interface FloorPlan {
@@ -44,6 +45,7 @@ export interface FloorPlan {
   L: number
   W: number
   wall: number
+  partition: number // interior partition thickness, m
   rooms: Room[]
   windows: { x: number; y: number; len: number; side: 'top' | 'bottom' | 'left' | 'right' }[]
   doors: Door[]
@@ -124,13 +126,18 @@ const PLAN = {
   // в полосу 8×3 с соотношением 1:2.8.
   kitchenMinDepth: 3.6, // м
   kitchenMaxRatio: 2.4, // кухня-столовая линейная по природе, но не бесконечная
+  // Service column beside the hall: entry, WC, a two-flight stair (2 × 1.0 m +
+  // gap) and a master bedroom at least 3 m wide still fit into 3.3 m.
+  minServiceColumn: 3.3, // м
+  galleryWidth: 1.4, // м, gallery along the void: ≥ 1.2 m clear of the partition
+  minRoomSide: 2.7, // м, shortest side of a bedroom or study
 }
 
 // Прямоугольник двусветного объёма. Считается ОДИН раз и используется обоими
 // этажами: на первом это зал, на втором — проём в перекрытии. Раньше этаж 1 и
 // этаж 2 строились независимо, и проём наверху не совпадал с залом внизу —
 // по чертежу невозможно было понять, правильно ли это.
-function voidRect(inner: Rect, hallArea: number): Rect {
+function voidRect(inner: Rect, hallArea: number, partition = 0): Rect {
   // Зал строится прямоугольником нормальных пропорций и ставится в передний
   // угол — окнами на улицу. Раньше это была полоса во всю глубину дома
   // (6.3 × 12.6), из-за чего комната была длинной и неосвещаемой в глубине.
@@ -142,6 +149,20 @@ function voidRect(inner: Rect, hallArea: number): Rect {
   if (inner.w <= 0 || usableH <= 0.8) return { x: inner.x, y: inner.y, w: 0, h: 0 }
   const area = Math.min(hallArea, inner.w * inner.h * 0.62)
   if (area <= 0) return { x: inner.x, y: inner.y, w: 0, h: 0 }
+  // Exact proportions first, in either orientation: 80 m² is a clear 8 × 10 or
+  // 10 × 8 room, the rectangle running along the partition axes (half a
+  // partition wider on its two inner sides). It must leave the kitchen its
+  // depth behind it and a service column that still holds the stair.
+  const half = partition / 2
+  const longSide = Math.sqrt(area / PLAN.hallAspect)
+  const shortSide = area / longSide
+  for (const [cw, ch] of [[shortSide, longSide], [longSide, shortSide]]) {
+    const aw = cw + half
+    const ah = ch + half
+    if (aw <= inner.w - PLAN.minServiceColumn && ah <= usableH) {
+      return { x: inner.x, y: inner.y + inner.h - ah, w: aw, h: ah }
+    }
+  }
   let w = Math.sqrt(area * PLAN.hallAspect)
   let h = area / w
   // не вылезаем за габарит, оставляя место под служебную полосу
@@ -158,6 +179,20 @@ function voidRect(inner: Rect, hallArea: number): Rect {
   return { x: inner.x, y: inner.y + inner.h - h, w, h }
 }
 
+// Clear size of a room, as norms and plans state it. Rooms tile the space
+// inside the external walls along partition centre lines, so each side shared
+// with another room gives up half a partition; external walls are already
+// outside the tiling.
+export function roomClear(r: Room, plan: Pick<FloorPlan, 'L' | 'W' | 'wall' | 'partition'>): { w: number; h: number; area: number } {
+  const e = 1e-6
+  const half = plan.partition / 2
+  const sidesX = (r.x > plan.wall + e ? 1 : 0) + (r.x + r.w < plan.L - plan.wall - e ? 1 : 0)
+  const sidesY = (r.y > plan.wall + e ? 1 : 0) + (r.y + r.h < plan.W - plan.wall - e ? 1 : 0)
+  const w = Math.max(0, r.w - half * sidesX)
+  const h = Math.max(0, r.h - half * sidesY)
+  return { w, h, area: w * h }
+}
+
 export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], labels: PlanLabels = {}): FloorPlan {
   const voidLabel = labels.voidLabel ?? 'Второй свет'
   const corridorLabel = labels.corridorLabel ?? 'Коридор'
@@ -172,6 +207,8 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
   // house and hid rooms below the 8 m² minimum.
   const extWall = p.eng?.extWall != null && p.eng.extWall > 0 ? p.eng.extWall / 100 : p.wallThickness
   const wall = Math.max(0.1, Math.min(extWall, (Math.min(L, W) - 2) / 2))
+  const partition =
+    p.eng?.partitionThickness != null && p.eng.partitionThickness > 0 ? p.eng.partitionThickness / 100 : C.partitionThickness
   const inset = wall
   const inner = { x: inset, y: inset, w: L - 2 * inset, h: W - 2 * inset }
 
@@ -187,7 +224,7 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
   if (floorIndex === 1 && p.doubleHeightHall && p.hallArea > 0) {
     // Проём — ТОТ ЖЕ прямоугольник, что зал на первом этаже. Над кухней и над
     // служебной полосой перекрытие есть, поэтому проём не на всю глубину.
-    const vr = voidRect(inner, p.hallArea)
+    const vr = voidRect(inner, p.hallArea, partition)
     if (vr.w >= 0.8 && vr.h >= 0.8) {
     openVoid = { x: vr.x, y: vr.y, w: vr.w, h: vr.h, type: 'living_kitchen', label: voidLabel, open: true }
 
@@ -207,7 +244,7 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
   // что и проём наверху, — этажи совпадают по вертикали.
   let doubleHall: Room | null = null
   if (floorIndex === 0 && p.doubleHeightHall && p.floors >= 2 && p.hallArea > 0) {
-    const vr = voidRect(inner, p.hallArea)
+    const vr = voidRect(inner, p.hallArea, partition)
     // Вырожденный прямоугольник — дом слишком мал: зал не строим,
     // этаж планируется обычной схемой.
     if (vr.w < 0.8 || vr.h < 0.8) {
@@ -301,6 +338,7 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
     L,
     W,
     wall,
+    partition,
     rooms,
     windows: facadeWindows,
     doors,
@@ -350,13 +388,36 @@ function buildDoors(rooms: Room[], inset: number, L: number, W: number, withEntr
     : t === 'living' || t === 'living_kitchen' || t === 'dining' || t === 'kitchen' ? 1
     : t === 'bedroom' || t === 'office' ? 2
     : 3 // bath, wardrobe — тупики, транзита через них нет
+  // A bathroom or wardrobe never opens into a kitchen or a living room: entry
+  // to a WC from a kitchen or habitable room is not allowed, a bedroom's own
+  // ensuite being the exception. Such a door is only a last resort.
+  const LIVING = new Set<Room['type']>(['kitchen', 'dining', 'living', 'living_kitchen'])
+  const service = (t: Room['type']) => t === 'bath' || t === 'wardrobe'
+  const badDoor = (a: Room, b: Room) => (service(a.type) && LIVING.has(b.type)) || (service(b.type) && LIVING.has(a.type))
+  // Which way the leaf opens, as on an architect's plan: into the habitable
+  // room, out of a bath or wardrobe (a WC door opens outwards), and no leaf at
+  // all between hall, corridor and stair, which are joined by open doorways.
+  const circulation = (t: Room['type']) => t === 'hall' || t === 'corridor' || t === 'stair'
+  const hang = (d: Door, a: Room, b: Room): Door => {
+    if (circulation(a.type) && circulation(b.type)) return { ...d, kind: 'opening' }
+    const plus = d.orient === 'v' ? (Math.abs(a.x - d.pos) < eps ? a : b) : Math.abs(a.y - d.pos) < eps ? a : b
+    const minus = plus === a ? b : a
+    const into = service(plus.type)
+      ? minus
+      : service(minus.type)
+        ? plus
+        : circulation(plus.type)
+          ? minus
+          : plus
+    return { ...d, swing: into === plus ? 1 : -1 }
+  }
   const connected0 = rooms.findIndex((r) => rank(r.type) === 0)
   connected.clear()
   connected.add(connected0 >= 0 ? connected0 : 0)
 
   let guard = 0
   while (connected.size < rooms.length && guard++ < rooms.length * rooms.length) {
-    let best: { d: Door; j: number; score: number } | null = null
+    let best: { d: Door; i: number; j: number; score: number } | null = null
     for (let i = 0; i < rooms.length; i++) {
       if (!connected.has(i)) continue
       if (rank(rooms[i].type) === 3) continue // тупик — от него не ветвимся
@@ -364,12 +425,12 @@ function buildDoors(rooms: Room[], inset: number, L: number, W: number, withEntr
         if (connected.has(j)) continue
         const d = sharedWall(rooms[i], rooms[j])
         if (!d) continue
-        const score = rank(rooms[i].type) * 10 + rank(rooms[j].type)
-        if (!best || score < best.score) best = { d, j, score }
+        const score = rank(rooms[i].type) * 10 + rank(rooms[j].type) + (badDoor(rooms[i], rooms[j]) ? 100 : 0)
+        if (!best || score < best.score) best = { d, i, j, score }
       }
     }
     if (!best) break
-    doors.push(best.d)
+    doors.push(hang(best.d, rooms[best.i], rooms[best.j]))
     connected.add(best.j)
   }
 
@@ -507,8 +568,10 @@ function serviceColumn(inner: Rect, hall: Rect) {
   const rx = hall.x + hall.w
   const rw = inner.x + inner.w - rx
   const bottom = inner.y + inner.h
-  const entryH = Math.min(2.4, inner.h * 0.18)
-  const wcH = Math.min(2.0, (inner.h - entryH) * 0.22)
+  // A 2 m deep entry and a 1.6 m guest WC are enough; the depth they give up
+  // goes to the master bedroom at the back of the column.
+  const entryH = Math.min(2.0, inner.h * 0.18)
+  const wcH = Math.min(1.6, (inner.h - entryH) * 0.22)
   const stairH = Math.min(3.2, (inner.h - entryH - wcH) * 0.42)
   const stairY = bottom - entryH - wcH - stairH
   return { rx, rw, entryH, wcH, stairH, stairY, topH: stairY - inner.y }
@@ -550,7 +613,17 @@ function layoutGroundWithHall(
 
   out.push({ x: rx, y: bottom - col.entryH, w: rw, h: col.entryH, type: 'hall', label: opts.hall })
   if (bath) {
-    out.push({ x: rx, y: bottom - col.entryH - col.wcH, w: rw, h: col.wcH, type: 'bath', label: bath.label })
+    // A corridor beside the guest WC links the entry straight to the stair, so
+    // the stair and the bedroom are not reached through the living room. The
+    // WC keeps the external wall and its window.
+    const wcY = bottom - col.entryH - col.wcH
+    const corrW = PLAN.minCorridor + 0.1 // 1.2 m clear between two partitions
+    if (rw - corrW >= 1.4) {
+      out.push({ x: rx, y: wcY, w: corrW, h: col.wcH, type: 'corridor', label: opts.corridor })
+      out.push({ x: rx + corrW, y: wcY, w: rw - corrW, h: col.wcH, type: 'bath', label: bath.label })
+    } else {
+      out.push({ x: rx, y: wcY, w: rw, h: col.wcH, type: 'bath', label: bath.label })
+    }
   }
   if (stair) {
     out.push({ x: rx, y: col.stairY, w: rw, h: col.stairH, type: 'stair', label: stair.label })
@@ -581,6 +654,59 @@ function layoutGroundWithHall(
 //   │                   ├────────┤
 //   │                   │Лестница│   ← строго над лестницей 1 этажа
 //   └───────────────────┴────────┘
+// Upper floor when the service column is too narrow for rooms beside a
+// corridor (a 10 m wide hall leaves ~3.4 m): the rooms stand over the kitchen
+// behind a gallery along the void, the usual scheme for a double-height hall.
+//
+//   ┌──────────┬──────────┬────────┐
+//   │ Детская 1│ Кабинет  │ Санузел│  ← back facade, over the kitchen
+//   ├──────────┴──────────┼────────┤
+//   │ Галерея, вид в зал  │  Холл  │
+//   ├─────────────────────┼────────┤
+//   │                     │Лестница│  ← over the ground-floor stair
+//   │   Второй свет       ├────────┤
+//   │                     │Детская2│  ← front facade
+//   └─────────────────────┴────────┘
+function layoutUpperGallery(
+  inner: Rect,
+  voidR: Rect,
+  specs: Spec[],
+  out: Room[],
+  opts: { corridor: string },
+): boolean {
+  const col = serviceColumn(inner, voidR)
+  const { rx, rw } = col
+  // a room still fits beside a corridor in the column: keep the classic scheme
+  if (rw - PLAN.minCorridor >= PLAN.minRoomSide) return false
+  const stair = specs.find((s) => s.type === 'stair')
+  const bath = specs.find((s) => s.type === 'bath')
+  const office = specs.find((s) => s.type === 'office')
+  const beds = specs.filter((s) => s.type === 'bedroom')
+  const galleryY = voidR.y - PLAN.galleryWidth
+  const backH = galleryY - inner.y // depth of the rooms behind the gallery
+  const hallH = col.stairY - galleryY // column hall between the gallery and the stair
+  const frontY = col.stairY + col.stairH
+  const frontH = inner.y + inner.h - frontY
+  const frontBed =
+    beds.length > 0 && Math.min(rw, frontH) >= PLAN.minRoomSide && rw * frontH >= C.norms.minRoomArea * 1.05
+      ? beds[beds.length - 1]
+      : null
+  const backRooms = [...(frontBed ? beds.slice(0, -1) : beds), ...(office ? [office] : [])]
+  if (!stair || !bath || !frontBed || backRooms.length === 0) return false
+  if (backH < PLAN.minRoomSide || hallH < PLAN.minCorridor) return false
+  const bw = voidR.w / backRooms.length
+  if (bw < PLAN.minRoomSide || Math.max(bw, backH) / Math.min(bw, backH) > 2) return false
+
+  out.push({ x: rx, y: col.stairY, w: rw, h: col.stairH, type: 'stair', label: stair.label })
+  out.push({ x: inner.x, y: galleryY, w: voidR.w, h: PLAN.galleryWidth, type: 'corridor', label: opts.corridor, gallery: true })
+  out.push({ x: rx, y: galleryY, w: rw, h: hallH, type: 'corridor', label: opts.corridor })
+  backRooms.forEach((s, i) => out.push({ x: inner.x + i * bw, y: inner.y, w: bw, h: backH, type: s.type, label: s.label }))
+  // the bathroom sits over the ground-floor ensuite: wet rooms stacked, short risers
+  out.push({ x: rx, y: inner.y, w: rw, h: backH, type: 'bath', label: bath.label })
+  out.push({ x: rx, y: frontY, w: rw, h: frontH, type: 'bedroom', label: frontBed.label })
+  return true
+}
+
 function layoutUpperWithVoid(
   inner: Rect,
   voidR: Rect,
@@ -588,6 +714,7 @@ function layoutUpperWithVoid(
   out: Room[],
   opts: { corridor: string; office: string },
 ) {
+  if (layoutUpperGallery(inner, voidR, specs, out, opts)) return
   const col = serviceColumn(inner, voidR)
   const { rx, rw } = col
   const stair = specs.find((s) => s.type === 'stair')

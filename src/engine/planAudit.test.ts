@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest'
 import { DEFAULT_HOUSE } from '../model/house'
 import type { HouseParams } from '../model/house'
 import { auditPlan } from './planAudit'
-import { buildFloorPlan } from './floorplan'
+import { buildFloorPlan, roomClear } from './floorplan'
 
 const h = (patch: Partial<HouseParams> = {}): HouseParams => ({ ...DEFAULT_HOUSE, ...patch })
 const errors = (p: HouseParams) => auditPlan(p).filter((i) => i.level === 'error')
@@ -40,7 +40,8 @@ describe('планировка дома по умолчанию', () => {
     expect(hall.h).toBeCloseTo(hole.h, 2)
     expect(hall.x).toBeCloseTo(hole.x, 2)
     expect(hall.y).toBeCloseTo(hole.y, 2)
-    expect(hall.w * hall.h).toBeCloseTo(DEFAULT_HOUSE.hallArea, 0)
+    // the hall area is the clear room area, the same 80 m² the estimate takes out of the slab
+    expect(roomClear(hall, buildFloorPlan(h(), 0)).area).toBeCloseTo(DEFAULT_HOUSE.hallArea, 6)
   })
 
   it('на втором этаже есть коридор — комнаты не проходные', () => {
@@ -111,9 +112,19 @@ describe('высота потолка и глубина кухни — разн�
   })
 
   it('двусветный зал близок к квадрату при заданной площади', () => {
-    const hall = buildFloorPlan(h(), 0).rooms.find((r) => r.doubleHeight)!
-    expect(hall.w * hall.h).toBeCloseTo(DEFAULT_HOUSE.hallArea, 0)
+    const plan = buildFloorPlan(h(), 0)
+    const hall = plan.rooms.find((r) => r.doubleHeight)!
+    expect(roomClear(hall, plan).area).toBeCloseTo(DEFAULT_HOUSE.hallArea, 6)
     expect(Math.max(hall.w, hall.h) / Math.min(hall.w, hall.h)).toBeLessThan(1.5)
+  })
+
+  it('80 m² hall of the default house is a clear 10 × 8 m room', () => {
+    // 8 × 10 would need 10 m + a 3.6 m kitchen of depth; 12.4 m is inside the
+    // walls, so the hall turns: 10 m along the 14 m facade, 8 m deep
+    const plan = buildFloorPlan(h(), 0)
+    const c = roomClear(plan.rooms.find((r) => r.doubleHeight)!, plan)
+    expect(c.w).toBeCloseTo(10, 6)
+    expect(c.h).toBeCloseTo(8, 6)
   })
 })
 
@@ -169,5 +180,50 @@ describe('the plan sits inside the real external wall', () => {
     const beds = buildFloorPlan(h(), 1).rooms.filter((r) => r.type === 'bedroom')
     expect(beds.length).toBe(2)
     for (const b of beds) expect(b.w * b.h, b.label).toBeGreaterThanOrEqual(8)
+  })
+})
+
+describe('doors hang the way an architect draws them', () => {
+  const plans = [0, 1].map((f) => buildFloorPlan(h(), f))
+  const roomsOf = (plan: ReturnType<typeof buildFloorPlan>, d: (typeof plan.doors)[number]) => {
+    const mid = d.start + d.w / 2
+    const onWall = (r: (typeof plan.rooms)[number]) =>
+      d.orient === 'v'
+        ? (Math.abs(r.x - d.pos) < 0.02 || Math.abs(r.x + r.w - d.pos) < 0.02) && mid > r.y && mid < r.y + r.h
+        : (Math.abs(r.y - d.pos) < 0.02 || Math.abs(r.y + r.h - d.pos) < 0.02) && mid > r.x && mid < r.x + r.w
+    return plan.rooms.filter((r) => !r.open && onWall(r))
+  }
+  const circulation = new Set(['hall', 'corridor', 'stair'])
+
+  it('no bathroom opens into the kitchen or the living room', () => {
+    expect(auditPlan(h()).filter((i) => i.rule === 'bath-door-living')).toEqual([])
+    for (const plan of plans) {
+      for (const d of plan.doors.filter((x) => x.kind !== 'entrance')) {
+        const types = roomsOf(plan, d).map((r) => r.type)
+        if (types.includes('bath')) expect(types.some((t) => ['kitchen', 'dining', 'living', 'living_kitchen'].includes(t))).toBe(false)
+      }
+    }
+  })
+
+  it('hall, corridor and stair are joined by open doorways, not leaves', () => {
+    for (const plan of plans) {
+      for (const d of plan.doors.filter((x) => x.kind !== 'entrance')) {
+        const rs = roomsOf(plan, d)
+        const bothCirculation = rs.length === 2 && rs.every((r) => circulation.has(r.type))
+        expect(d.kind === 'opening', rs.map((r) => r.label).join('/')).toBe(bothCirculation)
+      }
+    }
+  })
+
+  it('leaves open into bedrooms and out of bathrooms', () => {
+    for (const plan of plans) {
+      for (const d of plan.doors.filter((x) => x.kind === 'interior')) {
+        const rs = roomsOf(plan, d)
+        const plus = rs.find((r) => (d.orient === 'v' ? Math.abs(r.x - d.pos) < 0.02 : Math.abs(r.y - d.pos) < 0.02))!
+        const into = d.swing > 0 ? plus : rs.find((r) => r !== plus)!
+        if (rs.some((r) => r.type === 'bath')) expect(into.type, into.label).not.toBe('bath')
+        else if (rs.some((r) => r.type === 'bedroom')) expect(into.type, into.label).toBe('bedroom')
+      }
+    }
   })
 })

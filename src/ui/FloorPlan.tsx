@@ -1,6 +1,6 @@
 import type { HouseParams } from '../model/house'
 import type { Door, Room, Spec } from '../engine/floorplan'
-import { buildFloorPlan } from '../engine/floorplan'
+import { buildFloorPlan, roomClear } from '../engine/floorplan'
 import { useProject } from '../store/useProject'
 
 type Pal = { sheet: string; wall: string; room: string; furn: string; txt: string; grid: string; hatch: string; voidFill: string; furnFill: string }
@@ -21,6 +21,12 @@ export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: Hou
   const hallCeil = plan.hallCeilingH ?? ceil
   const pad = 1.6
   const wc = wall * 1.15 // opening cover width
+  // room sizes are labelled clear of the partitions, as on an architect's plan;
+  // the double-height void is the slab opening and keeps its full size
+  const clearLabel = (r: Room) => {
+    const c = r.open ? { w: r.w, h: r.h, area: r.w * r.h } : roomClear(r, plan)
+    return `${c.w.toFixed(1)}×${c.h.toFixed(1)} = ${c.area.toFixed(1)} м²`
+  }
 
   if (L <= 0 || W <= 0) return null
 
@@ -131,7 +137,7 @@ export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: Hou
                     strokeLinejoin="round"
                     fontFamily="Inter, sans-serif"
                   >
-                    {r.w.toFixed(1)}×{r.h.toFixed(1)} = {(r.w * r.h).toFixed(1)} м²
+                    {clearLabel(r)}
                     {/* Высота потолка: у двусветного зала она вдвое больше,
                         и на плане это иначе никак не видно. В тесных комнатах
                         высоту не пишем — строка не помещается. */}
@@ -183,6 +189,14 @@ export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: Hou
 
 function DoorSymbol({ door, wc }: { door: Door; wc: number }) {
   const s = { stroke: PAL.wall, strokeWidth: 0.038, fill: 'none' } as const
+  // an open doorway: the cut in the wall, no leaf and no swing
+  if (door.kind === 'opening') {
+    return door.orient === 'v' ? (
+      <rect x={door.pos - wc / 2} y={door.start} width={wc} height={door.w} fill={PAL.sheet} />
+    ) : (
+      <rect x={door.start} y={door.pos - wc / 2} width={door.w} height={wc} fill={PAL.sheet} />
+    )
+  }
   if (door.orient === 'v') {
     const x = door.pos
     const y0 = door.start
