@@ -163,6 +163,7 @@ describe('баг C — внутренние стены не считаются �
     // 2 стены × sqrt(182) × 3 м × 2 этажа × 0.1 м
     const expected = 2 * Math.sqrt(182) * 3 * 2 * C.partitionThickness
     expect(qty(house(), 'aerated_block', 'partitions')).toBeCloseTo(expected, 6)
+    expect(qty(house(), 'glue_aerated', 'partitions')).toBeCloseTo(expected * C.glueShare, 6)
   })
 
   it('в несущей кладке внутренние несущие стены сохраняются', () => {
@@ -304,7 +305,8 @@ describe('панель инженера — переопределения ре�
     //   82 942 699  VAT is opt-in: the default estimate is without VAT
     //   84 673 234  10 cm slab on ground under the ground floor (strip foundation)
     //   83 716 374  frame infill excludes the columns and beams in the wall plane
-    expect(Math.round(a)).toBe(83716374)
+    //   83 774 872  glue for the aerated-block partitions
+    expect(Math.round(a)).toBe(83774872)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {

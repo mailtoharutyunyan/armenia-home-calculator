@@ -372,6 +372,8 @@ export function computeQuantities(p: HouseParams): Quantities {
   const partitionWalls = Math.max(0, p.roomsPerFloor - 1) + (p.kitchenLivingCombined ? 0 : 1)
   const partitionArea = partitionWalls * Math.sqrt(A) * p.floorHeight * p.floors
   add('aerated_block', 'partitions', 'turnkey', partitionArea * partitionT)
+  // aerated blocks are laid on thin-joint glue, as in the walls
+  add('glue_aerated', 'partitions', 'turnkey', partitionArea * partitionT * glueShare)
 
   // Штукатурка: внутренняя грань наружных стен (одна сторона) + внутренние
   // несущие стены (две стороны) + перегородки (две стороны) + потолки.
