@@ -1,6 +1,7 @@
 import type { HouseParams, InfillMaterial } from '../model/house'
 import { COEFF as C } from '../data/coefficients'
 import { REGIONS } from '../data/regions'
+import { simplified41Reasons } from './norms'
 
 export type Stage = 'act' | 'turnkey'
 
@@ -86,6 +87,9 @@ export function computeQuantities(p: HouseParams): Quantities {
   const stripH = cm(e.stripHeight) ?? C.stripHeight
   const blindingT = cm(e.blinding) ?? C.blindingThickness
   const floorSlabT = cm(e.slab) ?? C.floorSlabThickness
+  // A monolithic slab is poured over the beams, columns and walls it rests on;
+  // that shared depth belongs to the slab (ГЭСН 81-02-06, 2.2-2.4).
+  const slabOverBeams = p.floorSlab === 'monolith' ? floorSlabT : 0
   const wallT = cm(e.extWall) ?? p.wallThickness
   const basementWallT = cm(e.basementWall) ?? C.basementWallThickness
   const colSize = cm(e.columnSize) ?? C.columnSection.w
@@ -164,10 +168,15 @@ export function computeQuantities(p: HouseParams): Quantities {
   // structural concrete + rebar accumulators, per estimate section
   const concreteBySection: Partial<Record<SectionId, number>> = {}
   const rebarBySection: Partial<Record<SectionId, number>> = {}
-  const addStruct = (section: SectionId, vol: number, rebarPerM3: number) => {
-    if (vol <= 0) return
-    concreteBySection[section] = (concreteBySection[section] ?? 0) + vol
-    rebarBySection[section] = (rebarBySection[section] ?? 0) + vol * rebarPerM3
+  const formedBySection: Partial<Record<SectionId, number>> = {}
+  // `vol` is the concrete actually poured. The rebar (kg/m³) and formwork
+  // (m²/m³) ratios were set on an element's full section, so an element whose
+  // node is poured with its neighbour passes that full volume as `gross`.
+  const addStruct = (section: SectionId, vol: number, rebarPerM3: number, gross = vol) => {
+    if (gross <= 0) return
+    concreteBySection[section] = (concreteBySection[section] ?? 0) + Math.max(0, vol)
+    formedBySection[section] = (formedBySection[section] ?? 0) + gross
+    rebarBySection[section] = (rebarBySection[section] ?? 0) + gross * rebarPerM3
   }
   // Foundation concrete cast onto or into the ground (slabs on ground, bored
   // piles) is formed only at slab edges, not by the per-m³ ratio below.
@@ -199,19 +208,23 @@ export function computeQuantities(p: HouseParams): Quantities {
     ? P * basementWorkW * (p.basementDepth + 0.3)
     : excavationVol * backfillK
   add('backfill', 'earthworks', 'act', backfillVol)
+  // The slab on ground is poured between the strips (grillage, column pads),
+  // so the area they already take is neither concreted nor bedded twice.
+  const underGroundSlab =
+    p.foundation === 'strip' || p.foundation === 'pile'
+      ? stripLen * stripW
+      : p.foundation === 'column'
+        ? (stripLen / axisStep) * colSize * colSize
+        : 0
+  const groundSlabArea = floorOnGround > 0 ? Math.max(0, A - underGroundSlab) : 0
   // Подсыпка: под подошву фундамента + под пол по грунту, если он задан.
-  add(
-    'sand_gravel',
-    'earthworks',
-    'act',
-    soleArea * sandBedT + (floorOnGround > 0 ? A * sandBedT : 0),
-  )
+  add('sand_gravel', 'earthworks', 'act', soleArea * sandBedT + groundSlabArea * sandBedT)
   add('concrete_blinding', 'foundation', 'act', soleArea * blindingT)
   // Пол по грунту — бетонная плита с сеткой, а не песчано-гравийная подсыпка.
   // It is poured between the strips / grillage, which act as its side form.
-  if (floorOnGround > 0) {
-    addStruct('foundation', A * floorOnGround, reb.slab)
-    castOnGround(A * floorOnGround, 0)
+  if (groundSlabArea > 0) {
+    addStruct('foundation', groundSlabArea * floorOnGround, reb.slab)
+    castOnGround(groundSlabArea * floorOnGround, 0)
   }
 
   // ---- Foundation ----
@@ -266,8 +279,8 @@ export function computeQuantities(p: HouseParams): Quantities {
   if (isMasonry) {
     addStruct('walls', ringBeamVol, reb.ringBeam)
     if (coreVol > 0) addStruct('walls', coreVol, reb.seismicCore)
-    // masonry volume minus embedded RC (avoid double count)
-    let masonryVol = wallNet * wallT - ringBeamVol - coreVol
+    // masonry volume minus embedded RC and the slab bearing on the walls (avoid double count)
+    let masonryVol = wallNet * wallT - ringBeamVol - coreVol - Lb * wallT * slabOverBeams * p.floors
     masonryVol = Math.max(0, masonryVol) * waste
     add(masonryKey(wallMat), 'walls', 'act', masonryVol)
     // mortar / glue
@@ -275,16 +288,24 @@ export function computeQuantities(p: HouseParams): Quantities {
     else add('mortar', 'walls', 'act', masonryVol * mortarShare)
   } else if (isMonolith) {
     // полный монолит: несущие ж/б стены (бетон + арматура), без кладки и заполнения
-    const wallVol = Math.max(0, wallNet * wallT) * waste
-    addStruct('walls', wallVol, reb.monolithWall)
+    // the slab over each storey is counted with the slab, not the wall below it
+    const wallVol = Math.max(0, (wallNet - Lb * slabOverBeams * p.floors) * wallT) * waste
+    addStruct('walls', wallVol, reb.monolithWall, Math.max(0, wallNet * wallT) * waste)
   } else {
     // frame: columns + beams + infill
     const nx = Math.floor(p.length / gridStep) + 1
     const ny = Math.floor(p.width / gridStep) + 1
     const nCol = ov(e.columns) ?? nx * ny
-    addStruct('frame', nCol * colSize * colSize * H, reb.column)
     const beamsLen = ov(e.beamsLen) ?? Lb * p.floors
-    addStruct('frame', beamsLen * beamSectionArea, reb.ringBeam)
+    const beamDepth = colSize > 0 ? beamSectionArea / colSize : 0
+    // Poured concrete as ГЭСН 81-02-06 (2.2-2.3) counts it, so no node is paid
+    // twice: columns up to the underside of each slab, beams between column
+    // faces and, under a monolithic slab, only the part below it.
+    const colConcrete = nCol * colSize * colSize * Math.max(0, H - p.floors * slabOverBeams)
+    addStruct('frame', colConcrete, reb.column, nCol * colSize * colSize * H)
+    const beamClearLen = Math.max(0, beamsLen - nCol * colSize * p.floors)
+    const beamConcrete = beamClearLen * colSize * Math.max(0, beamDepth - slabOverBeams)
+    addStruct('frame', beamConcrete, reb.ringBeam, beamsLen * beamSectionArea)
     // Columns and beams on the outer contour sit in the wall plane, so the
     // infill only fills the panels between them (the masonry branch subtracts
     // its ring beams and cores the same way). An overridden column count keeps
@@ -292,7 +313,6 @@ export function computeQuantities(p: HouseParams): Quantities {
     const gridCols = nx * ny
     const edgeCols = nx === 1 || ny === 1 ? gridCols : 2 * (nx + ny) - 4
     const colsInWall = gridCols > 0 ? nCol * (edgeCols / gridCols) : 0
-    const beamDepth = colSize > 0 ? beamSectionArea / colSize : 0
     const beamsInWall = Math.min(beamsLen, P * p.floors)
     const frameInWall = Math.max(
       0,
@@ -324,7 +344,7 @@ export function computeQuantities(p: HouseParams): Quantities {
   // ---- Beams over the double-height hall ----
   if (hallVoid > 0 && p.beamsOverHall) {
     const beamLen = Math.sqrt(hallVoid) * 2 // пара балок через проём
-    addStruct('floors', beamLen * 0.3 * 0.4, reb.floor)
+    addStruct('floors', beamLen * 0.3 * Math.max(0, 0.4 - slabOverBeams), reb.floor, beamLen * 0.3 * 0.4)
   }
 
   // ---- Stair ----
@@ -427,7 +447,8 @@ export function computeQuantities(p: HouseParams): Quantities {
     // проект и технадзор оплачиваются за м² дома, а проём зала — не площадь
     add('permit_design', 'permit', 'act', finishedArea)
     add('permit_geology', 'permit', 'act', 1)
-    add('permit_expertise', 'permit', 'act', 1)
+    // the simplified procedure N 4.1 issues the permit without the expertise
+    if (simplified41Reasons(p, netArea).length > 0) add('permit_expertise', 'permit', 'act', 1)
     add('permit_fee', 'permit', 'act', 1)
     add('permit_address', 'permit', 'act', 1)
     add('permit_supervision', 'permit', 'act', finishedArea)
@@ -439,10 +460,10 @@ export function computeQuantities(p: HouseParams): Quantities {
   // Опалубка ложится в тот же раздел, где залит бетон, иначе разбивка сметы по
   // разделам врёт: вся опалубка оказалась бы «фундаментом».
   let structConcrete = 0
-  for (const key of Object.keys(concreteBySection) as SectionId[]) {
-    const vol = concreteBySection[key] ?? 0
+  for (const key of Object.keys(formedBySection) as SectionId[]) {
+    structConcrete += concreteBySection[key] ?? 0
+    const vol = formedBySection[key] ?? 0
     if (vol <= 0) continue
-    structConcrete += vol
     const formed = key === 'foundation' ? Math.max(0, vol - groundCastVol) * formworkK + groundCastEdgeForm : vol * formworkK
     add('formwork', key, 'act', formed)
   }

@@ -59,25 +59,28 @@ describe('баг A — пол по грунту это бетон, а не по�
   it('пол по грунту 10 см добавляет бетон, а не песок с гравием', () => {
     const withFloor = house({ eng: { floorOnGround: 10 } })
     const base = qty(noGroundSlab, 'concrete_b25', 'foundation')
-    // 182 м² × 0.10 м = 18.2 м³ бетона в разделе «фундамент»
-    expect(qty(withFloor, 'concrete_b25', 'foundation')).toBeCloseTo(base + 18.2, 6)
+    // poured between the strips: (182 − 32.4 м² of strip) × 0.10 м = 14.96 м³
+    expect(qty(withFloor, 'concrete_b25', 'foundation')).toBeCloseTo(base + 14.96, 6)
     // подсыпка растёт только на слой под плитой (0.1 м), а не на толщину плиты
-    expect(qty(withFloor, 'sand_gravel')).toBeCloseTo(3.24 + 18.2, 6)
+    expect(qty(withFloor, 'sand_gravel')).toBeCloseTo(3.24 + 14.96, 6)
   })
 
   it('удвоение толщины пола по грунту удваивает бетон, но не подсыпку', () => {
     const t10 = house({ eng: { floorOnGround: 10 } })
     const t20 = house({ eng: { floorOnGround: 20 } })
     const base = qty(noGroundSlab, 'concrete_b25', 'foundation')
-    expect(qty(t20, 'concrete_b25', 'foundation') - base).toBeCloseTo(36.4, 6)
+    expect(qty(t20, 'concrete_b25', 'foundation') - base).toBeCloseTo(149.6 * 0.2, 6)
     expect(qty(t20, 'sand_gravel')).toBeCloseTo(qty(t10, 'sand_gravel'), 6)
   })
 
   it('a strip, pile or column house gets a 10 cm slab on ground by default', () => {
+    // poured between what already stands on the ground, never over it: the
+    // strip or grillage (81 × 0.4 = 32.4 m²) or 81 / 2 = 40.5 pads of 0.4 × 0.4
+    const area = { strip: 182 - 32.4, pile: 182 - 32.4, column: 182 - 40.5 * 0.16 }
     for (const foundation of ['strip', 'pile', 'column'] as const) {
       const d = qty(house({ foundation }), 'concrete_b25', 'foundation') -
         qty(house({ foundation, eng: { floorOnGround: 0 } }), 'concrete_b25', 'foundation')
-      expect(d, foundation).toBeCloseTo(182 * C.floorOnGroundThickness, 6)
+      expect(d, foundation).toBeCloseTo(area[foundation] * C.floorOnGroundThickness, 6)
     }
   })
 
@@ -313,7 +316,10 @@ describe('панель инженера — переопределения ре�
     //               inside the 9 000 + 5 000 "flat roof" line
     //   71 386 789  self-build is the default: no contractor overhead (15% of
     //               labour) or profit (8%), temporary works 1.5% -> 1%
-    expect(Math.round(a)).toBe(71386789)
+    //   70 460 655  concrete poured once at the frame nodes (ГЭСН 81-02-06,
+    //               2.2-2.4), slab on ground between the strips, no design
+    //               expertise under the simplified procedure N 4.1
+    expect(Math.round(a)).toBe(70460655)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {
@@ -387,15 +393,44 @@ describe('опалубка, подача бетона и толщина утеп
     expect(fw.some((l) => l.section === 'floors')).toBe(true)
   })
 
-  it('объём опалубки пропорционален объёму бетона', () => {
-    const q = computeQuantities(house())
-    const concrete = q.lines
-      .filter((l) => l.key === 'concrete_b25')
-      .reduce((a, l) => a + l.quantity, 0)
-    const formwork = q.lines.filter((l) => l.key === 'formwork').reduce((a, l) => a + l.quantity, 0)
-    // the 10 cm slab on ground (182 m² × 0.1 m) is cast on the ground, unformed
-    const groundSlab = 182 * C.floorOnGroundThickness
-    expect(formwork).toBeCloseTo((concrete - groundSlab) * C.formworkPerM3, 4)
+  it('объём опалубки пропорционален полным сечениям элементов', () => {
+    // The m²/m³ ratio was set on full sections, so the nodes poured once still
+    // count: strip 81 × 0.4 × 0.8, columns 16 × 0.16 × 6, beams 162 × 0.16,
+    // slabs 284 × 0.18, hall beams 2√80 × 0.3 × 0.4, lintels 30 × 0.25 × 0.2.
+    // The slab on ground is cast on the ground, unformed.
+    const formed = 25.92 + 15.36 + 25.92 + 284 * 0.18 + 2 * Math.sqrt(80) * 0.12 + 30 * C.lintel.w * C.lintel.h
+    expect(qty(house(), 'formwork')).toBeCloseTo(formed * C.formworkPerM3, 4)
+  })
+
+  it('concrete at the frame nodes is poured once (ГЭСН 81-02-06, 2.2–2.4)', () => {
+    // columns up to the underside of each 0.18 m slab: 16 × 0.16 × (6 − 2 × 0.18);
+    // beams between column faces, (162 − 16 × 0.4 × 2) m, and below the slab, 0.4 − 0.18 m
+    expect(qty(house(), 'concrete_b25', 'frame')).toBeCloseTo(16 * 0.16 * 5.64 + 149.2 * 0.4 * 0.22, 6)
+    // slabs over their whole area; the beams over the hall only below the roof slab
+    expect(qty(house(), 'concrete_b25', 'floors')).toBeCloseTo(284 * 0.18 + 2 * Math.sqrt(80) * 0.3 * 0.22, 6)
+    // precast slabs are laid on the beams, not poured over them: full beam depth
+    expect(qty(house({ floorSlab: 'precast' }), 'concrete_b25', 'frame')).toBeCloseTo(16 * 0.16 * 6 + 149.2 * 0.16, 6)
+    // the pump moves what is poured; the rebar is still set on full sections
+    const poured = qty(house(), 'concrete_b25')
+    expect(qty(house(), 'concrete_pump')).toBeCloseTo(poured, 6)
+    const rebarK = 1 + C.rebarFloorFactor
+    expect(qty(house(), 'rebar_a500', 'frame')).toBeCloseTo(
+      ((16 * 0.16 * 6 * C.rebar.column + 162 * 0.16 * C.rebar.ringBeam) * rebarK) / 1000,
+      6,
+    )
+  })
+
+  it('bearing walls stop under the slab that rests on them', () => {
+    // tuff: the 0.18 m slab over 81 m of 0.4 m walls on both storeys is slab, not masonry
+    const withSlab = qty(house({ system: 'tuff', wallThickness: 0.4 }), 'tuff_block', 'walls')
+    const precast = qty(house({ system: 'tuff', wallThickness: 0.4, floorSlab: 'precast' }), 'tuff_block', 'walls')
+    expect(precast - withSlab).toBeCloseTo(81 * 0.4 * 0.18 * 2 * 1.05, 6)
+  })
+
+  it('the simplified procedure N 4.1 needs no design expertise', () => {
+    expect(qty(house(), 'permit_expertise')).toBe(0)
+    // three storeys are outside N 4.1: the expertise is paid
+    expect(qty(house({ floors: 3 }), 'permit_expertise')).toBe(1)
   })
 
   it('норма опалубки настраивается инженером', () => {
