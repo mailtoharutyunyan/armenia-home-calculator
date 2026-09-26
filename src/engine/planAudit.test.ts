@@ -150,3 +150,24 @@ describe('газифицированная кухня', () => {
     expect(auditPlan(h({ floorHeight: 2.1 })).filter((i) => i.rule === 'gas-height')).toHaveLength(1)
   })
 })
+
+describe('the plan sits inside the real external wall', () => {
+  const roomsArea = (p: HouseParams, floor: number) =>
+    buildFloorPlan(p, floor).rooms.filter((r) => !r.open).reduce((a, r) => a + r.w * r.h, 0)
+
+  it('ground-floor rooms fill exactly the area inside 0.3 m walls', () => {
+    // (14 − 2 × 0.3) × (13 − 2 × 0.3) = 13.4 × 12.4
+    expect(roomsArea(h(), 0)).toBeCloseTo(13.4 * 12.4, 6)
+  })
+
+  it('follows the engineer override of the external wall', () => {
+    // 50 cm walls: (14 − 1) × (13 − 1)
+    expect(roomsArea(h({ eng: { extWall: 50 } }), 0)).toBeCloseTo(13 * 12, 6)
+  })
+
+  it('upper-floor bedrooms of the default house meet the 8 m² minimum', () => {
+    const beds = buildFloorPlan(h(), 1).rooms.filter((r) => r.type === 'bedroom')
+    expect(beds.length).toBe(2)
+    for (const b of beds) expect(b.w * b.h, b.label).toBeGreaterThanOrEqual(8)
+  })
+})

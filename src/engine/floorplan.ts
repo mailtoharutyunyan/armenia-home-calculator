@@ -1,4 +1,5 @@
 import type { HouseParams } from '../model/house'
+import { COEFF as C } from '../data/coefficients'
 
 export type RoomType =
   | 'living'
@@ -166,7 +167,11 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
   const swap = p.frontSide === 'width'
   const L = Math.max(1, swap ? p.width : p.length)
   const W = Math.max(1, swap ? p.length : p.width)
-  const wall = 0.2
+  // The plan sits inside the same external wall as the estimate (engineer
+  // override first). A fixed 0.2 m wall made every floor ~5 m² larger than the
+  // house and hid rooms below the 8 m² minimum.
+  const extWall = p.eng?.extWall != null && p.eng.extWall > 0 ? p.eng.extWall / 100 : p.wallThickness
+  const wall = Math.max(0.1, Math.min(extWall, (Math.min(L, W) - 2) / 2))
   const inset = wall
   const inner = { x: inset, y: inset, w: L - 2 * inset, h: W - 2 * inset }
 
@@ -594,24 +599,38 @@ function layoutUpperWithVoid(
   }
   const belowY = col.stairY + col.stairH
   const belowH = inner.y + inner.h - belowY
+  // If the bedrooms above the stair would drop under the minimum room area,
+  // the last one moves below the stair, onto the facade, and the bath keeps the
+  // strip by the stair. Otherwise a 13 m² bath sits next to 7.5 m² bedrooms.
+  const minBed = C.norms.minRoomArea * 1.05
+  const bedBelowH = Math.max(minBed / Math.max(roomsW, 0.1), belowH * 0.6)
+  const bedBelow =
+    beds.length >= 2 && roomsW >= 1.6 && topH * roomsW < minBed * beds.length && belowH - bedBelowH >= 1.2
+      ? beds[beds.length - 1]
+      : null
+  const topBeds = bedBelow ? beds.slice(0, -1) : beds
   if (belowH > PLAN.minCorridor) {
     out.push({ x: rx, y: belowY, w: corrW, h: belowH, type: 'corridor', label: '', gallery: true })
-    if (bath) out.push({ x: roomsX, y: belowY, w: roomsW, h: belowH, type: 'bath', label: bath.label })
+    const bathH = !bedBelow ? belowH : bath ? belowH - bedBelowH : 0
+    if (bath && bathH > 0) out.push({ x: roomsX, y: belowY, w: roomsW, h: bathH, type: 'bath', label: bath.label })
+    if (bedBelow) {
+      out.push({ x: roomsX, y: belowY + bathH, w: roomsW, h: belowH - bathH, type: 'bedroom', label: bedBelow.label })
+    }
   }
 
   if (roomsW < 1.6) return
-  if (beds.length > 0 && topH > 1.2) {
-    const n = Math.max(1, beds.length)
+  if (topBeds.length > 0 && topH > 1.2) {
+    const n = Math.max(1, topBeds.length)
     const ratio = (w: number, h: number) => Math.max(w, h) / Math.min(w, h)
     if (ratio(roomsW, topH / n) <= ratio(roomsW / n, topH)) {
       const bh = topH / n
       for (let i = 0; i < n; i++) {
-        out.push({ x: roomsX, y: inner.y + i * bh, w: roomsW, h: bh, type: 'bedroom', label: beds[i]?.label ?? beds[0].label })
+        out.push({ x: roomsX, y: inner.y + i * bh, w: roomsW, h: bh, type: 'bedroom', label: topBeds[i]?.label ?? topBeds[0].label })
       }
     } else {
       const bw = roomsW / n
       for (let i = 0; i < n; i++) {
-        out.push({ x: roomsX + i * bw, y: inner.y, w: bw, h: topH, type: 'bedroom', label: beds[i]?.label ?? beds[0].label })
+        out.push({ x: roomsX + i * bw, y: inner.y, w: bw, h: topH, type: 'bedroom', label: topBeds[i]?.label ?? topBeds[0].label })
       }
     }
   }
