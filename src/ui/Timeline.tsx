@@ -9,16 +9,28 @@ import { money } from './format'
 export function Timeline() {
   const { house, prices, lang, priceMode, amdPerUsd } = useProject()
 
-  const { totalArea, est } = useMemo(() => {
+  // Durations scale with the house area the user sees (net, without the hall
+  // void); the stage baselines are for a ~200 m² house.
+  const { houseArea, est } = useMemo(() => {
     const q = computeQuantities(house)
-    return { totalArea: q.geometry.totalFloorArea, est: computeEstimate(q, prices, house, priceMode) }
+    return { houseArea: q.geometry.netFloorArea, est: computeEstimate(q, prices, house, priceMode) }
   }, [house, prices, priceMode])
 
   const m = (v: number) => money(v, house.currency, amdPerUsd)
 
+  // Section totals are direct costs. Markups, contingency and VAT are spread
+  // over the works in proportion, so the stages add up to the contract price;
+  // documents carry no markups.
+  const tk = est.turnkey
+  const markup = tk.direct > 0 ? (tk.total - tk.permit) / tk.direct : 1
+
   const rows = STAGES.map((s) => {
-    const cost = s.sections.reduce((a, sec) => a + (est.sectionTotals[sec] ?? 0), 0)
-    return { s, w: stageWeeks(s, totalArea), cost }
+    const isPermit = s.sections.includes('permit')
+    const direct = s.sections.reduce((a, sec) => a + (est.sectionTotals[sec] ?? 0), 0)
+    // a stage with nothing in the estimate (no extras chosen, section switched
+    // off) takes no time either; paperwork takes time even when not priced
+    const w = direct > 0 || isPermit ? stageWeeks(s, houseArea) : { min: 0, max: 0 }
+    return { s, w, cost: isPermit ? direct : direct * markup }
   })
   const totalMin = rows.reduce((a, r) => a + r.w.min, 0)
   const totalMax = rows.reduce((a, r) => a + r.w.max, 0)
