@@ -1,12 +1,12 @@
 {
   "base": "AMD",
-  "currentDate": "2026-09-25",
-  "fetchedAt": "2026-09-25T14:05:51Z",
+  "currentDate": "2026-09-28",
+  "fetchedAt": "2026-09-28T16:57:18Z",
   "source": "https://api.cba.am/exchangerates.asmx",
   "rates": {
-    "USD": 363.52,
-    "EUR": 414.34,
-    "RUB": 4.3127,
-    "GEL": 139.55
+    "USD": 363.34,
+    "EUR": 413.19,
+    "RUB": 4.3043,
+    "GEL": 139.53
   }
 }
