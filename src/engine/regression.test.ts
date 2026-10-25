@@ -281,11 +281,13 @@ describe('новые разделы сметы', () => {
     const p = house()
     const est = computeEstimate(computeQuantities(p), SEED_PRICES, p, 'typical')
     const line = (key: string) => est.lines.find((l) => l.key === key)!.total
-    expect(line('heating')).toBeCloseTo(252.32 * (12000 + 8000), 0) // 5 046 400
+    expect(line('heating')).toBeCloseTo(252.32 * (10500 + 7600), 0) // 4 566 992
+    // a radiator under each of the 10 ordinary windows (30 m² / 3 m²)
+    expect(line('radiators')).toBeCloseTo(10 * (37400 + 10000), 0) // 474 000
     expect(line('ventilation')).toBeCloseTo(252.32 * (4000 + 3000), 0) // 1 766 240
   })
 
-  it('тёплый пол и рекуперация — доплаты по площади пола, базовые строки не меняются', () => {
+  it('тёплый пол заменяет радиаторы, рекуперация — доплата к вентиляции', () => {
     const base = house()
     const extra = house({ optHeating: true, optMvhr: true })
     expect(qty(extra, 'opt_boiler_heating')).toBeCloseTo(252.32, 6)
@@ -293,6 +295,9 @@ describe('новые разделы сметы', () => {
     expect(qty(base, 'opt_boiler_heating')).toBe(0)
     expect(qty(base, 'opt_mvhr')).toBe(0)
     expect(qty(extra, 'heating')).toBe(qty(base, 'heating'))
+    // underfloor heating replaces the radiators instead of adding to them
+    expect(qty(base, 'radiators')).toBe(10)
+    expect(qty(extra, 'radiators')).toBe(0)
     expect(qty(extra, 'ventilation')).toBe(qty(base, 'ventilation'))
   })
 
@@ -380,7 +385,9 @@ describe('панель инженера — переопределения ре�
     //               rates of 26.10.2026 (brigade 14 000, plaster 6 500 ֏/m²)
     //   83 932 064  installation priced for doors (18 000), fixtures, sills;
     //               crane shift 60 000
-    expect(Math.round(a)).toBe(83932064)
+    //   83 926 056  radiators on their own line (one per ordinary window, from
+    //               quotes), so underfloor heating replaces them
+    expect(Math.round(a)).toBe(83926056)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {

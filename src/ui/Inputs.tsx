@@ -421,10 +421,10 @@ export function Inputs() {
           <input type="checkbox" checked={house.optHeating} onChange={(e) => set({ optHeating: e.target.checked })} />
           <span style={{ marginBottom: 0 }}>
             {lang === 'hy'
-              ? 'Տաք հատակ՝ հավելում հիմնական ջեռուցմանը (կաթսա + ռադիատորներ)'
+              ? 'Տաք հատակ ռադիատորների փոխարեն'
               : lang === 'en'
-                ? 'Underfloor heating — extra over the base heating (boiler + radiators)'
-                : 'Тёплый пол — доплата к базовому отоплению (котёл + радиаторы)'}
+                ? 'Underfloor heating instead of radiators'
+                : 'Тёплый пол вместо радиаторов'}
           </span>
         </label>
         <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

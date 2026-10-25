@@ -87,6 +87,19 @@ const Q = {
   evCharger: ['https://evolt.am/product-category/ac-chargers/', 'https://solaron.am/en/shop/mira-7-kw-charging-station/', 'https://ener-go.am/en/chargers'],
   design: ['https://sip.am/price-list'],
   sanitary: ['https://domus.am/category/toilets', 'https://domus.am/category/sankeramika'],
+  radiators: [
+    'https://stalmetural.am/catalog/bimetallicheskie-radiatory/',
+    'https://shinshin.am/heating/radiators/bimetal-radiators/',
+    'https://www.chipdip.am/catalog-show/radiatory-bimetallicheskie-3879',
+    'https://domus.am/category/heating-radiator-valves',
+    'https://varpet.online/%D5%A3%D5%B6%D5%A1%D6%81%D5%B8%D6%82%D6%81%D5%A1%D5%AF',
+  ],
+  floorHeating: [
+    'https://kelvin.am/ru/products/index?c_id=86',
+    'https://santex-house.am/rasprodazha/truby-pex-a-16-kh-2-2c2mm-sanline-2c-universalnye-s-kislorodnoe-zashchitoj-barierom',
+    'https://newhome.am/gnacucak',
+    'https://varpet.online/%D5%A3%D5%B6%D5%A1%D6%81%D5%B8%D6%82%D6%81%D5%A1%D5%AF',
+  ],
 }
 // Prices read on 26.10.2026; quoted() stamps the 26.09.2026 check.
 const OCT = '26.10.2026'
@@ -303,7 +316,16 @@ const items: PriceItem[] = [
   // --- Engineering networks (per m2 of total floor area) ---
   item('electrical', 'Электрика', 'Էլեկտրագծեր', 'м²', 9000, 7000, S.market),
   item('plumbing', 'Водопровод/канализация', 'Ջրամատակարարում', 'м²', 8000, 7000, S.market),
-  item('heating', 'Отопление: котёл + радиаторы', 'Ջեռուցում՝ կաթսա + ռադիատորներ', 'м²', 12000, 8000, S.market),
+  // The boiler, its room and the pipework. This is the unverified 12 000 +
+  // 8 000 ֏/m² of before, less the radiators, now priced from quotes on their
+  // own line (10 × 37 440 material, 10 × 10 000 fitting on 252.32 m²).
+  item('heating', 'Отопление: котёл и разводка', 'Ջեռուցում՝ կաթսա և խողովակաշար', 'м²', 10500, 7600, S.market),
+  // One radiator under each ordinary window. Bimetal 500 mm, 10 sections:
+  // 21 930–36 176 ֏ (Stalmetgroup, ShinShin), up to 55 100 (Corvette, Chip and
+  // Dip); thermostatic valve 2 540 + return valve 1 920–4 900 ֏ (Domus, Valfex).
+  // Fitting is paid per point: 10 000–12 000 ֏ (Varpet, NewHome).
+  derived('radiators', 'Радиатор с краном и термоголовкой', 'Ռադիատոր՝ փականով և թերմոգլխիկով', 'шт', { min: 26400, typical: 37400, max: 62500 }, 10000, Q.radiators,
+    'из прайсов: радиатор биметалл 500 мм 10 секций 21 930–36 176 ֏ (Стальметгрупп, ShinShin), до 55 100 ֏ (Chip and Dip); термоклапан 2 540 ֏ + нижний кран 1 920–4 900 ֏ (Domus, Valfex); подключение — 10 000 ֏ за точку (Varpet)'),
   // Domus, 26.10.2026: WC 45 900–167 900, vanity with basin 89 900–290 000,
   // acrylic bath 50 100–145 900, Grohe mixers 39 000–69 000, shower set
   // 13 900–40 900 ֏. The water points themselves are in the plumbing line.
@@ -315,9 +337,13 @@ const items: PriceItem[] = [
   // --- Optional premium systems (opt-in extras) ---
   // Warm floor is an extra on top of the base heating line (boiler, pipes,
   // radiators), not a second boiler.
-  // Laying from 8 000 ֏/m² (NewHome); pipe, manifold and reflective layer ~4 000.
-  derived('opt_boiler_heating', 'Тёплый пол (доплата к отоплению)', 'Տաք հատակ (հավելում ջեռուցմանը)', 'м²', { min: 3000, typical: 4000, max: 6000 }, 8000, Q.labour,
-    'ОЦЕНКА: монтаж от 8 000 ֏/м² (NewHome); труба PEX ~6 м/м², коллектор, отражающий слой ~4 000 ֏/м²'),
+  // Pipe at 15 cm spacing is 1 / 0.15 = 6.7 m per m²: 500–600 ֏/m (Kelvin,
+  // Santex House) → 3 330–4 000 ֏/m². A loop serves ~15 m² (≤100 m of pipe),
+  // a manifold outlet costs 11 000 ֏ (Kelvin, 4 outlets 44 000) → 730 ֏/m²;
+  // one mixing unit (105 000 ֏, Kelvin) per floor → ~830 ֏/m² here. Laying
+  // from 5 000 (Varpet) to 8 000 (NewHome) ֏/m².
+  derived('opt_boiler_heating', 'Тёплый пол (вместо радиаторов)', 'Տաք հատակ (ռադիատորների փոխարեն)', 'м²', { min: 4900, typical: 4900, max: 5600 }, 6500, Q.floorHeating,
+    'из прайсов: труба PEX 16 мм 500–600 ֏/м × 6,7 м/м² (шаг 15 см), коллектор 11 000 ֏ за выход (~15 м² на петлю), смесительный узел 105 000 ֏ на этаж (Kelvin, Santex House); монтаж 5 000–8 000 ֏/м² (Varpet, NewHome)'),
   // electro.am: air-water units 12–18 kW 1 750 000–1 900 000 ֏ (Riello Family
   // Sprint, TICA 18 kW), equipment only
   derived('opt_heat_pump', 'Тепловой насос (воздух-вода)', 'Ջերմային պոմպ (օդ-ջուր)', 'компл', { min: 1750000, typical: 1900000, max: 2400000 }, 600000, Q.heatPump,
@@ -464,8 +490,9 @@ const EN_LABELS: Record<string, string> = {
   roof_pitched: 'Pitched roof',
   electrical: 'Electrical',
   plumbing: 'Plumbing / sewerage',
-  heating: 'Heating: boiler + radiators',
-  opt_boiler_heating: 'Underfloor heating (extra over heating)',
+  heating: 'Heating: boiler and pipework',
+  radiators: 'Radiators with valves',
+  opt_boiler_heating: 'Underfloor heating (instead of radiators)',
   opt_mvhr: 'Ventilation with heat recovery (extra)',
   opt_heat_pump: 'Heat pump (air-water)',
   opt_solar: 'Solar panels (photovoltaic)',

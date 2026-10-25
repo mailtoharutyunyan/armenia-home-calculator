@@ -102,7 +102,7 @@ export interface HouseParams {
   sitePavingArea: number // м² дорожек и площадок
   balconyArea: number // м² балконов/террас
   // optional premium systems (opt-in extras)
-  optHeating: boolean // тёплый пол — доплата к базовому отоплению (котёл + радиаторы), ֏/м²
+  optHeating: boolean // тёплый пол вместо радиаторов (котёл и разводка остаются), ֏/м²
   optMvhr: boolean // вентиляция с рекуперацией тепла — доплата к базовой вентиляции, ֏/м²
   optHeatPump: boolean // тепловой насос воздух-вода (компл.) + бойлер косвенного нагрева
   optFanCoils: number // фанкойлы, шт (0 = нет)

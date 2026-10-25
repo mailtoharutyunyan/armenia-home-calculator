@@ -506,6 +506,10 @@ export function computeQuantities(p: HouseParams): Quantities {
   add('electrical', 'engineering', 'turnkey', houseArea)
   add('plumbing', 'engineering', 'turnkey', houseArea)
   add('heating', 'engineering', 'turnkey', houseArea)
+  // A radiator goes under each ordinary window (3 m² each, as for the lintels);
+  // underfloor heating takes the radiators' place, it does not add to them.
+  const regularWindows = Math.ceil((p.windowAreaTotal * (1 - p.vitrageShare)) / 3)
+  if (!p.optHeating) add('radiators', 'engineering', 'turnkey', regularWindows)
   add('ventilation', 'engineering', 'turnkey', houseArea)
   add('lightning', 'engineering', 'turnkey', 1)
   add('sanitary_set', 'engineering', 'turnkey', take.baths)
@@ -529,7 +533,7 @@ export function computeQuantities(p: HouseParams): Quantities {
 
   // ---- Optional premium systems (opt-in extras) ----
   // per-m² options use the house area, as the networks above do
-  // тёплый пол и рекуперация — доплаты к базовым строкам heating/ventilation
+  // тёплый пол — вместо радиаторов; рекуперация — доплата к вентиляции
   if (p.optHeating) add('opt_boiler_heating', 'options', 'turnkey', houseArea)
   if (p.optMvhr) add('opt_mvhr', 'options', 'turnkey', houseArea)
   if (p.optHeatPump) {
