@@ -440,9 +440,19 @@ export function Inputs() {
         <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input type="checkbox" checked={house.optHeatPump} onChange={(e) => set({ optHeatPump: e.target.checked })} />
           <span style={{ marginBottom: 0 }}>
-            {lang === 'hy' ? 'Ջերմային պոմպ (օդ-ջուր)' : lang === 'en' ? 'Heat pump (air-water)' : 'Тепловой насос (воздух-вода)'}
+            {lang === 'hy'
+              ? 'Ջերմային պոմպ (օդ-ջուր) + տաք ջրի բաք'
+              : lang === 'en'
+                ? 'Heat pump (air-water) + hot-water cylinder'
+                : 'Тепловой насос (воздух-вода) + бойлер ГВС'}
           </span>
         </label>
+        <Num
+          label={lang === 'hy' ? 'Ֆանկոյլներ, հատ' : lang === 'en' ? 'Fan-coil units, pcs' : 'Фанкойлы, шт'}
+          value={house.optFanCoils}
+          step={1}
+          onChange={(n) => set({ optFanCoils: n })}
+        />
         <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input type="checkbox" checked={house.optFinishPremium} onChange={(e) => set({ optFinishPremium: e.target.checked })} />
           <span style={{ marginBottom: 0 }}>
@@ -460,6 +470,24 @@ export function Inputs() {
           value={house.optSolarKw}
           step={1}
           onChange={(n) => set({ optSolarKw: n })}
+        />
+        <Num
+          label={lang === 'hy' ? 'Կուտակիչ LiFePO4, կՎտ·ժ' : lang === 'en' ? 'LiFePO4 battery, kWh' : 'Аккумулятор LiFePO4, кВт·ч'}
+          value={house.optBatteryKwh}
+          step={5}
+          onChange={(n) => set({ optBatteryKwh: n })}
+        />
+        <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input type="checkbox" checked={house.optEvCharger} onChange={(e) => set({ optEvCharger: e.target.checked })} />
+          <span style={{ marginBottom: 0 }}>
+            {lang === 'hy' ? 'Էլեկտրամեքենայի լիցքավորիչ (wallbox)' : lang === 'en' ? 'EV charger (wallbox)' : 'Зарядка электромобиля (wallbox)'}
+          </span>
+        </label>
+        <Num
+          label={lang === 'hy' ? 'Խոհանոցային կահույք, գծ.մ' : lang === 'en' ? 'Kitchen furniture, running m' : 'Кухонная мебель, пог.м'}
+          value={house.optKitchenM}
+          step={0.5}
+          onChange={(n) => set({ optKitchenM: n })}
         />
 
         {/* Advanced */}

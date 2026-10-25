@@ -1,7 +1,7 @@
 import type { HouseParams, InfillMaterial } from '../model/house'
 import { COEFF as C } from '../data/coefficients'
 import { REGIONS } from '../data/regions'
-import { buildFloorPlan, planTakeoff } from './floorplan'
+import { buildFloorPlan, planTakeoff, DOOR_W } from './floorplan'
 import { simplified41Reasons } from './norms'
 
 export type Stage = 'act' | 'turnkey'
@@ -61,13 +61,15 @@ const masonryKey = (m: InfillMaterial) =>
 // door per room) gave 162 m² of partitions and 6 doors for plans with ~190 m²
 // and 10 doors, and left out the glass partition and the railings.
 export function planTake(p: HouseParams) {
-  const take = { partitions: 0, glass: 0, railing: 0, leafDoors: 0 }
+  const take = { partitions: 0, glass: 0, railing: 0, leafDoors: 0, baths: 0, bathPerimeter: 0 }
   for (let f = 0; f < Math.max(0, p.floors); f++) {
     const t = planTakeoff(buildFloorPlan(p, f))
     take.partitions += t.partitions
     take.glass += t.glass
     take.railing += t.railing
     take.leafDoors += t.leafDoors
+    take.baths += t.baths
+    take.bathPerimeter += t.bathPerimeter
   }
   return take
 }
@@ -183,6 +185,20 @@ export function computeQuantities(p: HouseParams): Quantities {
     Math.max(0, p.length - 2 * wallT) * Math.max(0, p.width - 2 * wallT) * p.floors - hallVoid,
   )
 
+  const take = planTake(p)
+  // In a frame the infill fills the outer contour only; load-bearing masonry
+  // and a full monolith keep their internal bearing walls.
+  const structLen = p.system === 'frame' ? P : Lb
+  const intBearingLen = Math.max(0, structLen - P)
+  // Работы «за м² дома» (сети, проект, технадзор, опции) считаются по общей
+  // площади — по внутренним поверхностям наружных стен, без проёма зала. Это
+  // площадь из документов и из шапки калькулятора, по ней же дают цену
+  // подрядчики. Наружный обмер (с толщиной стен) завышал её на ~13%.
+  const houseArea = netArea
+  // Слои пола (стяжка, покрытие) и потолки — без следа перегородок и
+  // внутренних несущих стен: под стеной пола нет.
+  const floorLayerArea = Math.max(0, houseArea - take.partitions * partitionT - intBearingLen * wallT * floors0)
+
   // structural concrete + rebar accumulators, per estimate section
   const concreteBySection: Partial<Record<SectionId, number>> = {}
   const rebarBySection: Partial<Record<SectionId, number>> = {}
@@ -190,11 +206,16 @@ export function computeQuantities(p: HouseParams): Quantities {
   // `vol` is the concrete actually poured. The rebar (kg/m³) and formwork
   // (m²/m³) ratios were set on an element's full section, so an element whose
   // node is poured with its neighbour passes that full volume as `gross`.
-  const addStruct = (section: SectionId, vol: number, rebarPerM3: number, gross = vol) => {
+  // Slabs carry their own floor whatever the storey count, so only the
+  // load-bearing elements (foundation, columns, beams, walls) get the
+  // per-storey rebar increase; slabs pass `grows = false`.
+  const rebarFixedBySection: Partial<Record<SectionId, number>> = {}
+  const addStruct = (section: SectionId, vol: number, rebarPerM3: number, gross = vol, grows = true) => {
     if (gross <= 0) return
     concreteBySection[section] = (concreteBySection[section] ?? 0) + Math.max(0, vol)
     formedBySection[section] = (formedBySection[section] ?? 0) + gross
-    rebarBySection[section] = (rebarBySection[section] ?? 0) + gross * rebarPerM3
+    const acc = grows ? rebarBySection : rebarFixedBySection
+    acc[section] = (acc[section] ?? 0) + gross * rebarPerM3
   }
   // Foundation concrete cast onto or into the ground (slabs on ground, bored
   // piles) is formed only at slab edges, not by the per-m³ ratio below.
@@ -218,14 +239,26 @@ export function computeQuantities(p: HouseParams): Quantities {
     : Math.max(stripH, region.frostDepth)
 
   // ---- Earthworks (act) ----
-  const excavationVol = p.basement ? A * (p.basementDepth + 0.3) : soleArea * excDepth
+  // The strip trench is wider than the strip (working space for formwork and
+  // coating) and deeper by the sand bed and the blinding under it.
+  const isStrip = p.foundation === 'strip' && !p.basement
+  const trenchW = stripW + 2 * C.trenchWorkingWidth
+  const trenchDepth = excDepth + sandBedT + blindingT
+  const excavationVol = p.basement
+    ? A * (p.basementDepth + 0.3)
+    : isStrip
+      ? stripLen * trenchW * trenchDepth
+      : soleArea * excDepth
   add('excavation', 'earthworks', 'act', excavationVol)
   // Обратная засыпка: у подвала засыпается только рабочая зона вокруг стен —
-  // сам подвал занимает котлован. У ленты — обычная доля объёма траншеи.
-  const backfillVol = p.basement
+  // сам подвал занимает котлован. У ленты — рабочая зона траншеи (всё, кроме
+  // ленты с подсыпкой и подбетонкой). Доля из панели инженера — приоритетнее.
+  const trenchBackfill = isStrip ? Math.max(0, excavationVol - stripLen * stripW * trenchDepth) : excavationVol * backfillK
+  const backfillTrench = p.basement
     ? P * basementWorkW * (p.basementDepth + 0.3)
-    : excavationVol * backfillK
-  add('backfill', 'earthworks', 'act', backfillVol)
+    : pct(e.backfillPct) != null
+      ? excavationVol * backfillK
+      : trenchBackfill
   // The slab on ground is poured between the strips (grillage, column pads),
   // so the area they already take is neither concreted nor bedded twice.
   const underGroundSlab =
@@ -235,19 +268,37 @@ export function computeQuantities(p: HouseParams): Quantities {
         ? (stripLen / axisStep) * colSize * colSize
         : 0
   const groundSlabArea = floorOnGround > 0 ? Math.max(0, A - underGroundSlab) : 0
+  // Пол первого этажа поднят на цоколь: под плитой — местный грунт из траншеи,
+  // затем песчаная подушка и сама плита.
+  const plinthFill = isStrip ? groundSlabArea * Math.max(0, C.plinthHeight - floorOnGround - sandBedT) : 0
+  const backfillVol = backfillTrench + plinthFill
+  // Засыпка идёт местным грунтом из траншеи; если его не хватает (цоколь
+  // поднимает пол), недостающее завозится и укладывается как подсыпка.
+  const importedFill = Math.max(0, backfillVol - excavationVol)
+  add('backfill', 'earthworks', 'act', backfillVol - importedFill)
+  // Лишний грунт вывозится; в кузове он занимает больше, чем в массиве.
+  add('soil_removal', 'earthworks', 'act', Math.max(0, excavationVol - backfillVol) * C.soilBulking)
+  add('setting_out', 'earthworks', 'act', A > 0 ? 1 : 0)
   // Подсыпка: под подошву фундамента + под пол по грунту, если он задан.
-  add('sand_gravel', 'earthworks', 'act', soleArea * sandBedT + groundSlabArea * sandBedT)
+  add('sand_gravel', 'earthworks', 'act', soleArea * sandBedT + groundSlabArea * sandBedT + importedFill)
   add('concrete_blinding', 'foundation', 'act', soleArea * blindingT)
   // Пол по грунту — бетонная плита с сеткой, а не песчано-гравийная подсыпка.
   // It is poured between the strips / grillage, which act as its side form.
   if (groundSlabArea > 0) {
-    addStruct('foundation', groundSlabArea * floorOnGround, reb.slab)
+    addStruct('foundation', groundSlabArea * floorOnGround, reb.slab, groundSlabArea * floorOnGround, false)
     castOnGround(groundSlabArea * floorOnGround, 0)
   }
+  // The ground floor lying on the ground is insulated under the screed (XPS),
+  // or the floor heats the soil. Priced per m² at 100 mm like the roof.
+  const floorOnSoil = groundSlabArea > 0 ? groundSlabArea : p.foundation === 'slab' && !p.basement ? A : 0
+  add('insulation_xps', 'floors', 'act', floorOnSoil * (C.groundSlabInsulation / C.insulationBaseThickness))
 
   // ---- Foundation ----
   if (p.foundation === 'strip') {
-    addStruct('foundation', stripLen * stripW * stripH, reb.strip)
+    // from the sole up to the plinth top: below ground to the frost depth (or
+    // the design height if deeper), then the plinth above ground
+    const stripTotalH = (p.basement ? stripH : excDepth + C.plinthHeight)
+    addStruct('foundation', stripLen * stripW * stripTotalH, reb.strip)
   } else if (p.foundation === 'slab') {
     addStruct('foundation', A * fndSlabT, reb.slab)
     castOnGround(A * fndSlabT, P * fndSlabT)
@@ -266,21 +317,22 @@ export function computeQuantities(p: HouseParams): Quantities {
   // ---- Basement walls + floor slab ----
   if (p.basement) {
     addStruct('foundation', P * basementWallT * p.basementDepth, reb.basementWall)
-    addStruct('foundation', A * fndSlabT, reb.slab) // пол подвала
+    addStruct('foundation', A * fndSlabT, reb.slab, A * fndSlabT, false) // пол подвала
     castOnGround(A * fndSlabT, P * fndSlabT)
     add('waterproofing', 'foundation', 'act', A) // гидроизоляция пола подвала
   }
 
-  // ---- Foundation waterproofing (plinth, exterior only) + apron ----
-  const plinthHeight = p.basement ? p.basementDepth : 0.5
-  add('waterproofing', 'foundation', 'act', P * plinthHeight)
+  // ---- Foundation waterproofing + apron ----
+  // A strip is coated on its outer face from the sole to the plinth top and
+  // gets a cut-off layer on top, under the walls, against rising damp.
+  const plinthHeight = p.basement ? p.basementDepth : isStrip ? excDepth + C.plinthHeight : C.plinthHeight
+  add('waterproofing', 'foundation', 'act', P * plinthHeight + (isStrip ? stripLen * stripW : 0))
   add('apron', 'foundation', 'act', P * apronW)
 
   // ---- Walls / frame ----
   // В каркасе вертикаль несут колонны: кладка заполняет только наружный контур,
   // внутренние деления — это перегородки (учтены отдельно, 0.1 м). В несущей
   // кладке и полном монолите внутренние несущие стены реальны → полные оси.
-  const structLen = p.system === 'frame' ? P : Lb
   const wallGross = structLen * H
   const doorsArea = p.exteriorDoors * 2.0
   const openingsArea =
@@ -346,6 +398,10 @@ export function computeQuantities(p: HouseParams): Quantities {
   const openingCount = Math.ceil(p.windowAreaTotal / 3) + p.exteriorDoors
   const lintelLen = openingCount * (1.5 + 0.5)
   addStruct('walls', lintelLen * lintelW * lintelH, reb.lintel)
+  // scaffolding on the facade from the masonry to the facade finish
+  const parapetH = p.roof === 'flat' ? C.parapetHeight : 0
+  add('scaffolding', 'walls', 'act', P * (H + parapetH) * C.scaffoldMonths)
+  add('crane', 'frame', 'act', A > 0 ? C.craneShifts : 0)
 
   // ---- Floors / ceilings ----
   // One slab over every storey. A basement adds the slab over it, i.e. the
@@ -353,7 +409,7 @@ export function computeQuantities(p: HouseParams): Quantities {
   const slabLevels = p.floors + (p.basement ? 1 : 0)
   const slabArea = Math.max(0, A * slabLevels - hallVoid)
   if (p.floorSlab === 'monolith') {
-    addStruct('floors', slabArea * floorSlabT, reb.floor)
+    addStruct('floors', slabArea * floorSlabT, reb.floor, slabArea * floorSlabT, false)
   } else {
     const count = Math.ceil(slabArea / precastArea)
     add('precast_slab', 'floors', 'act', count)
@@ -362,7 +418,7 @@ export function computeQuantities(p: HouseParams): Quantities {
   // ---- Beams over the double-height hall ----
   if (hallVoid > 0 && p.beamsOverHall) {
     const beamLen = Math.sqrt(hallVoid) * 2 // пара балок через проём
-    addStruct('floors', beamLen * 0.3 * Math.max(0, 0.4 - slabOverBeams), reb.floor, beamLen * 0.3 * 0.4)
+    addStruct('floors', beamLen * 0.3 * Math.max(0, 0.4 - slabOverBeams), reb.floor, beamLen * 0.3 * 0.4, false)
   }
 
   // ---- Stair ----
@@ -371,7 +427,7 @@ export function computeQuantities(p: HouseParams): Quantities {
   add('stair', 'stair', 'act', flights * stairVol)
 
   // ---- Rough screed (act) ----
-  add('screed', 'floors', 'act', finishedArea)
+  add('screed', 'floors', 'act', floorLayerArea)
 
   // ---- Roof (flat / pitched / hip / mansard) ----
   if (p.roof === 'flat') {
@@ -379,14 +435,21 @@ export function computeQuantities(p: HouseParams): Quantities {
     add('roof_slope', 'roof', 'act', A * C.roofSlopeLayer)
     add('roof_flat', 'roof', 'act', A)
     add('waterproofing', 'roof', 'act', A)
-    add('insulation', 'roof', 'act', A * (insulT / C.insulationBaseThickness))
+    add('insulation_xps', 'roof', 'act', A * (insulT / C.insulationBaseThickness))
+    // Parapet along the roof edge: the membrane turns up onto it and it guards
+    // the edge. Laid of the wall block, capped with a steel coping.
+    const parapetVol = P * C.parapetHeight * wallT * waste
+    add(masonryKey(wallMat), 'roof', 'act', parapetVol)
+    if (wallMat === 'aerated') add('glue_aerated', 'roof', 'act', parapetVol * glueShare)
+    else add('mortar', 'roof', 'act', parapetVol * mortarShare)
+    add('parapet_coping', 'roof', 'act', P)
   } else {
     // real slope: footprint / cos(angle) + eaves overhang, ×shape factor
     const rad = (Math.min(Math.max(p.roofPitchDeg, 5), 75) * Math.PI) / 180
     const shape = p.roof === 'mansard' ? 1.15 : p.roof === 'hip' ? 1.05 : 1
     const roofArea = (A / Math.cos(rad) + P * 0.5) * shape
     add('roof_pitched', 'roof', 'act', roofArea)
-    add('insulation', 'roof', 'act', roofArea * (insulT / C.insulationBaseThickness))
+    add('insulation_xps', 'roof', 'act', roofArea * (insulT / C.insulationBaseThickness))
     // gable walls: full for a gable/pitched roof, half for mansard, none for hip
     const gableMult = p.roof === 'pitched' ? 1 : p.roof === 'mansard' ? 0.5 : 0
     if (gableMult > 0) {
@@ -399,44 +462,55 @@ export function computeQuantities(p: HouseParams): Quantities {
   // Windows
   add('window_regular', 'openings', 'turnkey', p.windowAreaTotal * (1 - p.vitrageShare))
   add('window_vitrage', 'openings', 'turnkey', p.windowAreaTotal * p.vitrageShare)
-  const take = planTake(p)
+  // curtain walls stand on the floor; ordinary windows get a sill and a drip
+  add('window_sills', 'openings', 'turnkey', (p.windowAreaTotal * (1 - p.vitrageShare)) / C.windowHeight)
   // Doors
   add('door_exterior', 'openings', 'turnkey', p.exteriorDoors)
   const interiorDoors = p.interiorDoors ?? take.leafDoors
   add('door_interior', 'openings', 'turnkey', interiorDoors)
 
-  // Partitions (aerated block) + plaster, one storey high
-  const partitionArea = take.partitions * p.floorHeight
-  add('aerated_block', 'partitions', 'turnkey', partitionArea * partitionT)
+  // Partitions (aerated block) + plaster: from the floor to the slab above
+  // (storey height minus the slab), less the door openings in them
+  const clearH = Math.max(0, p.floorHeight - floorSlabT)
+  const partitionArea = Math.max(0, take.partitions * clearH - take.leafDoors * DOOR_W * C.doorHeight)
+  add('aerated_partition', 'partitions', 'turnkey', partitionArea * partitionT)
   // aerated blocks are laid on thin-joint glue, as in the walls
   add('glue_aerated', 'partitions', 'turnkey', partitionArea * partitionT * glueShare)
-  add('glass_partition', 'partitions', 'turnkey', take.glass * p.floorHeight)
+  add('glass_partition', 'partitions', 'turnkey', take.glass * clearH)
   // railings: along the void (gallery, landing) and along each flight
   add('railing', 'finishing', 'turnkey', take.railing + flights * C.stairRailingPerFlight)
 
   // Штукатурка: внутренняя грань наружных стен (одна сторона) + внутренние
   // несущие стены (две стороны) + перегородки (две стороны) + потолки.
-  const intBearingLen = Math.max(0, structLen - P)
-  const plasterWalls = Math.max(0, P * H - openingsArea) + intBearingLen * H * 2
-  const plasterArea = plasterWalls + partitionArea * 2 + finishedArea
+  // Стены — по внутреннему периметру и в чистоте, без толщины перекрытий.
+  const innerPerimeter = 2 * (Math.max(0, L0 - 2 * wallT) + Math.max(0, W0 - 2 * wallT))
+  const clearWallH = Math.max(0, H - floors0 * floorSlabT)
+  const plasterWalls = Math.max(0, innerPerimeter * clearWallH - openingsArea) + intBearingLen * clearWallH * 2
+  const plasterArea = plasterWalls + partitionArea * 2 + floorLayerArea
   add('plaster', 'finishing', 'turnkey', plasterArea)
-  add('floor_finish', 'finishing', 'turnkey', finishedArea)
+  add('floor_finish', 'finishing', 'turnkey', floorLayerArea)
+  // bathroom walls tiled to 2.4 m, less the door of each bathroom
+  add('wall_tile', 'finishing', 'turnkey', Math.max(0, take.bathPerimeter * C.bathTileHeight - take.baths * DOOR_W * C.doorHeight))
+  add('stair_finish', 'finishing', 'turnkey', flights * C.stairFinishPerFlight)
 
-  // Facade (outer walls only) + facade insulation
-  const facadeArea = Math.max(0, P * H - p.windowAreaTotal)
+  // Facade (outer walls and the parapet) + facade insulation
+  const parapetFace = p.roof === 'flat' ? P * C.parapetHeight : 0
+  const facadeArea = Math.max(0, P * H + parapetFace - p.windowAreaTotal)
   add('facade', 'facade', 'turnkey', facadeArea)
-  add('insulation', 'facade', 'turnkey', facadeArea * (insulT / C.insulationBaseThickness))
+  add('insulation', 'facade', 'turnkey', Math.max(0, P * H - p.windowAreaTotal) * (insulT / C.insulationBaseThickness))
 
-  // Engineering networks (per m²).
-  // Все сети разводятся по полу и оплачиваются за м² отапливаемого пола:
-  // над проёмом двусветного зала нет ни пола, ни труб, ни воздуховодов.
-  // Высокий объём зала требует мощности, а не площади — тёплый пол у
-  // остекления и вытяжка наверху (см. совет в norms.ts).
-  add('electrical', 'engineering', 'turnkey', finishedArea)
-  add('plumbing', 'engineering', 'turnkey', finishedArea)
-  add('heating', 'engineering', 'turnkey', finishedArea)
-  add('ventilation', 'engineering', 'turnkey', finishedArea)
+  // Engineering networks (per m² of house area).
+  // Сети оплачиваются за м² общей площади: над проёмом двусветного зала нет
+  // ни пола, ни труб, ни воздуховодов. Высокий объём зала требует мощности,
+  // а не площади — тёплый пол у остекления и вытяжка наверху (norms.ts).
+  add('electrical', 'engineering', 'turnkey', houseArea)
+  add('plumbing', 'engineering', 'turnkey', houseArea)
+  add('heating', 'engineering', 'turnkey', houseArea)
+  add('ventilation', 'engineering', 'turnkey', houseArea)
   add('lightning', 'engineering', 'turnkey', 1)
+  add('sanitary_set', 'engineering', 'turnkey', take.baths)
+  if (p.connectGas) add('gas_internal', 'engineering', 'turnkey', 1)
+  add('roof_drainage', 'roof', 'turnkey', A > 0 ? 1 : 0)
 
   // ---- Подключение к внешним сетям (ТУ + врезка) ----
   // Платежи сетевым организациям; от площади дома не зависят.
@@ -451,29 +525,36 @@ export function computeQuantities(p: HouseParams): Quantities {
   add('fence', 'site', 'turnkey', Math.max(0, p.fenceLength))
   add('site_paving', 'site', 'turnkey', Math.max(0, p.sitePavingArea))
   add('balcony', 'site', 'turnkey', Math.max(0, p.balconyArea))
+  add('waste_removal', 'site', 'turnkey', houseArea * C.debrisPerM2)
 
   // ---- Optional premium systems (opt-in extras) ----
-  // per-m² options use the finished floor area (gross minus the hall void) — same
-  // base as screed/plaster/floor_finish above, so numbers stay consistent.
+  // per-m² options use the house area, as the networks above do
   // тёплый пол и рекуперация — доплаты к базовым строкам heating/ventilation
-  if (p.optHeating) add('opt_boiler_heating', 'options', 'turnkey', finishedArea)
-  if (p.optMvhr) add('opt_mvhr', 'options', 'turnkey', finishedArea)
-  if (p.optHeatPump) add('opt_heat_pump', 'options', 'turnkey', 1)
+  if (p.optHeating) add('opt_boiler_heating', 'options', 'turnkey', houseArea)
+  if (p.optMvhr) add('opt_mvhr', 'options', 'turnkey', houseArea)
+  if (p.optHeatPump) {
+    add('opt_heat_pump', 'options', 'turnkey', 1)
+    add('dhw_cylinder', 'options', 'turnkey', 1)
+  }
+  add('opt_fancoil', 'options', 'turnkey', Math.max(0, Math.round(p.optFanCoils)))
+  add('opt_battery', 'options', 'turnkey', Math.max(0, p.optBatteryKwh))
+  if (p.optEvCharger) add('opt_ev_charger', 'options', 'turnkey', 1)
+  add('opt_kitchen', 'options', 'turnkey', Math.max(0, p.optKitchenM))
   if (p.optSolarKw > 0) add('opt_solar', 'options', 'turnkey', p.optSolarKw)
-  if (p.optFinishPremium) add('opt_finish_premium', 'options', 'turnkey', finishedArea)
-  if (p.optPanelCeiling) add('opt_panel_ceiling', 'options', 'turnkey', finishedArea)
+  if (p.optFinishPremium) add('opt_finish_premium', 'options', 'turnkey', floorLayerArea)
+  if (p.optPanelCeiling) add('opt_panel_ceiling', 'options', 'turnkey', floorLayerArea)
 
   // ---- Documents / permit (act) ----
   if (p.includePermitCost) {
     add('permit_apz', 'permit', 'act', 1)
     // проект и технадзор оплачиваются за м² дома, а проём зала — не площадь
-    add('permit_design', 'permit', 'act', finishedArea)
+    add('permit_design', 'permit', 'act', houseArea)
     add('permit_geology', 'permit', 'act', 1)
     // the simplified procedure N 4.1 issues the permit without the expertise
     if (simplified41Reasons(p, netArea).length > 0) add('permit_expertise', 'permit', 'act', 1)
     add('permit_fee', 'permit', 'act', 1)
     add('permit_address', 'permit', 'act', 1)
-    add('permit_supervision', 'permit', 'act', finishedArea)
+    add('permit_supervision', 'permit', 'act', houseArea)
   }
 
   // ---- Опалубка и подача бетона ----
@@ -509,8 +590,9 @@ export function computeQuantities(p: HouseParams): Quantities {
       lines.push({ key: g, section: key, stage: 'act', quantity: vol })
     }
   }
-  for (const key of Object.keys(rebarBySection) as SectionId[]) {
-    const kg = (rebarBySection[key] ?? 0) * rebarFloorK
+  const rebarSections = new Set([...Object.keys(rebarBySection), ...Object.keys(rebarFixedBySection)] as SectionId[])
+  for (const key of rebarSections) {
+    const kg = (rebarBySection[key] ?? 0) * rebarFloorK + (rebarFixedBySection[key] ?? 0)
     rebarKg += kg
     if (kg > 0) lines.push({ key: p.rebarGrade, section: key, stage: 'act', quantity: kg / 1000 })
   }

@@ -21,7 +21,7 @@ export interface PriceItem {
   labelHy: string
   labelEn?: string // English label; falls back to Russian when absent
   unit: string // 'м³', 'т', 'шт', 'м²', 'кг', 'компл', 'м'
-  materialMin: number // AMD, without VAT
+  materialMin: number // AMD, what a private buyer pays (a VAT-registered seller's VAT included)
   materialTypical: number
   materialMax: number
   labor: number // AMD per unit, 0 if not applicable

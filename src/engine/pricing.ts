@@ -8,6 +8,9 @@ import type { Quantities, SectionId, Stage } from './quantities'
 const FINISH_SECTIONS = new Set<SectionId>(['finishing', 'facade', 'openings', 'partitions'])
 // shell sections whose labour is covered by the builders' brigade rate (֏/m²)
 const BRIGADE_SECTIONS = new Set<SectionId>(['foundation', 'walls', 'frame', 'floors'])
+// ...except work a shell brigade does not do: the screed, the floor insulation
+// under it and the blind area are laid by their own crews at the end.
+const OWN_CREW = new Set(['screed', 'insulation_xps', 'apron'])
 
 export interface EstimateLine {
   key: string
@@ -80,7 +83,10 @@ function finalize(material: number, labor: number, permitAmt: number, p: HousePa
 
   const contingency = works * pc(p.contingencyPct)
   const taxable = works + contingency
-  const vat = p.vatIncluded ? taxable * C.vatRate : 0
+  // Catalogue material prices already carry the seller's VAT. A VAT-paying
+  // contractor recovers it and charges 20% on its own price, so the VAT added
+  // on top is 20% of everything except the materials.
+  const vat = p.vatIncluded ? Math.max(0, taxable - material) * C.vatRate : 0
 
   return {
     material,
@@ -126,7 +132,7 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
     const material = ql.quantity * unitMat * mult
     // shell labour (foundation/walls/frame/floors) is covered by the brigade rate
     // (added below); earthworks/roof/stair and all turnkey work keep per-item labour.
-    const labor = BRIGADE_SECTIONS.has(ql.section) ? 0 : ql.quantity * item.labor * mult
+    const labor = BRIGADE_SECTIONS.has(ql.section) && !OWN_CREW.has(ql.key) ? 0 : ql.quantity * item.labor * mult
     const total = material + labor
     if (isPermit) permitAmt += total
 

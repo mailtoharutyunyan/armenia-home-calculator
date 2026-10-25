@@ -77,7 +77,7 @@ export interface HouseParams {
   includePermitCost: boolean // включать стоимость документов/разрешения в смету
   roomsPerFloor: number // комнат на этаже (для проверки «помещается ли»)
   kitchenLivingCombined: boolean // зал и кухня вместе (студия) или раздельно
-  laborPerM2: number // работа бригады на стадии «коробка», ֏/м² (default 11000)
+  laborPerM2: number // работа бригады на стадии «коробка», ֏/м² (default 14000)
   beamsOverHall: boolean // балки над залом заложены
   // Подключение к сетям — отдельные платежи сетевым организациям (ТУ + врезка),
   // не входят в стоимость внутренних сетей дома.
@@ -104,7 +104,11 @@ export interface HouseParams {
   // optional premium systems (opt-in extras)
   optHeating: boolean // тёплый пол — доплата к базовому отоплению (котёл + радиаторы), ֏/м²
   optMvhr: boolean // вентиляция с рекуперацией тепла — доплата к базовой вентиляции, ֏/м²
-  optHeatPump: boolean // тепловой насос воздух-вода (компл.)
+  optHeatPump: boolean // тепловой насос воздух-вода (компл.) + бойлер косвенного нагрева
+  optFanCoils: number // фанкойлы, шт (0 = нет)
+  optBatteryKwh: number // аккумулятор LiFePO4, кВт·ч (0 = нет)
+  optEvCharger: boolean // зарядка электромобиля (wallbox)
+  optKitchenM: number // кухонная мебель, пог.м (0 = не входит)
   optSolarKw: number // солнечные панели, кВт (0 = нет)
   optFinishPremium: boolean // финишная отделка «под ключ» (֏/м²)
   optPanelCeiling: boolean // панельный (реечный) потолок (֏/м²)
@@ -215,7 +219,10 @@ export const DEFAULT_HOUSE: HouseParams = {
   includePermitCost: true,
   roomsPerFloor: 3, // студия (зал+кухня) + гостевой санузел + мастер-комната
   kitchenLivingCombined: true,
-  laborPerM2: 11000,
+  // Monolithic frame brigades quote 10 000–14 000 ֏/m² of floor (list.am,
+  // 12.10.2026) and block laying 4 000 ֏/m² of wall (NewHome): ~14 000 ֏/m²
+  // for the whole shell.
+  laborPerM2: 14000,
   beamsOverHall: true,
   // Подключения по умолчанию соответствуют региону по умолчанию (Ереван), где
   // центральная канализация есть. Для сёл и окраин снимите галочку
@@ -240,6 +247,10 @@ export const DEFAULT_HOUSE: HouseParams = {
   optHeating: false,
   optMvhr: false,
   optHeatPump: false,
+  optFanCoils: 0,
+  optBatteryKwh: 0,
+  optEvCharger: false,
+  optKitchenM: 0,
   optSolarKw: 0,
   optFinishPremium: false,
   optPanelCeiling: false,

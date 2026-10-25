@@ -168,7 +168,7 @@ describe('permit & hall', () => {
     const closed = house({ kitchenLivingCombined: false })
     expect(sum(open, 'glass_partition')).toBeGreaterThan(0)
     expect(sum(closed, 'glass_partition')).toBe(0)
-    expect(sum(closed, 'aerated_block')).toBeGreaterThan(sum(open, 'aerated_block'))
+    expect(sum(closed, 'aerated_partition')).toBeGreaterThan(sum(open, 'aerated_partition'))
     expect(sum(closed, 'door_interior')).toBe(sum(open, 'door_interior') + 1)
   })
 

@@ -205,7 +205,14 @@ export function roomClear(r: Room, plan: Pick<FloorPlan, 'L' | 'W' | 'wall' | 'p
 // partition, railings along the void, and doors with a leaf. Hall, corridor and
 // stair run into each other through open doorways, so no wall is counted between
 // them; a gallery or landing is railed along the void; any other room is walled.
-export function planTakeoff(plan: FloorPlan): { partitions: number; glass: number; railing: number; leafDoors: number } {
+export function planTakeoff(plan: FloorPlan): {
+  partitions: number
+  glass: number
+  railing: number
+  leafDoors: number
+  baths: number
+  bathPerimeter: number
+} {
   const e = 0.02
   const circulation = (t: RoomType) => t === 'hall' || t === 'corridor' || t === 'stair'
   // the side of `a` that `b` touches, and the length they share
@@ -251,7 +258,10 @@ export function planTakeoff(plan: FloorPlan): { partitions: number; glass: numbe
       return Math.abs(d.pos - pos) < e && d.start >= from - e && d.start + d.w <= from + len + e
     })
   const leafDoors = plan.doors.filter((d) => d.kind === 'interior' && !inGlass(d)).length
-  return { partitions, glass, railing, leafDoors }
+  // wet rooms: each gets sanitary ware, and its walls are tiled
+  const wet = rooms.filter((r) => r.type === 'bath')
+  const bathPerimeter = wet.reduce((a, r) => a + 2 * (r.w + r.h), 0)
+  return { partitions, glass, railing, leafDoors, baths: wet.length, bathPerimeter }
 }
 
 export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], labels: PlanLabels = {}): FloorPlan {
@@ -411,7 +421,7 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
   }
 }
 
-const DOOR_W = 0.9
+export const DOOR_W = 0.9
 
 // Connect rooms with a spanning tree of interior doors + one entrance door.
 function buildDoors(rooms: Room[], inset: number, L: number, W: number, withEntrance = true): Door[] {
