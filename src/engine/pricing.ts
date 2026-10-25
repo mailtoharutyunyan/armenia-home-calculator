@@ -11,6 +11,9 @@ const BRIGADE_SECTIONS = new Set<SectionId>(['foundation', 'walls', 'frame', 'fl
 // ...except work a shell brigade does not do: the screed, the floor insulation
 // under it and the blind area are laid by their own crews at the end.
 const OWN_CREW = new Set(['screed', 'insulation_xps', 'apron'])
+// Fixed payments: documents, state fees and the utilities' connection tariffs.
+// Nobody builds them, so they carry no markups, contingency or VAT.
+export const FEE_SECTIONS = new Set<SectionId>(['permit', 'utilities'])
 
 export interface EstimateLine {
   key: string
@@ -124,7 +127,7 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
       if (!missing.includes(ql.key)) missing.push(ql.key)
       continue
     }
-    const isPermit = ql.section === 'permit'
+    const isPermit = FEE_SECTIONS.has(ql.section)
     const mult = FINISH_SECTIONS.has(ql.section) ? finishMult : 1
     // state fees (permit) are fixed — no delivery surcharge
     const delivery = isPermit ? 0 : region.deliverySurcharge
@@ -171,9 +174,18 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
   // The rate is the only labour on shell sections, so a basement (its walls,
   // floor and the slab over it) has to be in the area, or it is built for free.
   const shellArea = q.geometry.totalFloorArea + (p.basement ? q.geometry.footprint : 0)
-  const brigade = p.excludedSections.includes('walls')
-    ? 0
-    : Math.max(0, p.laborPerM2) * shellArea * heightFactor * sysFactor
+  // The brigade builds every shell section; switching sections off takes their
+  // share of the work away, measured by the shell materials it lays.
+  let shellAll = 0
+  let shellKept = 0
+  for (const ql of q.lines) {
+    if (!BRIGADE_SECTIONS.has(ql.section) || !catalog[ql.key]) continue
+    const m = ql.quantity * materialPrice(catalog[ql.key], mode)
+    shellAll += m
+    if (!p.excludedSections.includes(ql.section)) shellKept += m
+  }
+  const shellShare = shellAll > 0 ? shellKept / shellAll : 0
+  const brigade = Math.max(0, p.laborPerM2) * shellArea * heightFactor * sysFactor * shellShare
   if (brigade > 0) {
     lines.push({
       key: 'brigade',

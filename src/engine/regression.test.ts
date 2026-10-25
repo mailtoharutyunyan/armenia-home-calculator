@@ -80,8 +80,8 @@ describe('баг A — пол по грунту это бетон, а не по�
 
   it('a strip, pile or column house gets a 10 cm slab on ground by default', () => {
     // poured between what already stands on the ground, never over it: the
-    // strip or grillage (81 × 0.4 = 32.4 m²) or 81 / 2 = 40.5 pads of 0.4 × 0.4
-    const area = { strip: 182 - 32.4, pile: 182 - 32.4, column: 182 - 40.5 * 0.16 }
+    // strip or grillage (81 × 0.4 = 32.4 m²) or ⌈81 / 2⌉ = 41 pads of 0.4 × 0.4
+    const area = { strip: 182 - 32.4, pile: 182 - 32.4, column: 182 - 41 * 0.16 }
     for (const foundation of ['strip', 'pile', 'column'] as const) {
       const d = qty(house({ foundation }), 'concrete_b25', 'foundation') -
         qty(house({ foundation, eng: { floorOnGround: 0 } }), 'concrete_b25', 'foundation')
@@ -120,10 +120,10 @@ describe('formwork of concrete cast on or into the ground', () => {
 describe('баг B — подвал не засыпают обратно', () => {
   it('засыпается только рабочая зона вокруг стен', () => {
     const p = house({ basement: true })
-    // котлован = A × (2.4 + 0.3) = 491.4 м³ — сам подвал его занимает
-    expect(qty(p, 'excavation')).toBeCloseTo(491.4, 6)
-    // засыпка = P × 0.6 × 2.7 = 87.48 м³, а не 60% от котлована (294.84)
-    expect(qty(p, 'backfill')).toBeCloseTo(54 * C.basementWorkingWidth * 2.7, 6)
+    // котлован с рабочей зоной 0.6 м: (13 + 1.2) × (14 + 1.2) × 2.7 = 582.768 м³
+    expect(qty(p, 'excavation')).toBeCloseTo(582.768, 6)
+    // засыпается только рабочая зона: котлован − подвал (182 × 2.7 = 491.4)
+    expect(qty(p, 'backfill')).toBeCloseTo(582.768 - 491.4, 6)
     expect(qty(p, 'backfill')).toBeLessThan(qty(p, 'excavation') * 0.25)
   })
 
@@ -263,28 +263,31 @@ describe('новые разделы сметы', () => {
     expect(big).toBe(1)
   })
 
-  it('все инженерные сети — по общей площади дома, без проёма зала', () => {
-    // внутри наружных стен 12.4 × 13.4 = 166.16 м² на этаж; × 2 − 80 = 252.32 м²
-    for (const key of ['electrical', 'plumbing', 'heating', 'ventilation']) {
-      expect(qty(house(), key), key).toBeCloseTo(252.32, 6)
-    }
+  it('сети считаются по точкам на планах', () => {
+    const take = planTake(house())
+    // 3 bathrooms × WC, basin, shower + kitchen-dining sink and dishwasher +
+    // the utility room's washer = 12 water and 12 sewer points
+    expect(take.waterPoints).toBe(12)
+    expect(qty(house(), 'plumbing')).toBe(12)
+    expect(qty(house(), 'sewer_points')).toBe(12)
+    // an extract fan in each bathroom and the kitchen
+    expect(qty(house(), 'ventilation')).toBe(4)
+    // sockets by СП 31-110 (one per 4 m of perimeter, ≥4 in the kitchen) and a
+    // light with its switch in every room
+    expect(qty(house(), 'electrical')).toBe(take.sockets + take.lights)
+    expect(take.sockets).toBe(42)
+    expect(take.lights).toBe(34)
+    expect(qty(house(), 'heating')).toBe(1) // one boiler room
   })
 
-  it('без двусветного зала сети — по всей общей площади этажей', () => {
-    const p = house({ doubleHeightHall: false })
-    for (const key of ['electrical', 'plumbing', 'heating', 'ventilation']) {
-      expect(qty(p, key), key).toBeCloseTo(332.32, 6)
-    }
-  })
-
-  it('отопление и вентиляция по умолчанию: 252.32 м² × (материал + работа)', () => {
+  it('котельная и радиаторы по прайсам', () => {
     const p = house()
     const est = computeEstimate(computeQuantities(p), SEED_PRICES, p, 'typical')
     const line = (key: string) => est.lines.find((l) => l.key === key)!.total
-    expect(line('heating')).toBeCloseTo(252.32 * (10500 + 7600), 0) // 4 566 992
-    // a radiator under each of the 10 ordinary windows (30 m² / 3 m²)
-    expect(line('radiators')).toBeCloseTo(10 * (37400 + 10000), 0) // 474 000
-    expect(line('ventilation')).toBeCloseTo(252.32 * (4000 + 3000), 0) // 1 766 240
+    expect(line('heating')).toBeCloseTo(422500 + 15000, 0)
+    // hall 2 × 80.9 m² × 60 W = 9.7 kW → 7; kitchen-dining 2; nine more rooms 1 each
+    expect(qty(p, 'radiators')).toBe(18)
+    expect(line('radiators')).toBeCloseTo(18 * (49400 + 10000), 0) // 1 069 200
   })
 
   it('тёплый пол заменяет радиаторы, рекуперация — доплата к вентиляции', () => {
@@ -296,7 +299,7 @@ describe('новые разделы сметы', () => {
     expect(qty(base, 'opt_mvhr')).toBe(0)
     expect(qty(extra, 'heating')).toBe(qty(base, 'heating'))
     // underfloor heating replaces the radiators instead of adding to them
-    expect(qty(base, 'radiators')).toBe(10)
+    expect(qty(base, 'radiators')).toBe(18)
     expect(qty(extra, 'radiators')).toBe(0)
     expect(qty(extra, 'ventilation')).toBe(qty(base, 'ventilation'))
   })
@@ -387,7 +390,13 @@ describe('панель инженера — переопределения ре�
     //               crane shift 60 000
     //   83 926 056  radiators on their own line (one per ordinary window, from
     //               quotes), so underfloor heating replaces them
-    expect(Math.round(a)).toBe(83926056)
+    //   72 430 513  engineering per point from the plans and price lists
+    //               (FastModernHouse, Vida, ShinShin, Domus); boiler room from
+    //               quotes; radiators per room by heat need; concrete at
+    //               Waelcon's list with VAT and delivery; pump per call; PSRC
+    //               connection fee; facade system from Ceresit prices;
+    //               connection fees carry no markups
+    expect(Math.round(a)).toBe(72430513)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {
@@ -762,5 +771,64 @@ describe('полная проверка 26.10.2026', () => {
   it('мусор и газ: по площади дома и только при подключении газа', () => {
     expect(qty(house(), 'waste_removal')).toBeCloseTo(252.32 * C.debrisPerM2, 6)
     expect(qty(house({ connectGas: false }), 'gas_internal')).toBe(0)
+  })
+})
+
+describe('независимая проверка логики 26.10.2026', () => {
+  const est = (p: HouseParams) => computeEstimate(computeQuantities(p), SEED_PRICES, p, 'typical')
+
+  it('проём зала — тот, что нарисован, а не заказанный', () => {
+    // the plans cap the void at what the house can hold (~80.9 m² here)
+    const g = computeQuantities(house({ hallArea: 150 })).geometry
+    expect(g.hallVoid).toBeCloseTo(planTake(house({ hallArea: 150 })).voidArea, 6)
+    expect(g.hallVoid).toBeLessThan(85)
+  })
+
+  it('плитный фундамент с подвалом — одна плита, а не две', () => {
+    const slab = computeQuantities(house({ foundation: 'slab', basement: true }))
+    const conc = slab.lines.filter((l) => l.key === 'concrete_b25' && l.section === 'foundation').reduce((a, l) => a + l.quantity, 0)
+    // raft 182 × 0.3 + basement walls 54 × 0.3 × 2.4
+    expect(conc).toBeCloseTo(182 * 0.3 + 54 * 0.3 * 2.4, 6)
+  })
+
+  it('отключённый раздел коробки убирает свою долю работы бригады', () => {
+    const full = est(house()).lines.find((l) => l.key === 'brigade')!.total
+    const noFloors = est(house({ excludedSections: ['floors'] })).lines.find((l) => l.key === 'brigade')!.total
+    expect(noFloors).toBeLessThan(full)
+    expect(noFloors).toBeGreaterThan(0)
+    expect(est(house({ excludedSections: ['foundation', 'walls', 'frame', 'floors'] })).lines.find((l) => l.key === 'brigade')).toBeUndefined()
+  })
+
+  it('плата за подключение не получает наценок и резерва', () => {
+    const a = est(house())
+    const b = est(house({ connectWater: false }))
+    // the water tariff leaves the total one for one
+    expect(a.turnkey.total - b.turnkey.total).toBeCloseTo(220000, 0)
+  })
+
+  it('фронтоны — два полных треугольника в толщину стены', () => {
+    const p = house({ roof: 'pitched', roofPitchDeg: 30 })
+    const face = ((14 * 14 * Math.tan(Math.PI / 6)) / 4) * 2
+    expect(qty(p, 'aerated_block', 'roof')).toBeCloseTo(face * 0.3 * 1.05, 6)
+  })
+
+  it('засыпка плитного фундамента не больше, чем осталось в котловане', () => {
+    const p = house({ foundation: 'slab' })
+    // pit 182 × 0.8; the raft, its bed and blinding take 182 × 0.45
+    expect(qty(p, 'backfill')).toBeCloseTo(182 * (0.8 - 0.45), 6)
+  })
+
+  it('монолитные стены опалубливаются с двух сторон', () => {
+    const p = house({ system: 'monolith' })
+    const fw = qty(p, 'formwork', 'walls')
+    const q = computeQuantities(p).geometry
+    expect(fw).toBeGreaterThan(2 * (q.wallNet - 81 * 0.18 * 2) - 1e-6)
+  })
+
+  it('в несущей кладке перегородки не дублируют внутренние несущие стены', () => {
+    const p = house({ system: 'aerated' })
+    const take = planTake(p)
+    const expected = (Math.max(0, take.partitions - 27 * 2) * 2.82 - take.leafDoors * 0.9 * 2.1) * C.partitionThickness
+    expect(qty(p, 'aerated_partition')).toBeCloseTo(Math.max(0, expected), 6)
   })
 })

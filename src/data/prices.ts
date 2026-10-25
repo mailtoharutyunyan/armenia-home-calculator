@@ -94,6 +94,16 @@ const Q = {
     'https://domus.am/category/heating-radiator-valves',
     'https://varpet.online/%D5%A3%D5%B6%D5%A1%D6%81%D5%B8%D6%82%D6%81%D5%A1%D5%AF',
   ],
+  // ready-mix with delivery up to 15 km, VAT included (Waelcon, 29.08.2026)
+  concreteVat: ['https://www.waelcon.am/wp-content/uploads/2026/08/%D5%8E%D4%B1%D4%B5%D4%BC%D4%BF%D5%88%D5%86-%D5%8D%D5%8A%D4%B8-%D4%B2%D5%A5%D5%BF%D5%B8%D5%B6%D5%AB-%D4%B3%D5%B6%D5%A1%D6%81%D5%B8%D6%82%D6%81%D5%A1%D5%AF29%E2%80%A408.2026.pdf'],
+  points: ['https://fastmodernhouse.com/%D5%A3%D5%B6%D5%A1%D6%81%D5%B8%D6%82%D6%81%D5%A1%D5%AF', 'https://varpet.online/%D5%A3%D5%B6%D5%A1%D6%81%D5%B8%D6%82%D6%81%D5%A1%D5%AF'],
+  cable: ['https://vida.am/catalog/elektrakanutyun/maluxner-larer/', 'https://electro.am/hy/', 'https://onlineshinanyut.am/product/view/lari-gofre-20mm-hrakayun-promrukav'],
+  panel: ['https://shinshin.am/electricity/panel-equipment/', 'https://domus.am/category/automatic-circuit-breaker'],
+  ppr: ['https://shinshin.am/engineering-systems/pipes/polypropylene-pipes/', 'https://erkatproff.am/jramatakararoum-ev-jraheracoum'],
+  boiler: ['https://onlineshinanyut.am/product/view/gazi-katsa+tskhatar-baxi-eco4s-24kvt', 'https://shinshin.am/heating/gas-water-heaters/', 'https://santex-house.am/weter-baqer'],
+  vent: ['https://domus.am/category/vents', 'https://onlineshinanyut.am/product/view/odapokhich-vents-100d', 'https://lanka.am/9001/06401'],
+  facadeSystem: ['https://shinshin.am/construction-materials/dry-construction-mixes/frontal-mixtures/', 'https://shinshin.am/construction-materials/', 'https://domus.am/product/shen-facade-paint-f-10l-152kg'],
+  psrc: ['https://psrc.am/content/electricity/connections1'],
   floorHeating: [
     'https://kelvin.am/ru/products/index?c_id=86',
     'https://santex-house.am/rasprodazha/truby-pex-a-16-kh-2-2c2mm-sanline-2c-universalnye-s-kislorodnoe-zashchitoj-barierom',
@@ -185,17 +195,21 @@ const items: PriceItem[] = [
   // ~4 000 ֏/m³ rise was reported with the cement shortage (Araratcement
   // denied raising its own price), so max carries that rise. Delivery and the
   // pump are separate lines.
-  quoted('concrete_b15', 'Бетон B15 / М200', 'Բետոն B15 / М200', 'м³', { min: 29000, typical: 29000, max: 33000 }, 18000, Q.concrete,
-    'MM Leader: М200 — 29 000 ֏/м³ (10.07.2026); в сентябре 2026 сообщали о росте на ~4 000 ֏/м³'),
-  quoted('concrete_b20', 'Бетон B20 / М250', 'Բետոն B20 / М250', 'м³', { min: 30000, typical: 30000, max: 34000 }, 18000, Q.concrete,
-    'MM Leader: М250 — 30 000 ֏/м³ (10.07.2026); в сентябре 2026 сообщали о росте на ~4 000 ֏/м³'),
-  quoted('concrete_b225', 'Бетон B22.5 / М300', 'Բետոն B22.5 / М300', 'м³', { min: 32000, typical: 32000, max: 36000 }, 18000, Q.concrete,
-    'MM Leader: М300 — 32 000 ֏/м³ (10.07.2026); в сентябре 2026 сообщали о росте на ~4 000 ֏/м³'),
-  quoted('concrete_b25', 'Бетон B25 / М350', 'Բետոն B25 / М350', 'м³', { min: 34000, typical: 34000, max: 38000 }, 18000, Q.concrete,
-    'MM Leader: М350 — 34 000 ֏/м³ (10.07.2026); в сентябре 2026 сообщали о росте на ~4 000 ֏/м³'),
-  item('concrete_b30', 'Бетон B30 / М400', 'Բետոն B30 / М400', 'м³', 36000, 18000, S.concrete),
-  quoted('concrete_blinding', 'Подбетонка М100', 'Ենթաբетон М100', 'м³', { min: 25000, typical: 25000, max: 29000 }, 8000, Q.concrete,
-    'MM Leader: М100 — 25 000 ֏/м³ (10.07.2026)'),
+  // Typical is Waelcon's list of 29.08.2026: VAT included, delivered within
+  // 15 km. MM Leader's lower list (10.07.2026) may be without VAT, so it is
+  // the minimum. Max is Waelcon's winter price (−10…−15 °C).
+  { ...quoted('concrete_b15', 'Бетон B15 / М200', 'Բետոն B15 / М200', 'м³', { min: 29000, typical: 37500, max: 42500 }, 18000, [...Q.concreteVat, ...Q.concrete],
+    'Waelcon (29.08.2026, с НДС и доставкой до 15 км): М200 — 37 500 ֏/м³, зимой до 42 500; MM Leader: 29 000 ֏/м³ (10.07.2026, возможно без НДС)'), verifiedAt: OCT },
+  { ...quoted('concrete_b20', 'Бетон B20 / М250', 'Բետոն B20 / М250', 'м³', { min: 30000, typical: 39500, max: 44500 }, 18000, [...Q.concreteVat, ...Q.concrete],
+    'Waelcon (29.08.2026, с НДС и доставкой до 15 км): М250 — 39 500 ֏/м³, зимой до 44 500; MM Leader: 30 000 ֏/м³ (10.07.2026, возможно без НДС)'), verifiedAt: OCT },
+  { ...quoted('concrete_b225', 'Бетон B22.5 / М300', 'Բետոն B22.5 / М300', 'м³', { min: 32000, typical: 41000, max: 46000 }, 18000, [...Q.concreteVat, ...Q.concrete],
+    'Waelcon (29.08.2026, с НДС и доставкой до 15 км): М300 — 41 000 ֏/м³, зимой до 46 000; MM Leader: 32 000 ֏/м³ (10.07.2026, возможно без НДС)'), verifiedAt: OCT },
+  { ...quoted('concrete_b25', 'Бетон B25 / М350', 'Բետոն B25 / М350', 'м³', { min: 34000, typical: 43000, max: 48000 }, 18000, [...Q.concreteVat, ...Q.concrete],
+    'Waelcon (29.08.2026, с НДС и доставкой до 15 км): М350 — 43 000 ֏/м³, зимой до 48 000; MM Leader: 34 000 ֏/м³ (10.07.2026, возможно без НДС)'), verifiedAt: OCT },
+  { ...quoted('concrete_b30', 'Бетон B30 / М400', 'Բետոն B30 / М400', 'м³', { min: 46000, typical: 46000, max: 51000 }, 18000, Q.concreteVat,
+    'Waelcon (29.08.2026, с НДС и доставкой до 15 км): М400 — 46 000 ֏/м³, зимой до 51 000'), verifiedAt: OCT },
+  { ...quoted('concrete_blinding', 'Подбетонка М100', 'Ենթաբетон М100', 'м³', { min: 25000, typical: 32500, max: 37500 }, 8000, [...Q.concreteVat, ...Q.concrete],
+    'Waelcon (29.08.2026, с НДС и доставкой): B7.5 (М100) — 32 500 ֏/м³, зимой до 37 500; MM Leader: 25 000 ֏/м³ (10.07.2026, возможно без НДС)'), verifiedAt: OCT },
 
   // --- Rebar (AMD/т) ---
   // RMS Group price list: A500C 12–32 mm 305 000, 8–10 mm 315 000 ֏/t; a house
@@ -256,8 +270,8 @@ const items: PriceItem[] = [
   // per m² at 100 mm: EPS grade I 1 556 (facade), stone wool 2 640, XPS 4 342.
   // The facade takes EPS (or wool), the flat roof and the floor on ground take
   // XPS: one averaged price under-paid the roof and over-paid the facade.
-  quoted('insulation', 'Утеплитель фасада', 'Ֆասադի ջերմամեկուսիչ', 'м²', { min: 1556, typical: 1556, max: 2640 }, 2000, Q.insulation,
-    'за м² при 100 мм: пенопласт I сорта 1 556 ֏; каменная вата 2 640 ֏'),
+  { ...quoted('insulation', 'Утеплитель фасада', 'Ֆասադի ջերմամեկուսիչ', 'м²', { min: 1556, typical: 1556, max: 2640 }, 4000, [...Q.insulation, 'https://turn.am/service/jermamekusacum-ev-dzaynamekusacman-carayutyun/detail'],
+    'за м² при 100 мм: пенопласт I сорта 1 556 ֏; каменная вата 2 640 ֏; монтаж утеплителя — от 4 000 ֏/м² (Turn.am)'), verifiedAt: OCT },
   quoted('insulation_xps', 'Утеплитель XPS (кровля, пол по грунту)', 'Ջերմամեկուսիչ XPS (տանիք, հատակ)', 'м²', { min: 4342, typical: 4342, max: 4342 }, 2000, Q.insulation,
     'за м² при 100 мм: экструдированный пенополистирол (XPS) — 4 342 ֏'),
   // 6 cm 1:3 screed: 0.54 bag of cement + 0.07 m³ of sand + fibre
@@ -297,7 +311,14 @@ const items: PriceItem[] = [
   // laminate 8 mm 6 500 ֏/m² + underlay and skirting; porcelain tile in wet rooms
   quoted('floor_finish', 'Напольное покрытие', 'Հատակածածկ', 'м²', { min: 6700, typical: 7800, max: 9800 }, 6000, Q.laminate,
     'laminat.am: ламинат 8 мм Swiss Krono — 6 500 ֏/м² + подложка и плинтус; керамогранит в санузлах и кухне'),
-  item('facade', 'Фасадная отделка', 'Ֆասադի հարդարում', 'м²', 9000, 6000, S.market),
+  // Thin-coat facade over the insulation, from ShinShin and Domus prices and
+  // Ceresit consumption: adhesive and base coat CT85 ~9 kg/m² (9 900 ֏ per
+  // 25 kg), mesh ×1.1 (Knauf 21 800 ֏ per 50 m²), CT35 "bark" 2.0 kg/m² at
+  // 2.5 mm (9 700 ֏ per 25 kg), primer ~0.15 l/m², two coats of facade paint
+  // ~0.3 l/m² (Shen F 17 900 ֏ per 10 l). Labour: no facade rate was found;
+  // interior decorative plaster is 5 000 ֏/m² (FastModernHouse).
+  derived('facade', 'Фасадная отделка (тонкослойная штукатурка)', 'Ֆասադի հարդարում (բարակ սվաղ)', 'м²', { min: 4300, typical: 5500, max: 7700 }, 6000, Q.facadeSystem,
+    'из прайсов ShinShin и Domus при расходах Ceresit: клей и базовый слой CT85 ~9 кг/м² (9 900 ֏ за 25 кг), сетка (21 800 ֏ за 50 м²), «короед» CT35 2 кг/м² (9 700 ֏ за 25 кг), грунт, краска Shen F в 2 слоя (17 900 ֏ за 10 л); работа фасада не сверена — ОЦЕНКА 6 000 ֏/м²'),
 
   // --- Roof ---
   item('roof_slope', 'Разуклонка кровли (керамзитобетон)', 'Տանիքի թեքաշերտ', 'м³', 22000, 9000, S.market),
@@ -314,23 +335,40 @@ const items: PriceItem[] = [
     'ОЦЕНКА — водосточные трубы от воронок до земли и отвод воды от отмостки; воронки входят в кровлю'),
 
   // --- Engineering networks (per m2 of total floor area) ---
-  item('electrical', 'Электрика', 'Էլեկտրագծեր', 'м²', 9000, 7000, S.market),
-  item('plumbing', 'Водопровод/канализация', 'Ջրամատակարարում', 'м²', 8000, 7000, S.market),
-  // The boiler, its room and the pipework. This is the unverified 12 000 +
-  // 8 000 ֏/m² of before, less the radiators, now priced from quotes on their
-  // own line (10 × 37 440 material, 10 × 10 000 fitting on 252.32 m²).
-  item('heating', 'Отопление: котёл и разводка', 'Ջեռուցում՝ կաթսա և խողովակաշար', 'м²', 10500, 7600, S.market),
+  // Per point drawn on the plans. Material: a device (Legrand Valena socket
+  // 1 500–1 900, Makel switch 630 ֏; none at a light point) + 10 m of VVG
+  // (3×1.5 370, 3×2.5 530 ֏/m, Vida) + 10 m of conduit (120–150 ֏/m).
+  // Labour as itemised by FastModernHouse: pulling the wire 5 000 + the device
+  // 3 500 + the box 1 000 ֏; cheaper all-in quotes start at 4 000 (Varpet).
+  derived('electrical', 'Электроточка (розетка, выключатель, свет)', 'Էլեկտրական կետ', 'точка', { min: 5500, typical: 7300, max: 8700 }, 9500, [...Q.cable, ...Q.points],
+    'из прайсов: механизм розетки 1 500–1 900 ֏ или выключатель 630 ֏ + 10 м кабеля ВВГ 370–530 ֏/м (Vida) + 10 м гофры 120–150 ֏/м (длина — допущение, уточнить по проекту ЭО); монтаж: протяжка 5 000 + установка 3 500 + подрозетник 1 000 ֏ (FastModernHouse), «от 4 000 ֏ за точку» (Varpet)'),
+  // IEK 36-module board 24 000, 18 breakers 660–1 200, 3 RCDs Legrand 8 300 ֏;
+  // fitting: the board 15 000 + 5 000 ֏ a breaker (FastModernHouse).
+  derived('electrical_panel', 'Электрощит с автоматами и УЗО', 'Էլեկտրական վահանակ', 'компл', { min: 54800, typical: 70500, max: 70500 }, 105000, [...Q.panel, ...Q.points],
+    'из прайсов: щит IEK 36 модулей 24 000 ֏ (ShinShin), 18 автоматов 660–1 200 ֏, 3 УЗО Legrand по 8 300 ֏ (Domus); монтаж щита 15 000 + 5 000 ֏ за автомат (FastModernHouse); число автоматов — допущение'),
+  // Per fixture: hot and cold PPR 20 mm, 8 m each (390 ֏/m, ShinShin); the
+  // point is laid for 10 000 ֏ (FastModernHouse, Varpet).
+  derived('plumbing', 'Водопроводная точка (ГВС + ХВС)', 'Ջրի կետ', 'точка', { min: 6240, typical: 6240, max: 10400 }, 10000, [...Q.ppr, ...Q.points],
+    'из прайсов: труба PPR 20 мм 390 ֏/м (ShinShin), 2 × 8 м на точку (длина — допущение, уточнить по проекту ВК); монтаж 10 000 ֏ за точку (FastModernHouse, Varpet)'),
+  derived('sewer_points', 'Канализационная точка', 'Կոյուղու կետ', 'точка', { min: 1140, typical: 1140, max: 3500 }, 10000, [...Q.ppr, ...Q.points],
+    'из прайсов: труба ПВХ 50 мм 759 ֏ за 2 м (Erkatproff), ~3 м на точку + стояки 110 мм 4 071 ֏ за 4 м (длина — допущение); монтаж 10 000 ֏ за точку (FastModernHouse)'),
+  // The boiler room: BAXI ECO4S 24 kW with flue 350 000 (Ferossi 240 000,
+  // Ariston 389 000), a 24 L expansion tank 13 500, a Grundfos UPS 25-60
+  // pump 59 000 ֏; fitting the boiler 15 000 ֏ (katsa.am). The pipes run
+  // with each radiator or floor loop.
+  derived('heating', 'Котельная: газовый котёл, бак, насос', 'Կաթսայատուն՝ գազի կաթսա, բաք, պոմպ', 'компл', { min: 312500, typical: 422500, max: 461500 }, 15000, Q.boiler,
+    'из прайсов: BAXI ECO4S 24 кВт с дымоходом 350 000 ֏ (Onlineshinanyut), Ferossi 240 000, Ariston 389 000 ֏; бак 24 л 13 500 ֏ (Santex House); насос Grundfos UPS 25-60 59 000 ֏; монтаж котла 15 000 ֏'),
   // One radiator under each ordinary window. Bimetal 500 mm, 10 sections:
   // 21 930–36 176 ֏ (Stalmetgroup, ShinShin), up to 55 100 (Corvette, Chip and
   // Dip); thermostatic valve 2 540 + return valve 1 920–4 900 ֏ (Domus, Valfex).
   // Fitting is paid per point: 10 000–12 000 ֏ (Varpet, NewHome).
-  derived('radiators', 'Радиатор с краном и термоголовкой', 'Ռադիատոր՝ փականով և թերմոգլխիկով', 'шт', { min: 26400, typical: 37400, max: 62500 }, 10000, Q.radiators,
-    'из прайсов: радиатор биметалл 500 мм 10 секций 21 930–36 176 ֏ (Стальметгрупп, ShinShin), до 55 100 ֏ (Chip and Dip); термоклапан 2 540 ֏ + нижний кран 1 920–4 900 ֏ (Domus, Valfex); подключение — 10 000 ֏ за точку (Varpet)'),
+  derived('radiators', 'Радиатор с краном, термоголовкой и подводкой', 'Ռադիատոր՝ փականով, թերմոգլխիկով և խողովակով', 'шт', { min: 31400, typical: 49400, max: 74500 }, 10000, Q.radiators,
+    'из прайсов: радиатор биметалл 500 мм 10 секций 21 930–36 176 ֏ (Стальметгрупп, ShinShin), до 55 100 ֏ (Chip and Dip); термоклапан 2 540 ֏ + нижний кран 1 920–4 900 ֏ (Domus, Valfex); подводка 20 м металлопластика 16 мм 250–600 ֏/м (длина — допущение); подключение 10 000 ֏ за точку (Varpet)'),
   // Domus, 26.10.2026: WC 45 900–167 900, vanity with basin 89 900–290 000,
   // acrylic bath 50 100–145 900, Grohe mixers 39 000–69 000, shower set
   // 13 900–40 900 ֏. The water points themselves are in the plumbing line.
-  derived('sanitary_set', 'Сантехника санузла (унитаз, раковина, душ/ванна, смесители)', 'Սանտեխնիկա (զուգարանակոնք, լվացարան, ցնցուղ/լոգարան)', 'компл', { min: 239000, typical: 380000, max: 714000 }, 45000, Q.sanitary,
-    'ОЦЕНКА из цен Domus: унитаз 45 900–167 900, тумба с раковиной 89 900–290 000, ванна 50 100–145 900, смесители 39 000–69 000, душевой набор 13 900–40 900 ֏; установка приборов ~15 000 ֏ за прибор (оценка), разводка труб — в строке водопровода'),
+  derived('sanitary_set', 'Сантехника санузла (унитаз, раковина, душ/ванна, смесители)', 'Սանտեխնիկա (զուգարանակոնք, լվացարան, ցնցուղ/լոգարան)', 'компл', { min: 239000, typical: 380000, max: 714000 }, 30000, [...Q.sanitary, ...Q.points],
+    'из цен Domus: унитаз 45 900–167 900, тумба с раковиной 89 900–290 000, ванна 50 100–145 900, смесители 39 000–69 000, душевой набор 13 900–40 900 ֏; установка: унитаз 10 000, раковина 10 000, смесители по 5 000 ֏ (FastModernHouse)'),
   estimate('gas_internal', 'Внутренний газопровод (от счётчика)', 'Ներքին գազատար', 'компл', 150000, 60000,
     'ОЦЕНКА — труба от счётчика до котла и плиты, краны, проект; врезка и счётчик — в подключении газа'),
 
@@ -398,18 +436,34 @@ const items: PriceItem[] = [
   // Опалубка считается по площади контакта с бетоном, а не по объёму.
   estimate('formwork', 'Опалубка (аренда + монтаж)', 'Կաղապար (վարձույթ + մոնտաժ)', 'м²', 4500, 2500,
     'ОЦЕНКА — зависит от оборачиваемости щитов и сложности конструкций'),
-  estimate('concrete_pump', 'Подача бетона насосом', 'Բետոնի մատակարարում պոմպով', 'м³', 3500, 0,
-    'ОЦЕНКА — обычно тарифицируется за смену с минимальным объёмом'),
+  // Waelcon: a 22 m pump 80 000 ֏ a call + 3 000 ֏/m³; MM Leader: 37 m,
+  // 70 000 ֏ up to 20 m³ + 3 000 ֏/m³ (without VAT).
+  { ...quoted('concrete_pump', 'Подача бетона насосом (за м³)', 'Բետոնի մատակարարում պոմպով (խ.մ)', 'м³', { min: 3000, typical: 3000, max: 3600 }, 0, Q.concreteVat,
+    'Waelcon: 3 000 ֏ за м³ сверх выезда (с НДС); MM Leader: 3 000 ֏/м³ без НДС'), verifiedAt: OCT },
+  { ...quoted('pump_call', 'Выезд бетононасоса', 'Բետոնապոմպի կանչ', 'выезд', { min: 70000, typical: 80000, max: 96000 }, 0, Q.concreteVat,
+    'Waelcon: насос 22 м — 80 000 ֏ за выезд (с НДС); MM Leader: 37 м — 70 000 ֏ до 20 м³ (без НДС)'), verifiedAt: OCT },
 
   // --- Вентиляция и электробезопасность (обязательны, ранее отсутствовали) ---
-  item('ventilation', 'Вентиляция', 'Օդափոխություն', 'м²', 4000, 3000, S.market),
+  // An extract fan in each bathroom and the kitchen: Vents 100D 6 650 (ERA
+  // 4 500) ֏ + 3 m of 125 mm duct (5 200 ֏ per 2 m, Lanka); wired like an
+  // electrical point (5 000 ֏, FastModernHouse).
+  derived('ventilation', 'Вытяжка: вентилятор с воздуховодом', 'Օդահանում՝ օդափոխիչ և օդատար', 'шт', { min: 12300, typical: 14450, max: 16250 }, 5000, [...Q.vent, ...Q.points],
+    'из прайсов: вентилятор Vents 100D 6 650 ֏ / ERA 4 500 ֏ (Onlineshinanyut, Domus) + 3 м воздуховода 125 мм (5 200 ֏ за 2 м, Lanka; длина — допущение); подключение 5 000 ֏ (FastModernHouse)'),
   estimate('lightning', 'Молниезащита и заземление', 'Կայծակապաշտպանություն և հողանցում', 'компл', 180000, 60000,
     'ОЦЕНКА — зависит от контура заземления и грунта'),
 
   // --- Подключение к инженерным сетям (техусловия + врезка) ---
   // Это отдельные платежи сетевым организациям, они НЕ входят в стоимость
   // внутренних сетей дома (electrical / plumbing / heating).
-  estimate('conn_electricity', 'Подключение электричества (ТУ + врезка)', 'Էլեկտրաէներգիայի միացում', 'компл', 250000, 0),
+  // PSRC standard connection fees for a private house in Yerevan (after
+  // 27.04.2026): single phase 14 kVA 199 000 ֏; 0.4 kV 229 000 + 16 000 ֏ per
+  // kVA. Outside Yerevan: 140 000, and 229 000 + 9 000 per kVA.
+  { ...quoted('conn_electricity', 'Подключение электричества, 1 фаза 14 кВА', 'Էլեկտրաէներգիայի միացում, միաֆազ 14 կՎԱ', 'компл', { min: 140000, typical: 199000, max: 199000 }, 0, Q.psrc,
+    'КРОУ (psrc.am): стандартная плата для дома, 14 кВА — 199 000 ֏ в Ереване, 140 000 ֏ в других местах; плюс местные пошлины за разрешение'), provenance: 'official' as const, verifiedAt: OCT },
+  { ...quoted('conn_electricity_3ph', 'Подключение электричества, 0,4 кВ (3 фазы)', 'Էլեկտրաէներգիայի միացում, 0,4 կՎ', 'кВА', { min: 9000, typical: 16000, max: 16000 }, 0, Q.psrc,
+    'КРОУ (psrc.am): 229 000 ֏ + 16 000 ֏ за кВА в Ереване (9 000 ֏ в других местах); постоянная часть — отдельной строкой'), provenance: 'official' as const, verifiedAt: OCT },
+  { ...quoted('conn_electricity_3ph_base', 'Подключение 0,4 кВ: постоянная часть', 'Միացում 0,4 կՎ՝ հաստատուն մաս', 'компл', { min: 229000, typical: 229000, max: 229000 }, 0, Q.psrc,
+    'КРОУ (psrc.am): постоянная часть платы за подключение 0,4 кВ — 229 000 ֏'), provenance: 'official' as const, verifiedAt: OCT },
   estimate('conn_gas', 'Подключение газа (ТУ + проект + врезка)', 'Գազի միացում', 'компл', 550000, 0),
   estimate('conn_water', 'Подключение водопровода', 'Ջրագծի միացում', 'компл', 220000, 0),
   estimate('conn_sewer', 'Подключение канализации', 'Կոյուղու միացում', 'компл', 200000, 0),
@@ -477,6 +531,11 @@ const EN_LABELS: Record<string, string> = {
   opt_battery: 'LiFePO4 battery',
   opt_ev_charger: 'EV charger (wallbox)',
   opt_kitchen: 'Kitchen furniture (no appliances)',
+  electrical_panel: 'Distribution board with breakers and RCDs',
+  sewer_points: 'Sewer point',
+  pump_call: 'Concrete pump call-out',
+  conn_electricity_3ph: 'Electricity connection 0.4 kV (per kVA)',
+  conn_electricity_3ph_base: 'Electricity connection 0.4 kV: fixed part',
   screed: 'Floor screed',
   window_regular: 'Window (standard)',
   window_vitrage: 'Window (curtain wall)',
@@ -484,14 +543,14 @@ const EN_LABELS: Record<string, string> = {
   door_interior: 'Interior door',
   plaster: 'Plaster / putty / paint',
   floor_finish: 'Floor covering',
-  facade: 'Facade finish',
+  facade: 'Facade finish (thin-coat render)',
   roof_slope: 'Roof slope screed (lightweight concrete)',
   roof_flat: 'Flat roof',
   roof_pitched: 'Pitched roof',
-  electrical: 'Electrical',
-  plumbing: 'Plumbing / sewerage',
-  heating: 'Heating: boiler and pipework',
-  radiators: 'Radiators with valves',
+  electrical: 'Electrical point (socket, switch, light)',
+  plumbing: 'Water point (hot + cold)',
+  heating: 'Boiler room: gas boiler, tank, pump',
+  radiators: 'Radiator with valves and pipe run',
   opt_boiler_heating: 'Underfloor heating (instead of radiators)',
   opt_mvhr: 'Ventilation with heat recovery (extra)',
   opt_heat_pump: 'Heat pump (air-water)',
@@ -502,10 +561,10 @@ const EN_LABELS: Record<string, string> = {
   glass_partition: 'Sliding glass partition',
   railing: 'Gallery and stair railings',
   formwork: 'Formwork (rental + erection)',
-  concrete_pump: 'Concrete pumping',
-  ventilation: 'Ventilation',
+  concrete_pump: 'Concrete pumping (per m³)',
+  ventilation: 'Extract fan with duct',
   lightning: 'Lightning protection & earthing',
-  conn_electricity: 'Electricity connection (TU + tap-in)',
+  conn_electricity: 'Electricity connection, 1 phase 14 kVA',
   conn_gas: 'Gas connection (TU + design + tap-in)',
   conn_water: 'Water connection',
   conn_sewer: 'Sewerage connection',

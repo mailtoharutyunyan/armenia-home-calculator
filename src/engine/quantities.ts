@@ -61,7 +61,10 @@ const masonryKey = (m: InfillMaterial) =>
 // door per room) gave 162 m² of partitions and 6 doors for plans with ~190 m²
 // and 10 doors, and left out the glass partition and the railings.
 export function planTake(p: HouseParams) {
-  const take = { partitions: 0, glass: 0, railing: 0, leafDoors: 0, baths: 0, bathPerimeter: 0 }
+  const take = {
+    partitions: 0, glass: 0, railing: 0, leafDoors: 0, baths: 0, bathPerimeter: 0, voidArea: 0, radiators: 0,
+    sockets: 0, lights: 0, waterPoints: 0, sewerPoints: 0, exhaustFans: 0,
+  }
   for (let f = 0; f < Math.max(0, p.floors); f++) {
     const t = planTakeoff(buildFloorPlan(p, f))
     take.partitions += t.partitions
@@ -70,6 +73,13 @@ export function planTake(p: HouseParams) {
     take.leafDoors += t.leafDoors
     take.baths += t.baths
     take.bathPerimeter += t.bathPerimeter
+    take.voidArea += t.voidArea
+    take.radiators += t.radiators
+    take.sockets += t.sockets
+    take.lights += t.lights
+    take.waterPoints += t.waterPoints
+    take.sewerPoints += t.sewerPoints
+    take.exhaustFans += t.exhaustFans
   }
   return take
 }
@@ -173,7 +183,11 @@ export function computeQuantities(p: HouseParams): Quantities {
 
   // double-height hall: void in the 2nd-floor slab (perimeter walls already
   // span the full height H, so no extra wall volume is added here).
-  const hallVoid = p.doubleHeightHall && p.floors >= 2 ? Math.max(0, Math.min(p.hallArea, A)) : 0
+  // The void is the one the plans draw: a hall asked larger than the house can
+  // hold (or in a house too small for it) is drawn smaller, and only the drawn
+  // void is missing from the slab.
+  const take = planTake(p)
+  const hallVoid = p.doubleHeightHall && p.floors >= 2 ? Math.max(0, Math.min(p.hallArea, A, take.voidArea)) : 0
   // Площадь реального пола: над двусветным залом перекрытия нет, поэтому всё,
   // что считается «на м² пола» (стяжка, полы, электрика, водопровод, проект),
   // берётся без проёма.
@@ -185,7 +199,6 @@ export function computeQuantities(p: HouseParams): Quantities {
     Math.max(0, p.length - 2 * wallT) * Math.max(0, p.width - 2 * wallT) * p.floors - hallVoid,
   )
 
-  const take = planTake(p)
   // In a frame the infill fills the outer contour only; load-bearing masonry
   // and a full monolith keep their internal bearing walls.
   const structLen = p.system === 'frame' ? P : Lb
@@ -197,7 +210,10 @@ export function computeQuantities(p: HouseParams): Quantities {
   const houseArea = netArea
   // Слои пола (стяжка, покрытие) и потолки — без следа перегородок и
   // внутренних несущих стен: под стеной пола нет.
-  const floorLayerArea = Math.max(0, houseArea - take.partitions * partitionT - intBearingLen * wallT * floors0)
+  const floorLayerArea = Math.max(
+    0,
+    houseArea - Math.max(0, take.partitions - intBearingLen * floors0) * partitionT - intBearingLen * wallT * floors0,
+  )
 
   // structural concrete + rebar accumulators, per estimate section
   const concreteBySection: Partial<Record<SectionId, number>> = {}
@@ -210,10 +226,13 @@ export function computeQuantities(p: HouseParams): Quantities {
   // load-bearing elements (foundation, columns, beams, walls) get the
   // per-storey rebar increase; slabs pass `grows = false`.
   const rebarFixedBySection: Partial<Record<SectionId, number>> = {}
-  const addStruct = (section: SectionId, vol: number, rebarPerM3: number, gross = vol, grows = true) => {
+  // Elements whose formwork is measured directly (monolithic walls, two faces)
+  // pass `formed = false` and add their contact area to formDirect instead.
+  const formDirect: Partial<Record<SectionId, number>> = {}
+  const addStruct = (section: SectionId, vol: number, rebarPerM3: number, gross = vol, grows = true, formed = true) => {
     if (gross <= 0) return
     concreteBySection[section] = (concreteBySection[section] ?? 0) + Math.max(0, vol)
-    formedBySection[section] = (formedBySection[section] ?? 0) + gross
+    if (formed) formedBySection[section] = (formedBySection[section] ?? 0) + gross
     const acc = grows ? rebarBySection : rebarFixedBySection
     acc[section] = (acc[section] ?? 0) + gross * rebarPerM3
   }
@@ -233,39 +252,50 @@ export function computeQuantities(p: HouseParams): Quantities {
     p.system === 'frame' || p.system === 'monolith' ? p.infillMaterial : (p.system as InfillMaterial)
 
   // ---- Foundation footing area ----
-  const soleArea = p.foundation === 'slab' ? A : stripLen * stripW
+  // Column pads stand one per axis step; a pad is a whole pad.
+  const padCount = Math.ceil(stripLen / axisStep)
+  const soleArea = p.foundation === 'slab' ? A : p.foundation === 'column' ? padCount * colSize * colSize : stripLen * stripW
   const excDepth = p.basement
     ? p.basementDepth + 0.3
-    : Math.max(stripH, region.frostDepth)
+    : p.foundation === 'column'
+      ? Math.max(colFndH, region.frostDepth)
+      : Math.max(stripH, region.frostDepth)
 
   // ---- Earthworks (act) ----
-  // The strip trench is wider than the strip (working space for formwork and
-  // coating) and deeper by the sand bed and the blinding under it.
+  // Trenches and pits are wider than what is cast in them (working space for
+  // formwork and coating) and deeper by the sand bed and blinding under it.
   const isStrip = p.foundation === 'strip' && !p.basement
-  const trenchW = stripW + 2 * C.trenchWorkingWidth
+  const workW = C.trenchWorkingWidth
+  const trenchW = stripW + 2 * workW
   const trenchDepth = excDepth + sandBedT + blindingT
   const excavationVol = p.basement
-    ? A * (p.basementDepth + 0.3)
-    : isStrip
+    ? (L0 + 2 * basementWorkW) * (W0 + 2 * basementWorkW) * (p.basementDepth + 0.3)
+    : p.foundation === 'strip' || p.foundation === 'pile'
       ? stripLen * trenchW * trenchDepth
-      : soleArea * excDepth
+      : p.foundation === 'column'
+        ? padCount * (colSize + 2 * workW) ** 2 * trenchDepth
+        : soleArea * excDepth
   add('excavation', 'earthworks', 'act', excavationVol)
-  // Обратная засыпка: у подвала засыпается только рабочая зона вокруг стен —
-  // сам подвал занимает котлован. У ленты — рабочая зона траншеи (всё, кроме
-  // ленты с подсыпкой и подбетонкой). Доля из панели инженера — приоритетнее.
-  const trenchBackfill = isStrip ? Math.max(0, excavationVol - stripLen * stripW * trenchDepth) : excavationVol * backfillK
-  const backfillTrench = p.basement
-    ? P * basementWorkW * (p.basementDepth + 0.3)
-    : pct(e.backfillPct) != null
-      ? excavationVol * backfillK
-      : trenchBackfill
+  // Обратная засыпка — всё, что вырыто, минус то, что в выемке отлито или
+  // уложено: подвал, лента или ростверк, подушки, плита с подушкой.
+  // Доля из панели инженера — приоритетнее.
+  const castInPit = p.basement
+    ? A * (p.basementDepth + 0.3)
+    : p.foundation === 'strip'
+      ? stripLen * stripW * trenchDepth
+      : p.foundation === 'pile'
+        ? stripLen * stripW * (0.4 + sandBedT + blindingT)
+        : p.foundation === 'column'
+          ? soleArea * trenchDepth
+          : A * Math.min(excDepth, fndSlabT + sandBedT + blindingT)
+  const backfillTrench = pct(e.backfillPct) != null ? excavationVol * backfillK : Math.max(0, excavationVol - castInPit)
   // The slab on ground is poured between the strips (grillage, column pads),
   // so the area they already take is neither concreted nor bedded twice.
   const underGroundSlab =
     p.foundation === 'strip' || p.foundation === 'pile'
       ? stripLen * stripW
       : p.foundation === 'column'
-        ? (stripLen / axisStep) * colSize * colSize
+        ? padCount * colSize * colSize
         : 0
   const groundSlabArea = floorOnGround > 0 ? Math.max(0, A - underGroundSlab) : 0
   // Пол первого этажа поднят на цоколь: под плитой — местный грунт из траншеи,
@@ -280,7 +310,9 @@ export function computeQuantities(p: HouseParams): Quantities {
   add('soil_removal', 'earthworks', 'act', Math.max(0, excavationVol - backfillVol) * C.soilBulking)
   add('setting_out', 'earthworks', 'act', A > 0 ? 1 : 0)
   // Подсыпка: под подошву фундамента + под пол по грунту, если он задан.
-  add('sand_gravel', 'earthworks', 'act', soleArea * sandBedT + groundSlabArea * sandBedT + importedFill)
+  // the basement floor lies on its own bed
+  const basementBed = p.basement && p.foundation !== 'slab' ? A * sandBedT : 0
+  add('sand_gravel', 'earthworks', 'act', soleArea * sandBedT + groundSlabArea * sandBedT + basementBed + importedFill)
   add('concrete_blinding', 'foundation', 'act', soleArea * blindingT)
   // Пол по грунту — бетонная плита с сеткой, а не песчано-гравийная подсыпка.
   // It is poured between the strips / grillage, which act as its side form.
@@ -310,15 +342,17 @@ export function computeQuantities(p: HouseParams): Quantities {
     castOnGround(pileVol, 0) // bored piles are cast in the hole; the grillage is formed
   } else {
     // column
-    const n = stripLen / axisStep
-    addStruct('foundation', n * colSize * colSize * colFndH, reb.pile)
+    addStruct('foundation', padCount * colSize * colSize * colFndH, reb.pile)
   }
 
   // ---- Basement walls + floor slab ----
   if (p.basement) {
     addStruct('foundation', P * basementWallT * p.basementDepth, reb.basementWall)
-    addStruct('foundation', A * fndSlabT, reb.slab, A * fndSlabT, false) // пол подвала
-    castOnGround(A * fndSlabT, P * fndSlabT)
+    // a slab foundation already is the basement floor
+    if (p.foundation !== 'slab') {
+      addStruct('foundation', A * fndSlabT, reb.slab, A * fndSlabT, false) // пол подвала
+      castOnGround(A * fndSlabT, P * fndSlabT)
+    }
     add('waterproofing', 'foundation', 'act', A) // гидроизоляция пола подвала
   }
 
@@ -360,7 +394,9 @@ export function computeQuantities(p: HouseParams): Quantities {
     // полный монолит: несущие ж/б стены (бетон + арматура), без кладки и заполнения
     // the slab over each storey is counted with the slab, not the wall below it
     const wallVol = Math.max(0, (wallNet - Lb * slabOverBeams * p.floors) * wallT) * waste
-    addStruct('walls', wallVol, reb.monolithWall, Math.max(0, wallNet * wallT) * waste)
+    addStruct('walls', wallVol, reb.monolithWall, Math.max(0, wallNet * wallT) * waste, true, false)
+    // a wall is formed on both faces, between the slab bands
+    formDirect.walls = (formDirect.walls ?? 0) + 2 * Math.max(0, wallNet - Lb * slabOverBeams * p.floors)
   } else {
     // frame: columns + beams + infill
     const nx = Math.floor(p.length / gridStep) + 1
@@ -430,6 +466,7 @@ export function computeQuantities(p: HouseParams): Quantities {
   add('screed', 'floors', 'act', floorLayerArea)
 
   // ---- Roof (flat / pitched / hip / mansard) ----
+  let gableFacade = 0
   if (p.roof === 'flat') {
     // Уклонообразующий слой: без него вода не уходит к воронкам.
     add('roof_slope', 'roof', 'act', A * C.roofSlopeLayer)
@@ -453,8 +490,14 @@ export function computeQuantities(p: HouseParams): Quantities {
     // gable walls: full for a gable/pitched roof, half for mansard, none for hip
     const gableMult = p.roof === 'pitched' ? 1 : p.roof === 'mansard' ? 0.5 : 0
     if (gableMult > 0) {
-      const gableVol = ((p.width ** 2 * Math.tan(rad)) / 4) * 2 * (wallT / 2) * gableMult
-      add(masonryKey(wallMat), 'roof', 'act', Math.max(0, gableVol))
+      // two triangles of base W and height W/2·tan, the full wall thick, laid
+      // like the walls and finished like the facade
+      const gableFace = ((W0 ** 2 * Math.tan(rad)) / 4) * 2 * gableMult
+      const gableVol = gableFace * wallT * waste
+      add(masonryKey(wallMat), 'roof', 'act', gableVol)
+      if (wallMat === 'aerated') add('glue_aerated', 'roof', 'act', gableVol * glueShare)
+      else add('mortar', 'roof', 'act', gableVol * mortarShare)
+      gableFacade = gableFace
     }
   }
 
@@ -472,7 +515,10 @@ export function computeQuantities(p: HouseParams): Quantities {
   // Partitions (aerated block) + plaster: from the floor to the slab above
   // (storey height minus the slab), less the door openings in them
   const clearH = Math.max(0, p.floorHeight - floorSlabT)
-  const partitionArea = Math.max(0, take.partitions * clearH - take.leafDoors * DOOR_W * C.doorHeight)
+  // load-bearing masonry and monolith build some room walls as bearing walls
+  // (counted with the walls); the plan draws them all as partitions
+  const partitionLen = Math.max(0, take.partitions - intBearingLen * floors0)
+  const partitionArea = Math.max(0, partitionLen * clearH - take.leafDoors * DOOR_W * C.doorHeight)
   add('aerated_partition', 'partitions', 'turnkey', partitionArea * partitionT)
   // aerated blocks are laid on thin-joint glue, as in the walls
   add('glue_aerated', 'partitions', 'turnkey', partitionArea * partitionT * glueShare)
@@ -495,22 +541,23 @@ export function computeQuantities(p: HouseParams): Quantities {
 
   // Facade (outer walls and the parapet) + facade insulation
   const parapetFace = p.roof === 'flat' ? P * C.parapetHeight : 0
-  const facadeArea = Math.max(0, P * H + parapetFace - p.windowAreaTotal)
+  const facadeArea = Math.max(0, P * H + parapetFace + gableFacade - p.windowAreaTotal)
   add('facade', 'facade', 'turnkey', facadeArea)
-  add('insulation', 'facade', 'turnkey', Math.max(0, P * H - p.windowAreaTotal) * (insulT / C.insulationBaseThickness))
+  add('insulation', 'facade', 'turnkey', Math.max(0, P * H + gableFacade - p.windowAreaTotal) * (insulT / C.insulationBaseThickness))
 
-  // Engineering networks (per m² of house area).
-  // Сети оплачиваются за м² общей площади: над проёмом двусветного зала нет
-  // ни пола, ни труб, ни воздуховодов. Высокий объём зала требует мощности,
-  // а не площади — тёплый пол у остекления и вытяжка наверху (norms.ts).
-  add('electrical', 'engineering', 'turnkey', houseArea)
-  add('plumbing', 'engineering', 'turnkey', houseArea)
-  add('heating', 'engineering', 'turnkey', houseArea)
-  // A radiator goes under each ordinary window (3 m² each, as for the lintels);
-  // underfloor heating takes the radiators' place, it does not add to them.
-  const regularWindows = Math.ceil((p.windowAreaTotal * (1 - p.vitrageShare)) / 3)
-  if (!p.optHeating) add('radiators', 'engineering', 'turnkey', regularWindows)
-  add('ventilation', 'engineering', 'turnkey', houseArea)
+  // Engineering networks, counted the way installers charge for them: per
+  // point drawn on the plans (planTakeoff), the boiler room and the panel as
+  // sets. A high hall needs power, not points — floor heating by the glazing
+  // and an extract at the top (norms.ts).
+  add('electrical', 'engineering', 'turnkey', take.sockets + take.lights)
+  add('electrical_panel', 'engineering', 'turnkey', A > 0 ? 1 : 0)
+  add('plumbing', 'engineering', 'turnkey', take.waterPoints)
+  add('sewer_points', 'engineering', 'turnkey', take.sewerPoints)
+  add('heating', 'engineering', 'turnkey', A > 0 ? 1 : 0)
+  // Radiators per heated room of the plans (see planTakeoff); underfloor
+  // heating takes their place, it does not add to them.
+  if (!p.optHeating) add('radiators', 'engineering', 'turnkey', take.radiators)
+  add('ventilation', 'engineering', 'turnkey', take.exhaustFans)
   add('lightning', 'engineering', 'turnkey', 1)
   add('sanitary_set', 'engineering', 'turnkey', take.baths)
   if (p.connectGas) add('gas_internal', 'engineering', 'turnkey', 1)
@@ -518,7 +565,14 @@ export function computeQuantities(p: HouseParams): Quantities {
 
   // ---- Подключение к внешним сетям (ТУ + врезка) ----
   // Платежи сетевым организациям; от площади дома не зависят.
-  if (p.connectElectricity) add('conn_electricity', 'utilities', 'turnkey', 1)
+  if (p.connectElectricity) {
+    // A heat pump or an EV charger needs a three-phase 0.4 kV connection;
+    // the PSRC fee is a fixed part plus a rate per kVA asked for.
+    if (p.optHeatPump || p.optEvCharger) {
+      add('conn_electricity_3ph_base', 'utilities', 'turnkey', 1)
+      add('conn_electricity_3ph', 'utilities', 'turnkey', C.threePhaseKva)
+    } else add('conn_electricity', 'utilities', 'turnkey', 1)
+  }
   if (p.connectGas) add('conn_gas', 'utilities', 'turnkey', 1)
   if (p.connectWater) add('conn_water', 'utilities', 'turnkey', 1)
   if (p.connectSewer) add('conn_sewer', 'utilities', 'turnkey', 1)
@@ -572,10 +626,23 @@ export function computeQuantities(p: HouseParams): Quantities {
     const vol = formedBySection[key] ?? 0
     if (vol <= 0) continue
     const formed = key === 'foundation' ? Math.max(0, vol - groundCastVol) * formworkK + groundCastEdgeForm : vol * formworkK
-    add('formwork', key, 'act', formed)
+    add('formwork', key, 'act', formed + (formDirect[key] ?? 0))
+  }
+  // a section formed only by direct measure (monolithic walls without lintels)
+  for (const key of Object.keys(formDirect) as SectionId[]) {
+    if ((formedBySection[key] ?? 0) <= 0) {
+      add('formwork', key, 'act', formDirect[key] ?? 0)
+      structConcrete += concreteBySection[key] ?? 0
+    }
   }
   // Насос тарифицируется на весь объём разом, поэтому одной строкой.
-  if (p.concretePump && structConcrete > 0) add('concrete_pump', 'foundation', 'act', structConcrete)
+  if (p.concretePump && structConcrete > 0) {
+    add('concrete_pump', 'foundation', 'act', structConcrete)
+    // the pump is paid per call: the foundation, the slab on ground, and per
+    // storey its columns and walls, then its slab (plus a basement storey)
+    const pours = 1 + (groundSlabArea > 0 ? 1 : 0) + 2 * (floors0 + (p.basement ? 1 : 0))
+    add('pump_call', 'foundation', 'act', pours)
+  }
 
   // ---- Aggregate structural concrete + rebar, per section ----
   // reinforcement grows with number of floors (seismic/loads)

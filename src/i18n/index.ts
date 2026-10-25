@@ -596,7 +596,7 @@ export const DICT: Dict = {
   winter: { ru: 'Зимнее удорожание', hy: 'Ձմեռային թանկացում' },
   works: { ru: 'СМР итого', hy: 'ՇՄԱ ընդամենը' },
   contingency: { ru: 'Непредвиденные', hy: 'Չնախատեսված ծախսեր' },
-  permitLine: { ru: 'Документы и пошлины', hy: 'Փաստաթղթեր և տուրքեր' },
+  permitLine: { ru: 'Документы, пошлины и подключения', hy: 'Փաստաթղթեր, տուրքեր և միացումներ' },
   contractPrice: { ru: 'Цена договора', hy: 'Պայմանագրային գին' },
   // Self-build has no contract: the same total is the owner's budget.
   breakdownTitleSelf: { ru: 'От затрат к бюджету стройки', hy: 'Ծախսերից մինչև շինարարության բյուջե' },
@@ -899,7 +899,7 @@ const EN: Record<string, string> = {
   winter: 'Winter surcharge',
   works: 'Construction works total',
   contingency: 'Contingency',
-  permitLine: 'Documents & state fees',
+  permitLine: 'Documents, state fees & connections',
   contractPrice: 'Contract price',
   breakdownTitleSelf: 'From costs to the build budget',
   selfPrice: 'Build budget',

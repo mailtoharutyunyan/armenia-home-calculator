@@ -135,7 +135,7 @@ describe('saved prices after a seed update', () => {
     const s = await storeWith({ ahc_prices_v1: JSON.stringify(v1) })
     expect(s.prices.aerated_block.materialTypical).toBe(35000)
     expect(s.prices.concrete_b25.materialTypical).toBe(36500)
-    expect(s.prices.concrete_b25.materialMax).toBe(38000) // not edited → new seed
+    expect(s.prices.concrete_b25.materialMax).toBe(48000) // not edited → new seed
   })
 
   it('v2 stores only what the visitor changed', async () => {

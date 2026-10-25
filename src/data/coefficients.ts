@@ -87,6 +87,16 @@ export const COEFF = {
   stairFinishPerFlight: 10, // m²
   // Высота типового окна: длина подоконника = площадь обычных окон / высота.
   windowHeight: 1.5, // m
+  // Design heat need of an insulated house: the energy model of the default
+  // house gives 29.8 MWh a year, i.e. ~15 kW at the design frost on 252 m²
+  // ≈ 60 W/m² (the 12 kW heat pump chosen for it agrees). The old 100 W/m²
+  // rule is for uninsulated walls.
+  heatLoadPerM2: 60, // W/m²
+  // 10-section bimetal radiator, 500 mm: 1 330–1 630 W (Stalmetgroup list)
+  radiatorPower: 1500, // W
+  // Power asked of the grid with a heat pump or an EV charger: the pump's
+  // ~4–5 kW electric, a 7.4–11 kW wallbox and ~8 kW of the house.
+  threePhaseKva: 20, // kVA
   sandBedThickness: 0.1,
   blindingThickness: 0.05, // подбетонка
   apronWidth: 1.0, // отмостка

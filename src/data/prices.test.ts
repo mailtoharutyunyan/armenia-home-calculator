@@ -76,7 +76,7 @@ describe('точность расчёта заявляется честно', ()
   it('the 26.09.2026 and 26.10.2026 market checks verified part of the catalogue', () => {
     const p = precisionOf(SEED_PRICES)
     expect(p.level).toBe('partial')
-    expect(p.quoted).toBe(24)
+    expect(p.quoted).toBe(27)
     expect(p.total).toBe(Object.keys(SEED_PRICES).length)
   })
 

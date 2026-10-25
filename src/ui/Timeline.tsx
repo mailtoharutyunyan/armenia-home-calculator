@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useProject } from '../store/useProject'
 import { t } from '../i18n'
 import { computeQuantities } from '../engine/quantities'
-import { computeEstimate } from '../engine/pricing'
+import { computeEstimate, FEE_SECTIONS } from '../engine/pricing'
 import { STAGES, stageWeeks } from '../data/stages'
 import { money } from './format'
 
@@ -20,17 +20,19 @@ export function Timeline() {
 
   // Section totals are direct costs. Markups, contingency and VAT are spread
   // over the works in proportion, so the stages add up to the contract price;
-  // documents carry no markups.
+  // documents and connection tariffs carry no markups.
   const tk = est.turnkey
   const markup = tk.direct > 0 ? (tk.total - tk.permit) / tk.direct : 1
 
   const rows = STAGES.map((s) => {
     const isPermit = s.sections.includes('permit')
     const direct = s.sections.reduce((a, sec) => a + (est.sectionTotals[sec] ?? 0), 0)
+    // documents and connection tariffs are paid as they are
+    const fees = s.sections.reduce((a, sec) => a + (FEE_SECTIONS.has(sec) ? (est.sectionTotals[sec] ?? 0) : 0), 0)
     // a stage with nothing in the estimate (no extras chosen, section switched
     // off) takes no time either; paperwork takes time even when not priced
     const w = direct > 0 || isPermit ? stageWeeks(s, houseArea) : { min: 0, max: 0 }
-    return { s, w, cost: isPermit ? direct : direct * markup }
+    return { s, w, cost: (direct - fees) * markup + fees }
   })
   const totalMin = rows.reduce((a, r) => a + r.w.min, 0)
   const totalMax = rows.reduce((a, r) => a + r.w.max, 0)

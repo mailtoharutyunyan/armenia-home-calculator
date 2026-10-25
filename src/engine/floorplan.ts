@@ -212,6 +212,13 @@ export function planTakeoff(plan: FloorPlan): {
   leafDoors: number
   baths: number
   bathPerimeter: number
+  voidArea: number
+  radiators: number
+  sockets: number
+  lights: number
+  waterPoints: number
+  sewerPoints: number
+  exhaustFans: number
 } {
   const e = 0.02
   const circulation = (t: RoomType) => t === 'hall' || t === 'corridor' || t === 'stair'
@@ -261,7 +268,49 @@ export function planTakeoff(plan: FloorPlan): {
   // wet rooms: each gets sanitary ware, and its walls are tiled
   const wet = rooms.filter((r) => r.type === 'bath')
   const bathPerimeter = wet.reduce((a, r) => a + 2 * (r.w + r.h), 0)
-  return { partitions, glass, railing, leafDoors, baths: wet.length, bathPerimeter }
+  // the double-height void as drawn in the upper slab
+  const voidArea = rooms.filter((r) => r.open).reduce((a, r) => a + r.w * r.h, 0)
+  // Radiators per heated room, sized to its heat need (C.heatLoadPerM2,
+  // twice for a double-height room) with a 10-section bimetal radiator of
+  // C.radiatorPower; at least one per room. Stairs, corridors and
+  // wardrobes are heated through their doors.
+  const unheated = (t: RoomType) => t === 'stair' || t === 'corridor' || t === 'wardrobe'
+  const radiators = rooms
+    .filter((r) => !r.open && !unheated(r.type))
+    .reduce((a, r) => {
+      const need = r.w * r.h * (r.doubleHeight ? 2 : 1) * C.heatLoadPerM2
+      return a + Math.max(1, Math.ceil(need / C.radiatorPower))
+    }, 0)
+  // Electrical points per room. Sockets as the norm sets them (СП 31-110-2003,
+  // 14.29): one per full or part 4 m of a living room's perimeter, at least
+  // four in a kitchen, one per 10 m² of hall or corridor; plus one in a
+  // bathroom and two in the utility room for the washer and the boiler. Every
+  // room has a light point and a switch.
+  const closed = rooms.filter((r) => !r.open)
+  // the kitchen is a kitchen, a living-kitchen or, when the plan has neither,
+  // the kitchen-dining room
+  const cooking = closed.filter((r) => r.type === 'kitchen' || r.type === 'living_kitchen')
+  const kitchens = cooking.length > 0 ? cooking : closed.filter((r) => r.type === 'dining')
+  const kitchen = (r: Room) => kitchens.includes(r)
+  const sockets = closed.reduce((a, r) => {
+    const perimeter = 2 * (r.w + r.h)
+    if (kitchen(r)) return a + Math.max(4, Math.ceil(perimeter / 4))
+    if (r.type === 'hall' || r.type === 'corridor') return a + Math.ceil((r.w * r.h) / 10)
+    if (r.type === 'bath') return a + 1
+    if (r.type === 'utility') return a + 2
+    if (r.type === 'stair' || r.type === 'wardrobe') return a
+    return a + Math.ceil(perimeter / 4)
+  }, 0)
+  const lights = closed.length * 2 // a light point and its switch
+  // Water and sewer points: WC, basin and shower in each bathroom, the sink
+  // and dishwasher in the kitchen, the washer in the utility room.
+  const fixtures = wet.length * 3 + kitchens.length * 2 + closed.filter((r) => r.type === 'utility').length
+  // an extract fan in each bathroom and the kitchen
+  const exhaustFans = wet.length + kitchens.length
+  return {
+    partitions, glass, railing, leafDoors, baths: wet.length, bathPerimeter, voidArea, radiators,
+    sockets, lights, waterPoints: fixtures, sewerPoints: fixtures, exhaustFans,
+  }
 }
 
 export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], labels: PlanLabels = {}): FloorPlan {
