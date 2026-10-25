@@ -97,6 +97,8 @@ export const COEFF = {
   // Power asked of the grid with a heat pump or an EV charger: the pump's
   // ~4–5 kW electric, a 7.4–11 kW wallbox and ~8 kW of the house.
   threePhaseKva: 20, // kVA
+  // A pump call covers the first 20 m³ (Waelcon, MM Leader price lists)
+  pumpCallM3: 20, // m³
   sandBedThickness: 0.1,
   blindingThickness: 0.05, // подбетонка
   apronWidth: 1.0, // отмостка

@@ -16,10 +16,10 @@
 
 ## Состояние на 26.10.2026
 
-- всего позиций: 87
-- сверено с прайсом (`quoted`): 27 — бетон (Waelcon, с НДС), арматура, туф, газоблок, песок, гидроизоляция, утеплители, окна, двери, напольное покрытие, солнечные панели, леса, проект, бойлер ГВС, фанкойлы, аккумулятор, зарядка, насос (за м³ и выезд)
+- всего позиций: 88
+- сверено с прайсом (`quoted`): 31 — бетон (Waelcon, с НДС), арматура, туф, газоблок, песок, гидроизоляция, утеплители, окна, двери, напольное покрытие, солнечные панели, леса, проект, бойлер ГВС, фанкойлы, аккумулятор, зарядка, насос (за м³ и выезд)
 - собрано из сверенных цен или оценено (`estimate`): 39 — раствор, стяжка, штукатурка/покраска, плитка, облицовка лестницы, лестница, тёплый пол, тепловой насос, сантехника, плоская кровля, вывоз грунта и мусора, стеклянная перегородка, ограждения, опалубка, насос, подключения, рекуперация, радиаторы и прочие строки с пометкой ОЦЕНКА
-- ориентир (`unverified`): 12 — арматура А400, кирпич, клей для газоблока, плита ПК, выемка и засыпка грунта, отмостка, витраж, разуклонка кровли, скатная кровля, премиум-отделка, панельный потолок
+- ориентир (`unverified`): 9 — кирпич, клей для газоблока, плита ПК, отмостка, витраж, разуклонка кровли, скатная кровля, премиум-отделка, панельный потолок
 - госпошлина и тарифы (`official`): 9 (в т.ч. подключение электричества по тарифу КРОУ)
 
 Источники 26.09.2026: прайс MM Leader на yell.am (бетон, обновлён 10.07.2026),
@@ -39,6 +39,17 @@ sip.am — проект 5 000 ֏/м² (без ОВ/ВК/ЭО); Accurate Group �
 ShinShin — бойлер Apamet 200 л 288 500 ֏; Midea — фанкойлы 92 000–192 000 ֏;
 Solaron — Deye 5,12 кВт·ч 518 000 ֏; evolt.am, Solaron, EnerGo — зарядки
 180 000–295 000 ֏; КамАЗ 30 000 ֏ за рейс (list.am 24239515).
+
+Вторая сверка рынка (26.10.2026, четыре независимых поиска + второе мнение):
+основная цена — самая низкая надёжная розничная (без акций, распродаж и
+оптовых минимумов), максимум — самая высокая найденная. Бетон — прайс Waelcon
+с 01.10.2026 (с НДС и доставкой); HSKA дешевле на 4 000–5 500 ֏/м³, но не
+указывает НДС и доставку — уточнить звонком. Экскаватор — расценки Газпром
+Армения и Veolia Jur (июнь 2026), 723 ֏/м³ без НДС для грунта III кат.
+NewHome и Varpet — один подрядчик (общий телефон), считаются одним источником.
+Без данных (нужна котировка): стеклянная перегородка, витраж, подоконники и
+отливы, ограждения, кухня, работа по фасаду, молниезащита, геодезия, водосток,
+внутренний газопровод, подключение газа, воды и канализации.
 
 Сети по точкам (26.10.2026): число точек берётся с планов — розетки по
 СП 31-110-2003 п. 14.29, свет и выключатель в каждой комнате, вода и
@@ -68,61 +79,61 @@ Smart Solar (страница на engineering10.com) — 10,32 кВт за 1 48
 
 | Позиция | Ключ | Ед. | Материал сейчас, ֏ | Работа сейчас, ֏ | Статус | **Найденная цена, ֏** | **Дата сверки** | Где смотреть |
 |---|---|---|---:|---:|---|---:|---|---|
-| Бетон B15 / М200 | `concrete_b15` | м³ | 37500 | 18000 | quoted | 29 000 (MM Leader, yell.am) | 26.10.2026 | www.waelcon.am, www.yell.am, yerkir.am |
-| Бетон B20 / М250 | `concrete_b20` | м³ | 39500 | 18000 | quoted | 30 000 (MM Leader, yell.am) | 26.10.2026 | www.waelcon.am, www.yell.am, yerkir.am |
-| Бетон B22.5 / М300 | `concrete_b225` | м³ | 41000 | 18000 | quoted | 32 000 (MM Leader, yell.am) | 26.10.2026 | www.waelcon.am, www.yell.am, yerkir.am |
-| Бетон B25 / М350 | `concrete_b25` | м³ | 43000 | 18000 | quoted | 34 000 (MM Leader, yell.am) | 26.10.2026 | www.waelcon.am, www.yell.am, yerkir.am |
-| Бетон B30 / М400 | `concrete_b30` | м³ | 46000 | 18000 | quoted | см. note в prices.ts | 26.10.2026 | www.waelcon.am |
-| Подбетонка М100 | `concrete_blinding` | м³ | 32500 | 8000 | quoted | 25 000 (MM Leader, yell.am) | 26.10.2026 | www.waelcon.am, www.yell.am, yerkir.am |
-| Арматура А500С | `rebar_a500` | т | 308000 | 60000 | quoted | 305 000–315 000 (RMS Group), ≈339 000 (Стальметгрупп) | 26.09.2026 | stalmetural.am / met-trans.am — прайс в открытом доступе |
-| Арматура А400 (A-III) | `rebar_a400` | т | 275000 | 60000 | unverified |  |  | stalmetural.am / met-trans.am — прайс в открытом доступе |
+| Бетон B15 / М200 | `concrete_b15` | м³ | 39000 | 18000 | quoted | см. note в prices.ts | 26.10.2026 | www.waelcon.am, hska.am, mmleader.am |
+| Бетон B20 / М250 | `concrete_b20` | м³ | 41000 | 18000 | quoted | см. note в prices.ts | 26.10.2026 | www.waelcon.am, hska.am, mmleader.am |
+| Бетон B22.5 / М300 | `concrete_b225` | м³ | 42500 | 18000 | quoted | см. note в prices.ts | 26.10.2026 | www.waelcon.am, hska.am, mmleader.am |
+| Бетон B25 / М350 | `concrete_b25` | м³ | 45000 | 18000 | quoted | см. note в prices.ts | 26.10.2026 | www.waelcon.am, hska.am, mmleader.am |
+| Бетон B30 / М400 | `concrete_b30` | м³ | 47500 | 18000 | quoted | см. note в prices.ts | 26.10.2026 | www.waelcon.am, hska.am, mmleader.am |
+| Подбетонка М100 | `concrete_blinding` | м³ | 34000 | 8000 | quoted | см. note в prices.ts | 26.10.2026 | www.waelcon.am, hska.am, mmleader.am |
+| Арматура А500С | `rebar_a500` | т | 305000 | 60000 | quoted | см. note в prices.ts | 26.10.2026 | rmsgroup.am, mikmetal.am, erkatproff.am |
+| Арматура А400 (A-III) | `rebar_a400` | т | 300000 | 60000 | quoted | см. note в prices.ts | 26.10.2026 | rmsgroup.am, mikmetal.am, erkatproff.am |
 | Туф (кладка) | `tuff_block` | м³ | 16000 | 15000 | quoted | 150–250 за камень ≈ 10 000–17 500 за м³ (list.am) | 26.09.2026 | list.am раздел стройматериалов / rmsgroup.am |
 | Газоблок | `aerated_block` | м³ | 35000 | 12000 | quoted | 35 000 опт D600, 32 000 средний (list.am) | 26.09.2026 | list.am раздел стройматериалов / rmsgroup.am |
 | Кирпич (кладка) | `brick` | м³ | 45000 | 18000 | unverified |  |  | list.am раздел стройматериалов / rmsgroup.am |
-| Раствор кладочный | `mortar` | м³ | 24000 | 0 | estimate | ≈24 000 из цены цемента и песка | 26.09.2026 | list.am, звонок поставщику — в открытых прайсах РА нет |
+| Раствор кладочный | `mortar` | м³ | 24000 | 0 | estimate | см. note в prices.ts | 26.10.2026 | armenpress.am, www.list.am |
 | Клей для газоблока | `glue_aerated` | м³ | 120000 | 0 | unverified |  |  | list.am, звонок поставщику — в открытых прайсах РА нет |
 | Плита перекрытия ПК | `precast_slab` | шт | 40000 | 8000 | unverified |  |  | list.am, звонок поставщику — в открытых прайсах РА нет |
 | Песок/щебень подсыпка | `sand_gravel` | м³ | 7000 | 3000 | quoted | 45 000–55 000 за ЗИЛ 7 м³ (list.am) | 26.09.2026 | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Выемка грунта | `excavation` | м³ | 0 | 4000 | unverified |  |  | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Обратная засыпка | `backfill` | м³ | 0 | 3000 | unverified |  |  | list.am, звонок поставщику — в открытых прайсах РА нет |
+| Выемка грунта экскаватором | `excavation` | м³ | 0 | 868 | quoted | см. note в prices.ts | 26.10.2026 | armenia-am.gazprom.com, www.veolia.am |
+| Обратная засыпка экскаватором | `backfill` | м³ | 0 | 868 | quoted | см. note в prices.ts | 26.10.2026 | armenia-am.gazprom.com, www.veolia.am |
 | Отмостка | `apron` | м² | 6000 | 4000 | unverified |  |  | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Гидроизоляция | `waterproofing` | м² | 2100 | 1500 | quoted | Бикрост 10 500 за 10 м², 2 слоя (list.am) | 26.09.2026 | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Утеплитель фасада | `insulation` | м² | 1556 | 4000 | quoted | пенопласт 1 556, вата 2 640, XPS 4 342 за м² 100 мм | 26.10.2026 | totalarmenia.am, www.list.am, rmsgroup.am, turn.am |
-| Стяжка пола | `screed` | м² | 2100 | 2500 | estimate | ≈2 100 из цены цемента и песка | 26.09.2026 | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Окно обычное | `window_regular` | м² | 35000 | 8000 | quoted | от 25 000–35 000 за м² (FarmPlast) | 26.09.2026 | list.am, звонок поставщику — в открытых прайсах РА нет |
+| Гидроизоляция (2 слоя) | `waterproofing` | м² | 1940 | 1500 | quoted | см. note в prices.ts | 26.10.2026 | erkatproff.am, shinshin.am |
+| Утеплитель фасада | `insulation` | м² | 1556 | 4000 | quoted | см. note в prices.ts | 26.10.2026 | totalarmenia.am, www.list.am, rmsgroup.am, turn.am |
+| Стяжка пола | `screed` | м² | 2100 | 3000 | estimate | см. note в prices.ts | 26.10.2026 | armenpress.am, www.list.am, turn.am, newhome.am |
+| Окно обычное (поворотно-откидное) | `window_regular` | м² | 32000 | 8000 | quoted | см. note в prices.ts | 26.10.2026 | flagma.am, www.list.am, flagma.am |
 | Окно витражное | `window_vitrage` | м² | 90000 | 12000 | unverified |  |  | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Дверь входная | `door_exterior` | шт | 73400 | 18000 | quoted | 49 900–73 400 (Domus, JW) | 26.09.2026 | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Дверь межкомнатная | `door_interior` | шт | 55000 | 18000 | quoted | полотно 40 800–42 320 (Nor Tun) + коробка ≈14 000 | 26.09.2026 | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Штукатурка/шпаклёвка/покраска | `plaster` | м² | 2000 | 6500 | estimate | ≈2 000 из цен штукатурки и краски | 26.09.2026 | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Напольное покрытие | `floor_finish` | м² | 7800 | 6000 | quoted | ламинат 8 мм 6 500 за м² (laminat.am) | 26.09.2026 | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Фасадная отделка (тонкослойная штукатурка) | `facade` | м² | 5500 | 6000 | estimate |  |  | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Кровля плоская | `roof_flat` | м² | 2800 | 2500 | estimate | ≈2 800 из сверенных цен; гидроизоляция, утеплитель и разуклонка — отдельными строками | 26.09.2026 | list.am, звонок поставщику — в открытых прайсах РА нет |
+| Дверь входная | `door_exterior` | шт | 49900 | 10000 | quoted | см. note в prices.ts | 26.10.2026 | domus.am, nortun.am, domus.am, turn.am |
+| Дверь межкомнатная | `door_interior` | шт | 36000 | 10000 | quoted | см. note в prices.ts | 26.10.2026 | domus.am, nortun.am, domus.am, turn.am, www.nortun.am |
+| Штукатурка/шпаклёвка/покраска | `plaster` | м² | 1500 | 6500 | estimate | см. note в prices.ts | 26.10.2026 | shinshin.am, totalarmenia.am, turn.am, newhome.am |
+| Напольное покрытие | `floor_finish` | м² | 5600 | 4800 | quoted | см. note в prices.ts | 26.10.2026 | domus.am, laminat.am, domus.am, domus.am, fastmodernhouse.com, varpet.online |
+| Фасадная отделка (тонкослойная штукатурка) | `facade` | м² | 3900 | 6000 | estimate | см. note в prices.ts | 26.10.2026 | shinshin.am, shinshin.am, domus.am, shinshin.am, totalarmenia.am, turn.am |
+| Кровля плоская | `roof_flat` | м² | 2800 | 2500 | estimate | см. note в prices.ts | 26.10.2026 | rmsgroup.am, www.list.am |
 | Кровля скатная | `roof_pitched` | м² | 14000 | 8000 | unverified |  |  | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Электроточка (розетка, выключатель, свет) | `electrical` | точка | 7300 | 9500 | estimate |  |  | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Водопроводная точка (ГВС + ХВС) | `plumbing` | точка | 6240 | 10000 | estimate |  |  | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Котельная: газовый котёл, бак, насос | `heating` | компл | 422500 | 15000 | estimate |  |  | прежние 12 000 + 8 000 ֏/м² за вычетом радиаторов, посчитанных по прайсам |
-| Радиатор с краном, термоголовкой и подводкой | `radiators` | шт | 49400 | 10000 | estimate | радиатор 21 930–36 176 (Стальметгрупп, ShinShin), до 55 100 (Chip and Dip); термоклапан 2 540, кран 1 920–4 900 (Domus, Valfex); подключение 10 000 за точку (Varpet) | 26.10.2026 | stalmetural.am, shinshin.am, chipdip.am, domus.am, varpet.online |
-| Тёплый пол (вместо радиаторов) | `opt_boiler_heating` | м² | 4900 | 6500 | estimate | труба PEX 16 мм 500–600 ֏/м × 6,7 м/м²; коллектор 11 000 за выход; смесительный узел 105 000; монтаж 5 000–8 000 ֏/м² | 26.10.2026 | kelvin.am, santex-house.am, varpet.online, newhome.am |
-| Тепловой насос (воздух-вода) | `opt_heat_pump` | компл | 1900000 | 600000 | estimate | оценка из сверенных цен, см. note |  | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Солнечные панели (фотовольтаика) | `opt_solar` | кВт | 163000 | 0 | quoted | 163 000 (list.am: 10,4 кВт под ключ — 1 700 000); 144 000–220 000 (Smart Solar) | 26.10.2026 | www.list.am, www.engineering10.com |
+| Электроточка (розетка, выключатель, свет) | `electrical` | точка | 5300 | 4000 | estimate | см. note в prices.ts | 26.10.2026 | shinshin.am, domus.am, shinmarket.am, shinshin.am, fastmodernhouse.com, varpet.online |
+| Водопроводная точка (ГВС + ХВС) | `plumbing` | точка | 6240 | 10000 | estimate | см. note в prices.ts | 26.10.2026 | shinshin.am, erkatproff.am, fastmodernhouse.com, varpet.online |
+| Котельная: газовый котёл, бак, насос | `heating` | компл | 228800 | 15000 | estimate | см. note в prices.ts | 26.10.2026 | shinshin.am, santex-house.am, santex-house.am, stalmetural.am, domus.am, onlineshinanyut.am, shinshin.am, santex-house.am |
+| Радиатор с краном, термоголовкой и подводкой | `radiators` | шт | 35300 | 10000 | estimate | см. note в prices.ts | 26.10.2026 | shinshin.am, santex-house.am, santex-house.am, stalmetural.am, domus.am, stalmetural.am, shinshin.am, www.chipdip.am, domus.am, varpet.online |
+| Тёплый пол (вместо радиаторов) | `opt_boiler_heating` | м² | 2700 | 6500 | estimate | см. note в prices.ts | 26.10.2026 | vida.am, shinshin.am, kelvin.am, santex-house.am, newhome.am, varpet.online |
+| Тепловой насос (воздух-вода) | `opt_heat_pump` | компл | 1750000 | 600000 | estimate | см. note в prices.ts | 26.10.2026 | electro.am |
+| Солнечные панели (фотовольтаика) | `opt_solar` | кВт | 163000 | 0 | quoted | см. note в prices.ts | 26.10.2026 | www.list.am, www.engineering10.com |
 | Финишная отделка «под ключ» | `opt_finish_premium` | м² | 20000 | 0 | unverified |  |  | list.am, звонок поставщику — в открытых прайсах РА нет |
 | Панельный (реечный) потолок | `opt_panel_ceiling` | м² | 6000 | 4000 | unverified |  |  | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Лестница монолитная | `stair` | м³ | 95000 | 45000 | estimate | оценка из сверенных цен, см. note |  | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Раздвижная стеклянная перегородка | `glass_partition` | м² | 85000 | 15000 | estimate |  |  | звонок поставщику алюминиевых систем |
-| Ограждение галереи и лестницы | `railing` | пог.м | 25000 | 6000 | estimate | б/у стальные ≈13 000 за м (list.am) | 26.09.2026 | мастер по металлу, list.am |
-| Опалубка (аренда + монтаж) | `formwork` | м² | 4500 | 2500 | estimate |  |  | техусловия сетевой организации / подрядчик |
+| Лестница монолитная | `stair` | м³ | 95000 | 45000 | estimate | см. note в prices.ts | 26.10.2026 | www.yell.am, yerkir.am, rmsgroup.am, stalmetural.am |
+| Раздвижная стеклянная перегородка | `glass_partition` | м² | 85000 | 15000 | estimate | НЕТ ДАННЫХ — нужна котировка |  | звонок поставщику алюминиевых систем |
+| Ограждение галереи и лестницы | `railing` | пог.м | 25000 | 6000 | estimate | НЕТ ДАННЫХ — нужна котировка | 26.09.2026 | мастер по металлу, list.am |
+| Опалубка (аренда) | `formwork` | м² | 4500 | 2500 | estimate | см. note в prices.ts | 26.10.2026 | www.accurate.am, uyut.am |
 | Подача бетона насосом (за м³) | `concrete_pump` | м³ | 3000 | 0 | quoted | см. note в prices.ts | 26.10.2026 | www.waelcon.am |
-| Вытяжка: вентилятор с воздуховодом | `ventilation` | шт | 14450 | 5000 | estimate |  |  | list.am, звонок поставщику — в открытых прайсах РА нет |
-| Вентиляция с рекуперацией (доплата) | `opt_mvhr` | м² | 6000 | 3000 | estimate |  |  | list.am (установки HVAC QRXF от 210 000 ֏), проект вентиляции |
-| Молниезащита и заземление | `lightning` | компл | 180000 | 60000 | estimate |  |  | техусловия сетевой организации / подрядчик |
+| Вытяжка: вентилятор с воздуховодом | `ventilation` | шт | 11750 | 5000 | estimate | см. note в prices.ts | 26.10.2026 | shinshin.am, lanka.am, domus.am, onlineshinanyut.am, lanka.am, fastmodernhouse.com, varpet.online |
+| Вентиляция с рекуперацией (доплата) | `opt_mvhr` | м² | 6000 | 3000 | estimate | НЕТ ДАННЫХ — нужна котировка |  | list.am (установки HVAC QRXF от 210 000 ֏), проект вентиляции |
+| Молниезащита и заземление | `lightning` | компл | 180000 | 60000 | estimate | НЕТ ДАННЫХ — нужна котировка |  | техусловия сетевой организации / подрядчик |
 | Подключение электричества, 1 фаза 14 кВА | `conn_electricity` | компл | 199000 | 0 | official | см. note в prices.ts | 26.10.2026 | psrc.am |
-| Подключение газа (ТУ + проект + врезка) | `conn_gas` | компл | 550000 | 0 | estimate |  |  | техусловия сетевой организации / подрядчик |
-| Подключение водопровода | `conn_water` | компл | 220000 | 0 | estimate |  |  | техусловия сетевой организации / подрядчик |
-| Подключение канализации | `conn_sewer` | компл | 200000 | 0 | estimate |  |  | техусловия сетевой организации / подрядчик |
-| Локальное очистное (септик) | `septic` | компл | 800000 | 150000 | estimate |  |  | техусловия сетевой организации / подрядчик |
-| Забор с фундаментом | `fence` | пог.м | 32000 | 12000 | estimate |  |  | техусловия сетевой организации / подрядчик |
-| Дорожки и площадки | `site_paving` | м² | 12000 | 5000 | estimate |  |  | техусловия сетевой организации / подрядчик |
-| Балкон / терраса | `balcony` | м² | 45000 | 18000 | estimate |  |  | техусловия сетевой организации / подрядчик |
+| Подключение газа (ТУ + проект + врезка) | `conn_gas` | компл | 550000 | 0 | estimate | НЕТ ДАННЫХ — нужна котировка |  | техусловия сетевой организации / подрядчик |
+| Подключение водопровода | `conn_water` | компл | 220000 | 0 | estimate | НЕТ ДАННЫХ — нужна котировка |  | техусловия сетевой организации / подрядчик |
+| Подключение канализации | `conn_sewer` | компл | 200000 | 0 | estimate | НЕТ ДАННЫХ — нужна котировка |  | техусловия сетевой организации / подрядчик |
+| Локальное очистное (септик) | `septic` | компл | 800000 | 150000 | estimate | НЕТ ДАННЫХ — нужна котировка |  | техусловия сетевой организации / подрядчик |
+| Забор с фундаментом | `fence` | пог.м | 32000 | 12000 | estimate | НЕТ ДАННЫХ — нужна котировка |  | техусловия сетевой организации / подрядчик |
+| Дорожки и площадки | `site_paving` | м² | 12000 | 5000 | estimate | НЕТ ДАННЫХ — нужна котировка |  | техусловия сетевой организации / подрядчик |
+| Балкон / терраса | `balcony` | м² | 45000 | 18000 | estimate | НЕТ ДАННЫХ — нужна котировка |  | техусловия сетевой организации / подрядчик |
 | АПЗ (муниципалитет) | `permit_apz` | комплект | 40000 | 0 | official |  |  | urban.e-gov.am, муниципалитет |
 | Проект (за м²) | `permit_design` | м² | 5000 | 0 | quoted | см. note в prices.ts | 26.10.2026 | sip.am |
 | Геологические изыскания | `permit_geology` | комплект | 150000 | 0 | official |  |  | urban.e-gov.am, муниципалитет |
@@ -132,26 +143,27 @@ Smart Solar (страница на engineering10.com) — 10,32 кВт за 1 48
 | Технадзор (за м²) | `permit_supervision` | м² | 1500 | 0 | official |  |  | urban.e-gov.am, муниципалитет |
 | Газоблок перегородок (10 см) | `aerated_partition` | м³ | 35000 | 40000 | quoted | см. note в prices.ts | 26.10.2026 | www.list.am, www.list.am, newhome.am |
 | Аренда строительных лесов | `scaffolding` | м²·мес | 650 | 0 | quoted | см. note в prices.ts | 26.10.2026 | www.accurate.am |
-| Манипулятор / кран (разгрузка, подача) | `crane` | смена | 60000 | 0 | estimate |  |  | оценка — нужна котировка |
+| Манипулятор / кран (разгрузка, подача) | `crane` | смена | 60000 | 0 | estimate | НЕТ ДАННЫХ — нужна котировка |  | оценка — нужна котировка |
 | Вывоз лишнего грунта | `soil_removal` | м³ | 3000 | 0 | estimate | см. note в prices.ts | 26.10.2026 | www.list.am |
 | Вывоз строительного мусора | `waste_removal` | м³ | 3000 | 0 | estimate | см. note в prices.ts | 26.10.2026 | www.list.am |
-| Геодезическая разбивка осей | `setting_out` | компл | 120000 | 0 | estimate |  |  | оценка — нужна котировка |
-| Утеплитель XPS (кровля, пол по грунту) | `insulation_xps` | м² | 4342 | 2000 | quoted | см. note в prices.ts | 26.09.2026 | totalarmenia.am, www.list.am, rmsgroup.am |
-| Подоконники и отливы | `window_sills` | пог.м | 7000 | 1500 | estimate |  |  | оценка — нужна котировка |
-| Плитка на стенах санузлов | `wall_tile` | м² | 13500 | 10000 | estimate | см. note в prices.ts | 26.10.2026 | newhome.am |
-| Облицовка лестницы (керамогранит) | `stair_finish` | м² | 13500 | 15000 | estimate | см. note в prices.ts | 26.10.2026 | newhome.am |
+| Геодезическая разбивка осей | `setting_out` | компл | 120000 | 0 | estimate | НЕТ ДАННЫХ — нужна котировка |  | оценка — нужна котировка |
+| Утеплитель XPS (кровля, пол по грунту) | `insulation_xps` | м² | 4342 | 2000 | quoted | см. note в prices.ts | 26.10.2026 | totalarmenia.am, www.list.am, rmsgroup.am, shinshin.am, erkatproff.am |
+| Подоконники и отливы | `window_sills` | пог.м | 7000 | 1500 | estimate | НЕТ ДАННЫХ — нужна котировка |  | оценка — нужна котировка |
+| Плитка на стенах санузлов | `wall_tile` | м² | 4100 | 10000 | estimate | см. note в prices.ts | 26.10.2026 | domus.am, laminat.am, domus.am, domus.am, newhome.am |
+| Облицовка лестницы (керамогранит) | `stair_finish` | м² | 5600 | 15000 | estimate | см. note в prices.ts | 26.10.2026 | domus.am, laminat.am, domus.am, domus.am, newhome.am |
 | Разуклонка кровли (керамзитобетон) | `roof_slope` | м³ | 22000 | 9000 | unverified |  |  | оценка — нужна котировка |
-| Парапетная крышка (оцинк. сталь) | `parapet_coping` | пог.м | 3500 | 1500 | estimate |  |  | оценка — нужна котировка |
-| Водосток: трубы, отвод от дома | `roof_drainage` | компл | 180000 | 60000 | estimate |  |  | оценка — нужна котировка |
-| Сантехника санузла (унитаз, раковина, душ/ванна, смесители) | `sanitary_set` | компл | 380000 | 30000 | estimate | см. note в prices.ts | 26.10.2026 | domus.am, domus.am |
-| Внутренний газопровод (от счётчика) | `gas_internal` | компл | 150000 | 60000 | estimate |  |  | оценка — нужна котировка |
-| Бойлер косвенного нагрева 200 л | `dhw_cylinder` | шт | 288500 | 40000 | quoted | см. note в prices.ts | 26.10.2026 | www.shinshin.am |
-| Фанкойл | `opt_fancoil` | шт | 129000 | 25000 | quoted | см. note в prices.ts | 26.10.2026 | mideaarmenia.am |
+| Парапетная крышка (оцинк. сталь) | `parapet_coping` | пог.м | 3500 | 1500 | estimate | НЕТ ДАННЫХ — нужна котировка |  | оценка — нужна котировка |
+| Водосток: трубы, отвод от дома | `roof_drainage` | компл | 180000 | 60000 | estimate | НЕТ ДАННЫХ — нужна котировка |  | оценка — нужна котировка |
+| Сантехника санузла (унитаз, раковина, душевой поддон, смесители) | `sanitary_set` | компл | 144600 | 30000 | estimate | см. note в prices.ts | 26.10.2026 | nortun.am, domus.am, domus.am, nortun.am, domus.am, domus.am, fastmodernhouse.com, varpet.online |
+| Внутренний газопровод (от счётчика) | `gas_internal` | компл | 150000 | 60000 | estimate | НЕТ ДАННЫХ — нужна котировка |  | оценка — нужна котировка |
+| Бойлер косвенного нагрева 200 л | `dhw_cylinder` | шт | 286000 | 40000 | quoted | см. note в prices.ts | 26.10.2026 | www.list.am, www.shinshin.am, www.shinshin.am |
+| Фанкойл | `opt_fancoil` | шт | 92000 | 25000 | quoted | см. note в prices.ts | 26.10.2026 | www.list.am, mideaarmenia.am, mideaarmenia.am |
 | Аккумулятор LiFePO4 | `opt_battery` | кВт·ч | 101000 | 5000 | quoted | см. note в prices.ts | 26.10.2026 | solaron.am |
-| Зарядка электромобиля (wallbox) | `opt_ev_charger` | шт | 226000 | 35000 | quoted | см. note в prices.ts | 26.10.2026 | evolt.am, solaron.am, ener-go.am |
-| Кухонная мебель (без техники) | `opt_kitchen` | пог.м | 100000 | 10000 | estimate |  |  | оценка — нужна котировка |
-| Электрощит с автоматами и УЗО | `electrical_panel` | компл | 70500 | 105000 | estimate | см. note в prices.ts | 26.10.2026 | shinshin.am, domus.am, fastmodernhouse.com, varpet.online |
+| Зарядка электромобиля (wallbox) | `opt_ev_charger` | шт | 180000 | 35000 | quoted | см. note в prices.ts | 26.10.2026 | evolt.am, solaron.am, ener-go.am |
+| Кухонная мебель (без техники) | `opt_kitchen` | пог.м | 100000 | 10000 | estimate | НЕТ ДАННЫХ — нужна котировка |  | оценка — нужна котировка |
+| Электрощит с автоматами и УЗО | `electrical_panel` | компл | 49900 | 105000 | estimate | см. note в prices.ts | 26.10.2026 | shinshin.am, domus.am, shinmarket.am, shinshin.am, fastmodernhouse.com, varpet.online |
 | Канализационная точка | `sewer_points` | точка | 1140 | 10000 | estimate | см. note в prices.ts | 26.10.2026 | shinshin.am, erkatproff.am, fastmodernhouse.com, varpet.online |
 | Выезд бетононасоса | `pump_call` | выезд | 80000 | 0 | quoted | см. note в prices.ts | 26.10.2026 | www.waelcon.am |
 | Подключение электричества, 0,4 кВ (3 фазы) | `conn_electricity_3ph` | кВА | 16000 | 0 | official | см. note в prices.ts | 26.10.2026 | psrc.am |
 | Подключение 0,4 кВ: постоянная часть | `conn_electricity_3ph_base` | компл | 229000 | 0 | official | см. note в prices.ts | 26.10.2026 | psrc.am |
+| Гибридный инвертор (для аккумулятора) | `opt_hybrid_inverter` | шт | 890000 | 0 | quoted | см. note в prices.ts | 26.10.2026 | www.list.am, www.list.am |

@@ -36,6 +36,12 @@ const PROV_LABEL: Record<Provenance, { ru: string; hy: string; en: string; cls: 
   official: { ru: 'госпошлина', hy: 'պետ. տուրք', en: 'state fee', cls: 'lvl-info' },
 }
 
+// An estimate with no published price behind it is a question for a
+// contractor, and the badge says so.
+const QUOTE_NEEDED = { ru: 'нужна котировка', hy: 'անհրաժեշտ է գնառաջարկ', en: 'quote needed', cls: 'lvl-warning' }
+const badge = (it: { provenance?: Provenance; sourceUrls?: string[] }) =>
+  prov(it.provenance) === 'estimate' && (it.sourceUrls ?? []).length === 0 ? QUOTE_NEEDED : PROV_LABEL[prov(it.provenance)]
+
 export function PriceEditor() {
   const { prices, lang, setPriceItem, resetPrices, amdPerUsd, setAmdPerUsd, rateSource, rateDate, rateStale } = useProject()
   const items = Object.values(prices)
@@ -169,12 +175,8 @@ export function PriceEditor() {
                   {labelFor(it, lang)}
                   {/* по каждой строке видно, откуда цена: сверено / ориентир / оценка */}
                   <div style={{ marginTop: '0.2rem', display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span className={`badge ${PROV_LABEL[prov(it.provenance)].cls}`}>
-                      {lang === 'hy'
-                        ? PROV_LABEL[prov(it.provenance)].hy
-                        : lang === 'en'
-                          ? PROV_LABEL[prov(it.provenance)].en
-                          : PROV_LABEL[prov(it.provenance)].ru}
+                    <span className={`badge ${badge(it).cls}`}>
+                      {lang === 'hy' ? badge(it).hy : lang === 'en' ? badge(it).en : badge(it).ru}
                     </span>
                     {it.verifiedAt && <span className="mono" style={{ fontSize: '0.62rem', color: 'var(--color-ink-soft)' }}>{it.verifiedAt}</span>}
                     {(it.sourceUrls ?? []).map((u) => (

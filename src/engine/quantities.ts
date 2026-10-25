@@ -596,6 +596,8 @@ export function computeQuantities(p: HouseParams): Quantities {
   }
   add('opt_fancoil', 'options', 'turnkey', Math.max(0, Math.round(p.optFanCoils)))
   add('opt_battery', 'options', 'turnkey', Math.max(0, p.optBatteryKwh))
+  // a battery works through a hybrid inverter
+  if (p.optBatteryKwh > 0) add('opt_hybrid_inverter', 'options', 'turnkey', 1)
   if (p.optEvCharger) add('opt_ev_charger', 'options', 'turnkey', 1)
   add('opt_kitchen', 'options', 'turnkey', Math.max(0, p.optKitchenM))
   if (p.optSolarKw > 0) add('opt_solar', 'options', 'turnkey', p.optSolarKw)
@@ -637,11 +639,12 @@ export function computeQuantities(p: HouseParams): Quantities {
   }
   // Насос тарифицируется на весь объём разом, поэтому одной строкой.
   if (p.concretePump && structConcrete > 0) {
-    add('concrete_pump', 'foundation', 'act', structConcrete)
     // the pump is paid per call: the foundation, the slab on ground, and per
-    // storey its columns and walls, then its slab (plus a basement storey)
+    // storey its columns and walls, then its slab (plus a basement storey).
+    // A call covers the first 20 m³; only the rest is paid per m³.
     const pours = 1 + (groundSlabArea > 0 ? 1 : 0) + 2 * (floors0 + (p.basement ? 1 : 0))
     add('pump_call', 'foundation', 'act', pours)
+    add('concrete_pump', 'foundation', 'act', Math.max(0, structConcrete - C.pumpCallM3 * pours))
   }
 
   // ---- Aggregate structural concrete + rebar, per section ----

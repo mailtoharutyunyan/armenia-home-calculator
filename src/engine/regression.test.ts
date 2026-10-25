@@ -284,10 +284,10 @@ describe('новые разделы сметы', () => {
     const p = house()
     const est = computeEstimate(computeQuantities(p), SEED_PRICES, p, 'typical')
     const line = (key: string) => est.lines.find((l) => l.key === key)!.total
-    expect(line('heating')).toBeCloseTo(422500 + 15000, 0)
+    expect(line('heating')).toBeCloseTo(228800 + 15000, 0)
     // hall 2 × 80.9 m² × 60 W = 9.7 kW → 7; kitchen-dining 2; nine more rooms 1 each
     expect(qty(p, 'radiators')).toBe(18)
-    expect(line('radiators')).toBeCloseTo(18 * (49400 + 10000), 0) // 1 069 200
+    expect(line('radiators')).toBeCloseTo(18 * (35300 + 10000), 0) // 815 400
   })
 
   it('тёплый пол заменяет радиаторы, рекуперация — доплата к вентиляции', () => {
@@ -396,7 +396,11 @@ describe('панель инженера — переопределения ре�
     //               Waelcon's list with VAT and delivery; pump per call; PSRC
     //               connection fee; facade system from Ceresit prices;
     //               connection fees carry no markups
-    expect(Math.round(a)).toBe(72430513)
+    //   66 874 603  second market pass of 26.10.2026: cheapest credible shop
+    //               prices (concrete at Waelcon's 01.10.2026 list), excavator
+    //               work at the Gazprom/Veolia unit rates, a pump call covers
+    //               20 m³, screed labour 3 000 ֏/m²
+    expect(Math.round(a)).toBe(66874603)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {
@@ -487,9 +491,11 @@ describe('опалубка, подача бетона и толщина утеп
     expect(qty(house(), 'concrete_b25', 'floors')).toBeCloseTo(284 * 0.18 + 2 * Math.sqrt(80) * 0.3 * 0.22, 6)
     // precast slabs are laid on the beams, not poured over them: full beam depth
     expect(qty(house({ floorSlab: 'precast' }), 'concrete_b25', 'frame')).toBeCloseTo(16 * 0.16 * 6 + 149.2 * 0.16, 6)
-    // the pump moves what is poured; the rebar is still set on full sections
+    // the pump moves what is poured, 20 m³ per call included (6 calls here);
+    // the rebar is still set on full sections
     const poured = qty(house(), 'concrete_b25')
-    expect(qty(house(), 'concrete_pump')).toBeCloseTo(poured, 6)
+    expect(qty(house(), 'pump_call')).toBe(6)
+    expect(qty(house(), 'concrete_pump')).toBeCloseTo(poured - 6 * C.pumpCallM3, 6)
     const rebarK = 1 + C.rebarFloorFactor
     expect(qty(house(), 'rebar_a500', 'frame')).toBeCloseTo(
       ((16 * 0.16 * 6 * C.rebar.column + 162 * 0.16 * C.rebar.ringBeam) * rebarK) / 1000,
@@ -716,7 +722,7 @@ describe('полная проверка 26.10.2026', () => {
     // стяжка по полу без следа перегородок × 2 500, 74.8 м² XPS × 2 000,
     // 54 м² отмостки × 4 000
     const floor = 252.32 - planTake(house()).partitions * C.partitionThickness
-    expect(line(house(), 'screed')[0].labor).toBeCloseTo(floor * 2500, 6)
+    expect(line(house(), 'screed')[0].labor).toBeCloseTo(floor * 3000, 6)
     expect(line(house(), 'insulation_xps', 'floors')[0].labor).toBeCloseTo(74.8 * 2000, 0)
     expect(line(house(), 'apron')[0].labor).toBeCloseTo(54 * 4000, 0)
     // а бетон и кладка коробки — по-прежнему в ставке бригады
@@ -841,7 +847,7 @@ describe('коробка не платит за подключения', () => {
     expect(utilities).toBeGreaterThan(0)
     expect(e.act.permit).toBeCloseTo(e.sectionTotals['permit'] ?? 0, 6)
     expect(e.turnkey.permit).toBeCloseTo((e.sectionTotals['permit'] ?? 0) + utilities, 6)
-    // 24 331 028 + 8 283 915 + 1% + 10% + documents 1 915 080
-    expect(Math.round(e.act.total)).toBe(38150282)
+    // shell materials and labour + 1% + 10% + documents, without the tariffs
+    expect(Math.round(e.act.total)).toBe(37640958)
   })
 })
