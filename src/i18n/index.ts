@@ -228,8 +228,8 @@ export const DICT: Dict = {
     hy: 'Պրեմիում',
   },
   vat: {
-    ru: 'Цены с НДС 20%',
-    hy: 'Գներ՝ ներառյալ 20% ԱԱՀ',
+    ru: 'Строит подрядчик — плательщик НДС (+20% к работам; при строительстве своими силами не ставить)',
+    hy: 'Կառուցում է ԱԱՀ վճարող կապալառու (+20% աշխատանքներին. ինքնուրույն կառուցելիս չնշել)',
   },
   priceMode: {
     ru: 'Режим цен',
@@ -734,7 +734,7 @@ const EN: Record<string, string> = {
   economy: 'Economy',
   standard: 'Standard',
   premium: 'Premium',
-  vat: 'Prices incl. 20% VAT',
+  vat: 'Built by a VAT-registered contractor (+20% on works; leave off when you build yourself)',
   priceMode: 'Price mode',
   pm_min: 'Economy',
   pm_typical: 'Market',
