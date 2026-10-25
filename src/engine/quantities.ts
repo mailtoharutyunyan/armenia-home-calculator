@@ -428,13 +428,14 @@ export function computeQuantities(p: HouseParams): Quantities {
   add('insulation', 'facade', 'turnkey', facadeArea * (insulT / C.insulationBaseThickness))
 
   // Engineering networks (per m²).
-  // Электрика и водопровод разводятся по полу — над проёмом зала их нет.
-  // Отопление и вентиляция зависят от объёма: двусветный зал греется и
-  // проветривается как два этажа, поэтому для них остаётся полная площадь.
+  // Все сети разводятся по полу и оплачиваются за м² отапливаемого пола:
+  // над проёмом двусветного зала нет ни пола, ни труб, ни воздуховодов.
+  // Высокий объём зала требует мощности, а не площади — тёплый пол у
+  // остекления и вытяжка наверху (см. совет в norms.ts).
   add('electrical', 'engineering', 'turnkey', finishedArea)
   add('plumbing', 'engineering', 'turnkey', finishedArea)
-  add('heating', 'engineering', 'turnkey', totalFloorArea)
-  add('ventilation', 'engineering', 'turnkey', totalFloorArea)
+  add('heating', 'engineering', 'turnkey', finishedArea)
+  add('ventilation', 'engineering', 'turnkey', finishedArea)
   add('lightning', 'engineering', 'turnkey', 1)
 
   // ---- Подключение к внешним сетям (ТУ + врезка) ----
@@ -454,7 +455,9 @@ export function computeQuantities(p: HouseParams): Quantities {
   // ---- Optional premium systems (opt-in extras) ----
   // per-m² options use the finished floor area (gross minus the hall void) — same
   // base as screed/plaster/floor_finish above, so numbers stay consistent.
+  // тёплый пол и рекуперация — доплаты к базовым строкам heating/ventilation
   if (p.optHeating) add('opt_boiler_heating', 'options', 'turnkey', finishedArea)
+  if (p.optMvhr) add('opt_mvhr', 'options', 'turnkey', finishedArea)
   if (p.optHeatPump) add('opt_heat_pump', 'options', 'turnkey', 1)
   if (p.optSolarKw > 0) add('opt_solar', 'options', 'turnkey', p.optSolarKw)
   if (p.optFinishPremium) add('opt_finish_premium', 'options', 'turnkey', finishedArea)

@@ -73,10 +73,10 @@ describe('возраст прайса', () => {
 })
 
 describe('точность расчёта заявляется честно', () => {
-  it('the 26.09.2026 market check verified part of the catalogue', () => {
+  it('the 26.09.2026 market check and the 26.10.2026 solar check verified part of the catalogue', () => {
     const p = precisionOf(SEED_PRICES)
     expect(p.level).toBe('partial')
-    expect(p.quoted).toBe(15)
+    expect(p.quoted).toBe(16)
     expect(p.total).toBe(Object.keys(SEED_PRICES).length)
   })
 
@@ -84,7 +84,11 @@ describe('точность расчёта заявляется честно', ()
     for (const i of items.filter((x) => x.provenance === 'quoted')) {
       expect(i.materialMin, i.key).toBeLessThanOrEqual(i.materialTypical)
       expect(i.materialTypical, i.key).toBeLessThanOrEqual(i.materialMax)
-      expect(i.verifiedAt, i.key).toBe(PRICES_UPDATED)
+      // checked on the catalogue-wide date or later, never before it
+      const now = new Date('2027-01-01T00:00:00Z')
+      const age = priceAgeDays(i.verifiedAt, now)
+      expect(age, `${i.key}: verifiedAt ${i.verifiedAt}`).not.toBeNull()
+      expect(age!, i.key).toBeLessThanOrEqual(priceAgeDays(PRICES_UPDATED, now)!)
       expect(i.note, i.key).toBeTruthy()
     }
   })

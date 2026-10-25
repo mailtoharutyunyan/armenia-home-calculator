@@ -27,7 +27,7 @@ const cases: [string, Partial<HouseParams>][] = [
   ['всё исключено', { excludedSections: ['earthworks','foundation','walls','frame','floors','stair','roof','openings','partitions','finishing','facade','engineering','utilities','site','options','permit'] }],
   ['доллары', { currency: 'USD' as const }],
   ['подвал 10м', { basement: true, basementDepth: 10 }],
-  ['все опции', { optHeating: true, optHeatPump: true, optSolarKw: 20, optFinishPremium: true, optPanelCeiling: true }],
+  ['все опции', { optHeating: true, optMvhr: true, optHeatPump: true, optSolarKw: 20, optFinishPremium: true, optPanelCeiling: true }],
   ['проценты огромные', { overheadPct: 500, profitPct: 500, contingencyPct: 500 }],
   ['проценты отрицательные', { overheadPct: -50, profitPct: -50, contingencyPct: -50 }],
   ['eng мусор', { eng: { slabThickness: -5, pileDiameter: 0, rebarFloor: -100, columnGridStep: 0 } }],

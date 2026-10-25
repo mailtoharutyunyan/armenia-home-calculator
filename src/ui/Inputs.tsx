@@ -420,7 +420,21 @@ export function Inputs() {
         <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input type="checkbox" checked={house.optHeating} onChange={(e) => set({ optHeating: e.target.checked })} />
           <span style={{ marginBottom: 0 }}>
-            {lang === 'hy' ? 'Ջեռուցում՝ կաթսա + տաք հատակ' : lang === 'en' ? 'Heating: boiler + warm floor' : 'Отопление: котёл + тёплый пол'}
+            {lang === 'hy'
+              ? 'Տաք հատակ՝ հավելում հիմնական ջեռուցմանը (կաթսա + ռադիատորներ)'
+              : lang === 'en'
+                ? 'Underfloor heating — extra over the base heating (boiler + radiators)'
+                : 'Тёплый пол — доплата к базовому отоплению (котёл + радиаторы)'}
+          </span>
+        </label>
+        <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input type="checkbox" checked={house.optMvhr} onChange={(e) => set({ optMvhr: e.target.checked })} />
+          <span style={{ marginBottom: 0 }}>
+            {lang === 'hy'
+              ? 'Օդափոխություն ջերմության ռեկուպերացիայով (MVHR)՝ հավելում'
+              : lang === 'en'
+                ? 'Ventilation with heat recovery (MVHR) — extra'
+                : 'Вентиляция с рекуперацией тепла (MVHR) — доплата'}
           </span>
         </label>
         <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

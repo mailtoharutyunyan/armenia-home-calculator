@@ -245,22 +245,37 @@ describe('новые разделы сметы', () => {
     expect(big).toBe(1)
   })
 
-  it('вентиляция считается по всей площади этажей', () => {
-    expect(qty(house(), 'ventilation')).toBeCloseTo(364, 6)
+  it('все инженерные сети — по полу, без проёма двусветного зала', () => {
+    // над залом перекрытия нет — разводки там тоже нет: 364 − 80 = 284 м²
+    for (const key of ['electrical', 'plumbing', 'heating', 'ventilation']) {
+      expect(qty(house(), key), key).toBeCloseTo(284, 6)
+    }
   })
 
-  it('электрика и водопровод — по полу, без проёма двусветного зала', () => {
-    // над залом перекрытия нет — разводки там тоже нет: 364 − 80 = 284 м².
-    // Отопление зависит от объёма, зал греется как два этажа — остаётся 364.
-    expect(qty(house(), 'electrical')).toBeCloseTo(284, 6)
-    expect(qty(house(), 'plumbing')).toBeCloseTo(284, 6)
-    expect(qty(house(), 'heating')).toBeCloseTo(364, 6)
-  })
-
-  it('без двусветного зала электрика и водопровод — по всей площади', () => {
+  it('без двусветного зала сети — по всей площади этажей', () => {
     const p = house({ doubleHeightHall: false })
-    expect(qty(p, 'electrical')).toBeCloseTo(364, 6)
-    expect(qty(p, 'plumbing')).toBeCloseTo(364, 6)
+    for (const key of ['electrical', 'plumbing', 'heating', 'ventilation']) {
+      expect(qty(p, key), key).toBeCloseTo(364, 6)
+    }
+  })
+
+  it('отопление и вентиляция по умолчанию: 284 м² × (материал + работа)', () => {
+    const p = house()
+    const est = computeEstimate(computeQuantities(p), SEED_PRICES, p, 'typical')
+    const line = (key: string) => est.lines.find((l) => l.key === key)!.total
+    expect(line('heating')).toBeCloseTo(284 * (12000 + 8000), 0) // 5 680 000
+    expect(line('ventilation')).toBeCloseTo(284 * (4000 + 3000), 0) // 1 988 000
+  })
+
+  it('тёплый пол и рекуперация — доплаты по площади пола, базовые строки не меняются', () => {
+    const base = house()
+    const extra = house({ optHeating: true, optMvhr: true })
+    expect(qty(extra, 'opt_boiler_heating')).toBeCloseTo(284, 6)
+    expect(qty(extra, 'opt_mvhr')).toBeCloseTo(284, 6)
+    expect(qty(base, 'opt_boiler_heating')).toBe(0)
+    expect(qty(base, 'opt_mvhr')).toBe(0)
+    expect(qty(extra, 'heating')).toBe(qty(base, 'heating'))
+    expect(qty(extra, 'ventilation')).toBe(qty(base, 'ventilation'))
   })
 
   it('проект и технадзор оплачиваются за м² дома без проёма зала', () => {
@@ -333,7 +348,9 @@ describe('панель инженера — переопределения ре�
     //               expertise under the simplified procedure N 4.1
     //   74 324 966  doors, partitions, the kitchen's sliding glass partition and
     //               the gallery and stair railings measured on the plans
-    expect(Math.round(a)).toBe(74324966)
+    //   71 925 206  heating and ventilation priced on the floor (284 m²), not
+    //               over the double-height void (364 m²)
+    expect(Math.round(a)).toBe(71925206)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {

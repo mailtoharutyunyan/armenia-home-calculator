@@ -252,12 +252,28 @@ const items: PriceItem[] = [
   // --- Engineering networks (per m2 of total floor area) ---
   item('electrical', 'Электрика', 'Էլեկտրագծեր', 'м²', 9000, 7000, S.market),
   item('plumbing', 'Водопровод/канализация', 'Ջրամատակարարում', 'м²', 8000, 7000, S.market),
-  item('heating', 'Отопление', 'Ջեռուցում', 'м²', 12000, 8000, S.market),
+  item('heating', 'Отопление: котёл + радиаторы', 'Ջեռուցում՝ կաթսա + ռադիատորներ', 'м²', 12000, 8000, S.market),
 
   // --- Optional premium systems (opt-in extras) ---
-  item('opt_boiler_heating', 'Отопление: котёл + тёплый пол', 'Ջեռուցում՝ կաթսա + տաք հատակ', 'м²', 7000, 0, S.market),
+  // Warm floor is an extra on top of the base heating line (boiler, pipes,
+  // radiators), not a second boiler.
+  item('opt_boiler_heating', 'Тёплый пол (доплата к отоплению)', 'Տաք հատակ (հավելում ջեռուցմանը)', 'м²', 7000, 0, S.market),
   item('opt_heat_pump', 'Тепловой насос (воздух-вода)', 'Ջերմային պոմպ (օդ-ջուր)', 'компл', 2500000, 0, S.market),
-  item('opt_solar', 'Солнечные панели (фотовольтаика)', 'Արևային վահանակներ (ֆոտովոլտ.)', 'кВт', 350000, 0, S.market),
+  // Turnkey on-grid stations, October 2026: 10.4 kW (Longi 650 W + Solax) for
+  // 1 700 000 ֏ on list.am; Smart Solar 10.32 kW for 1 485 000 ֏ cash and a
+  // 220 000 ֏/kW instalment offer. A battery is not in this line.
+  {
+    ...quoted('opt_solar', 'Солнечные панели (фотовольтаика)', 'Արևային վահանակներ (ֆոտովոլտ.)', 'кВт', { min: 144000, typical: 163000, max: 220000 }, 0, [
+      'https://www.list.am/en/item/22616313',
+      'https://www.engineering10.com/AM/Gyumri/381447735537287/Smart--Solar',
+    ], 'list.am: сетевая станция 10,4 кВт под ключ — 1 700 000 ֏; Smart Solar: 10,32 кВт — 1 485 000 ֏, в рассрочку 220 000 ֏/кВт. Аккумулятор не входит: гибрид с 10 кВт·ч дороже'),
+    verifiedAt: '26.10.2026',
+  },
+  // Whole-house supply/extract unit with heat recovery: an extra on top of the
+  // base ventilation line. list.am lists HVAC QRXF units from 210 000 ֏; the
+  // ducts, grilles and commissioning are a design-dependent guess.
+  estimate('opt_mvhr', 'Вентиляция с рекуперацией (доплата)', 'Օդափոխություն ռեկուպերացիայով (հավելում)', 'м²', 6000, 3000,
+    'ОЦЕНКА — установка 400–500 м³/ч (на list.am от 210 000 ֏), воздуховоды притока и вытяжки, решётки, наладка; уточните по проекту вентиляции'),
   item('opt_finish_premium', 'Финишная отделка «под ключ»', 'Ֆինիշ հարդարում «բանալի հանձնում»', 'м²', 20000, 0, S.market),
   item('opt_panel_ceiling', 'Панельный (реечный) потолок', 'Վահանակային առաստաղ', 'м²', 6000, 0, S.market),
 
@@ -347,8 +363,9 @@ const EN_LABELS: Record<string, string> = {
   roof_pitched: 'Pitched roof',
   electrical: 'Electrical',
   plumbing: 'Plumbing / sewerage',
-  heating: 'Heating',
-  opt_boiler_heating: 'Heating: boiler + warm floor',
+  heating: 'Heating: boiler + radiators',
+  opt_boiler_heating: 'Underfloor heating (extra over heating)',
+  opt_mvhr: 'Ventilation with heat recovery (extra)',
   opt_heat_pump: 'Heat pump (air-water)',
   opt_solar: 'Solar panels (photovoltaic)',
   opt_finish_premium: 'Turnkey finishing',

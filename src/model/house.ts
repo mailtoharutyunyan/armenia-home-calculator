@@ -102,7 +102,8 @@ export interface HouseParams {
   sitePavingArea: number // м² дорожек и площадок
   balconyArea: number // м² балконов/террас
   // optional premium systems (opt-in extras)
-  optHeating: boolean // отопление: котёл + тёплый пол (֏/м²)
+  optHeating: boolean // тёплый пол — доплата к базовому отоплению (котёл + радиаторы), ֏/м²
+  optMvhr: boolean // вентиляция с рекуперацией тепла — доплата к базовой вентиляции, ֏/м²
   optHeatPump: boolean // тепловой насос воздух-вода (компл.)
   optSolarKw: number // солнечные панели, кВт (0 = нет)
   optFinishPremium: boolean // финишная отделка «под ключ» (֏/м²)
@@ -237,6 +238,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   sitePavingArea: 0,
   balconyArea: 0,
   optHeating: false,
+  optMvhr: false,
   optHeatPump: false,
   optSolarKw: 0,
   optFinishPremium: false,
