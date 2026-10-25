@@ -832,3 +832,16 @@ describe('независимая проверка логики 26.10.2026', () =
     expect(qty(p, 'aerated_partition')).toBeCloseTo(Math.max(0, expected), 6)
   })
 })
+
+describe('коробка не платит за подключения', () => {
+  it('тарифы подключения входят только в «под ключ»', () => {
+    const p = house()
+    const e = computeEstimate(computeQuantities(p), SEED_PRICES, p, 'typical')
+    const utilities = e.sectionTotals['utilities'] ?? 0
+    expect(utilities).toBeGreaterThan(0)
+    expect(e.act.permit).toBeCloseTo(e.sectionTotals['permit'] ?? 0, 6)
+    expect(e.turnkey.permit).toBeCloseTo((e.sectionTotals['permit'] ?? 0) + utilities, 6)
+    // 24 331 028 + 8 283 915 + 1% + 10% + documents 1 915 080
+    expect(Math.round(e.act.total)).toBe(38150282)
+  })
+})

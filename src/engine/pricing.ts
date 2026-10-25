@@ -119,6 +119,7 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
   let extraMat = 0
   let extraLabor = 0
   let permitAmt = 0
+  let actFees = 0 // the fees paid by the shell stage (documents, permit)
 
   for (const ql of q.lines) {
     if (p.excludedSections.includes(ql.section)) continue // раздел отключён чекбоксом
@@ -138,6 +139,7 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
     const labor = BRIGADE_SECTIONS.has(ql.section) && !OWN_CREW.has(ql.key) ? 0 : ql.quantity * item.labor * mult
     const total = material + labor
     if (isPermit) permitAmt += total
+    if (isPermit && ql.stage === 'act') actFees += total
 
     lines.push({
       key: ql.key,
@@ -206,7 +208,8 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
 
   return {
     lines,
-    act: finalize(actMat, actLabor, permitAmt, p),
+    // the shell stage pays its documents, not the turnkey connection tariffs
+    act: finalize(actMat, actLabor, actFees, p),
     turnkey: finalize(actMat + extraMat, actLabor + extraLabor, permitAmt, p),
     sectionTotals,
     missing,
