@@ -1,7 +1,7 @@
 import type { HouseParams, InfillMaterial } from '../model/house'
 import { COEFF as C } from '../data/coefficients'
 import { REGIONS } from '../data/regions'
-import { buildFloorPlan, planTakeoff, DOOR_W } from './floorplan'
+import { buildFloorPlan, planTakeoff, usesTemplate, DOOR_W } from './floorplan'
 import { simplified41Reasons } from './norms'
 
 export type Stage = 'act' | 'turnkey'
@@ -187,7 +187,13 @@ export function computeQuantities(p: HouseParams): Quantities {
   // hold (or in a house too small for it) is drawn smaller, and only the drawn
   // void is missing from the slab.
   const take = planTake(p)
-  const hallVoid = p.doubleHeightHall && p.floors >= 2 ? Math.max(0, Math.min(p.hallArea, A, take.voidArea)) : 0
+  // The template draws its own void (its size field is hidden), so it is taken
+  // as drawn; the generated plan caps the asked-for size at what it can draw.
+  const hallVoid = !(p.doubleHeightHall && p.floors >= 2)
+    ? 0
+    : usesTemplate(p)
+      ? take.voidArea
+      : Math.max(0, Math.min(p.hallArea, A, take.voidArea))
   // Площадь реального пола: над двусветным залом перекрытия нет, поэтому всё,
   // что считается «на м² пола» (стяжка, полы, электрика, водопровод, проект),
   // берётся без проёма.
@@ -546,6 +552,9 @@ export function computeQuantities(p: HouseParams): Quantities {
   const stoneArea = facadeArea * Math.min(100, Math.max(0, p.stoneFacadePct ?? 0)) / 100
   add('facade', 'facade', 'turnkey', facadeArea - stoneArea)
   add(`facade_${p.stoneType ?? 'travertine'}`, 'facade', 'turnkey', stoneArea)
+  // stone is fixed on the reinforced base coat over the insulation, with its
+  // own adhesive — the render's finish layers are what it replaces
+  add('stone_base', 'facade', 'turnkey', stoneArea)
   add('insulation', 'facade', 'turnkey', Math.max(0, P * H + gableFacade - p.windowAreaTotal) * (insulT / C.insulationBaseThickness))
 
   // Engineering networks, counted the way installers charge for them: per
@@ -645,9 +654,18 @@ export function computeQuantities(p: HouseParams): Quantities {
     // the pump is paid per call: the foundation, the slab on ground, and per
     // storey its columns and walls, then its slab (plus a basement storey).
     // A call covers the first 20 m³; only the rest is paid per m³.
-    const pours = 1 + (groundSlabArea > 0 ? 1 : 0) + 2 * (floors0 + (p.basement ? 1 : 0))
-    add('pump_call', 'foundation', 'act', pours)
-    add('concrete_pump', 'foundation', 'act', Math.max(0, structConcrete - C.pumpCallM3 * pours))
+    const storeys = floors0 + (p.basement ? 1 : 0)
+    const groundSlabVol = groundSlabArea * floorOnGround
+    const pours = [
+      (concreteBySection.foundation ?? 0) - groundSlabVol,
+      groundSlabVol,
+      ...Array.from({ length: storeys }, () => ((concreteBySection.frame ?? 0) + (concreteBySection.walls ?? 0)) / Math.max(1, storeys)),
+      ...Array.from({ length: storeys }, () => (concreteBySection.floors ?? 0) / Math.max(1, storeys)),
+    ].filter((v) => v > 0)
+    add('pump_call', 'foundation', 'act', pours.length)
+    // each call covers its own first 20 m³ — a small pour does not lend its
+    // allowance to a big one
+    add('concrete_pump', 'foundation', 'act', pours.reduce((a, v) => a + Math.max(0, v - C.pumpCallM3), 0))
   }
 
   // ---- Aggregate structural concrete + rebar, per section ----

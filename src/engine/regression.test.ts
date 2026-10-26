@@ -405,7 +405,8 @@ describe('панель инженера — переопределения ре�
     //               work at the Gazprom/Veolia unit rates, a pump call covers
     //               20 m³, screed labour 3 000 ֏/m²
     //   66 922 118  scaffolding at Accurate's day rate, 23 ֏ ≈ 690 ֏/m² a month
-    expect(Math.round(a)).toBe(66922118)
+    //   66 975 353  each pump call covers its own first 20 m³; the vestibule wall
+    expect(Math.round(a)).toBe(66975353)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {
@@ -500,7 +501,10 @@ describe('опалубка, подача бетона и толщина утеп
     // the rebar is still set on full sections
     const poured = qty(house(), 'concrete_b25')
     expect(qty(house(), 'pump_call')).toBe(6)
-    expect(qty(house(), 'concrete_pump')).toBeCloseTo(poured - 6 * C.pumpCallM3, 6)
+    // over 20 m³ per pour: strip with plinth 42.12, slab on ground 14.96, per
+    // storey columns and walls 14.53, slabs 26.15 → 22.12 + 2 × 6.15
+    expect(qty(house(), 'concrete_pump')).toBeCloseTo((42.12 - 20) + 2 * (52.301 / 2 - 20), 2)
+    expect(poured).toBeGreaterThan(0)
     const rebarK = 1 + C.rebarFloorFactor
     expect(qty(house(), 'rebar_a500', 'frame')).toBeCloseTo(
       ((16 * 0.16 * 6 * C.rebar.column + 162 * 0.16 * C.rebar.ringBeam) * rebarK) / 1000,
@@ -853,7 +857,7 @@ describe('коробка не платит за подключения', () => {
     expect(e.act.permit).toBeCloseTo(e.sectionTotals['permit'] ?? 0, 6)
     expect(e.turnkey.permit).toBeCloseTo((e.sectionTotals['permit'] ?? 0) + utilities, 6)
     // shell materials and labour + 1% + 10% + documents, without the tariffs
-    expect(Math.round(e.act.total)).toBe(37688473)
+    expect(Math.round(e.act.total)).toBe(37741708)
   })
 })
 

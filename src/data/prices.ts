@@ -357,6 +357,13 @@ const items: PriceItem[] = [
   { ...quoted('facade_basalt', 'Облицовка фасада базальтом', 'Ֆասադի երեսպատում բազալտով', 'м²', { min: 6500, typical: 6500, max: 12700 }, 15000, Q.stone,
     'list.am: базальт 2 см — 6 500, 3 см — 7 000 ֏/м² (окт. 2026); flagma.am — 25–35 $/м²; монтаж от 15 000 ֏/м²; клей CM 16 (8 500 ֏ за мешок) не учтён'), verifiedAt: OCT },
 
+  // Under stone the insulation still gets its reinforced base coat (Ceresit
+  // Thermo Universal ~9 kg/m², 7 000 per 25 kg; Knauf mesh 14 500 per 50 m²)
+  // and the stone its adhesive (Ceresit CM 16, 8 500 per 25 kg bag, ~5 kg/m²).
+  // Anchors, where the stone is heavy, are not counted.
+  derived('stone_base', 'Основание под камень: армирующий слой и клей', 'Քարի հիմք՝ ամրանավորող շերտ և սոսինձ', 'м²', { min: 4300, typical: 4700, max: 5200 }, 3000, [...Q.facadeSystem, 'https://www.list.am/en/item/23043937'],
+    'из прайсов: базовый слой Ceresit Thermo Universal ~9 кг/м² (7 000 ֏ за 25 кг), сетка Knauf (14 500 ֏ за 50 м²), клей для камня Ceresit CM 16 ~5 кг/м² (8 500 ֏ за мешок 25 кг, list.am); анкеры не учтены; работа 3 000 ֏/м² — ОЦЕНКА (половина фасадной)'),
+
   // Thin-coat facade over the insulation, from ShinShin and Domus prices and
   // Ceresit consumption: adhesive and base coat CT85 ~9 kg/m² (9 900 ֏ per
   // 25 kg), mesh ×1.1 (Knauf 21 800 ֏ per 50 m²), CT35 "bark" 2.0 kg/m² at
@@ -449,7 +456,7 @@ const items: PriceItem[] = [
   // A battery needs a hybrid inverter: Deye 10 kW 890 000 (one phase),
   // 930 000–950 000 ֏ (three phase), list.am 2026
   { ...quoted('opt_hybrid_inverter', 'Гибридный инвертор (для аккумулятора)', 'Հիբրիդ ինվերտոր', 'шт', { min: 890000, typical: 890000, max: 950000 }, 0, Q.inverter,
-    'list.am: Deye 10 кВт однофазный — 890 000 ֏ (06.06.2026), трёхфазный 930 000–950 000 ֏; монтаж — вместе с солнечной станцией'), verifiedAt: OCT },
+    'list.am: Deye 10 кВт однофазный — 890 000 ֏ (06.06.2026), трёхфазный 930 000–950 000 ֏; монтаж — вместе с солнечной станцией. Если станцию сразу заказывать гибридной, установщик ставит один инвертор вместо двух — уточните, сколько он вычтет из цены станции'), verifiedAt: OCT },
   { ...quoted('opt_ev_charger', 'Зарядка электромобиля (wallbox)', 'Էլեկտրամեքենայի լիցքավորիչ', 'шт', { min: 180000, typical: 180000, max: 300000 }, 35000, Q.evCharger,
     'evolt.am Wattsaving 7 кВт — 180 000 ֏; Bull Electric 200 000; Solaron Mira 226 000; Star Charge 300 000 ֏; монтаж ~35 000 ֏ — ОЦЕНКА'), verifiedAt: OCT },
   estimate('opt_kitchen', 'Кухонная мебель (без техники)', 'Խոհանոցային կահույք (առանց տեխնիկայի)', 'пог.м', 100000, 10000,
@@ -593,6 +600,7 @@ const EN_LABELS: Record<string, string> = {
   facade_tuff: 'Facade cladding, tuff',
   facade_travertine: 'Facade cladding, travertine',
   facade_basalt: 'Facade cladding, basalt',
+  stone_base: 'Base under stone: reinforced coat and adhesive',
   opt_hybrid_inverter: 'Hybrid inverter (for the battery)',
   electrical_panel: 'Distribution board with breakers and RCDs',
   sewer_points: 'Sewer point',

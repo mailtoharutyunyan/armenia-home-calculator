@@ -88,7 +88,20 @@ export function Facts() {
       .sort((a, b) => b.amount - a.amount || labelFor(a.it, lang).localeCompare(labelFor(b.it, lang)))
   }, [prices, byKey, filter, query, lang])
 
-  const pct = (v: number) => (direct > 0 ? Math.round((v / direct) * 100) : 0)
+  // whole percents that add up to 100 (largest remainder), so the legend
+  // never shows 101%
+  const pctOf = useMemo(() => {
+    const raw = ORDER.map((e) => (direct > 0 ? (share[e] / direct) * 100 : 0))
+    const out = raw.map(Math.floor)
+    let left = direct > 0 ? 100 - out.reduce((a, v) => a + v, 0) : 0
+    const order = raw.map((v, i) => [v - Math.floor(v), i] as const).sort((a, b) => b[0] - a[0])
+    for (const [, i] of order) if (left-- > 0) out[i]++
+    return Object.fromEntries(ORDER.map((e, i) => [e, out[i]])) as Record<Evidence, number>
+  }, [share, direct])
+  const pct = (v: number) => {
+    const e = ORDER.find((k) => share[k] === v)
+    return e ? pctOf[e] : 0
+  }
 
   return (
     <div className="facts">
@@ -97,10 +110,10 @@ export function Facts() {
           <h2>{lang === 'hy' ? 'Ինչի վրա է հենված հաշվարկը' : lang === 'en' ? 'What the estimate rests on' : 'На чём стоит смета'}</h2>
           <p className="facts-lede">
             {lang === 'hy'
-              ? `Ձեր տան ուղիղ ծախսերը՝ ${m(direct)}։ Գոտին ցույց է տալիս, թե դրանցից որքանն է հենված հրապարակված գնի վրա։`
+              ? `Ձեր տան նախահաշվի տողերը՝ ${m(direct)}՝ առանց պահուստի։ Գոտին ցույց է տալիս, թե դրանցից որքանն է հենված հրապարակված գնի վրա։`
               : lang === 'en'
-                ? `Your house's direct costs come to ${m(direct)}. The bar shows how much of that rests on a published price.`
-                : `Прямые затраты вашего дома — ${m(direct)}. Полоса показывает, какая их часть стоит на опубликованной цене.`}
+                ? `Your house's estimate lines come to ${m(direct)}, before the reserve. The bar shows how much of that rests on a published price.`
+                : `Строки сметы вашего дома — ${m(direct)} без резерва. Полоса показывает, какая их часть стоит на опубликованной цене.`}
           </p>
           <div className="facts-bar" role="img" aria-label={ORDER.map((e) => `${L(EVIDENCE[e])} ${pct(share[e])}%`).join(', ')}>
             {ORDER.map((e) =>

@@ -70,6 +70,40 @@ describe('шаблон планировки по реальному проект
   it('итог дома по умолчанию закреплён', () => {
     const e = computeEstimate(computeQuantities(p), SEED_PRICES, p, 'typical')
     // 280.48 m² of house on the template plan, prices of 26.10.2026
-    expect(Math.round(e.turnkey.total)).toBe(70866564)
+    expect(Math.round(e.turnkey.total)).toBe(70958351)
+  })
+})
+
+describe('шаблон: границы применения и связка со сметой', () => {
+  it('смета вычитает нарисованный проём, а не сохранённое поле', () => {
+    for (const hallArea of [0, 30, 80]) {
+      const g = computeQuantities({ ...p, hallArea }).geometry
+      expect(g.hallVoid, String(hallArea)).toBeCloseTo(51.84, 6)
+    }
+  })
+
+  it('маленький или большой дом получает генератор, а не растянутый шаблон', () => {
+    expect(buildFloorPlan({ ...p, length: 8, width: 8 }, 0).rooms.some((r) => r.label === 'Тамбур')).toBe(false)
+    expect(buildFloorPlan({ ...p, length: 20, width: 18 }, 0).rooms.some((r) => r.label === 'Тамбур')).toBe(false)
+    expect(buildFloorPlan({ ...p, length: 14, width: 15 }, 0).rooms.some((r) => r.label === 'Тамбур')).toBe(true)
+  })
+
+  it('кладовая — хранение: без воды, радиатора и розеток; стена тамбура считается', () => {
+    const t = planTakeoff(plans[0])
+    // 3 fixtures in the guest and the bedroom bathrooms each, the kitchen 2, the boiler room 1
+    expect(t.waterPoints).toBe(3 + 3 + 2 + 1)
+    const pantry = plans[0].rooms.find((r) => r.label === 'Кладовая')!
+    expect(pantry.type).toBe('wardrobe')
+    // the vestibule door has a leaf, so the wall it hangs in is built
+    const porch = plans[0].rooms.find((r) => r.label === 'Тамбур')!
+    const withWall = planTakeoff({ ...plans[0], doors: plans[0].doors.filter((d) => d.kind !== 'interior' || Math.abs(d.pos - (porch.y)) > 1e-6) })
+    expect(t.partitions - withWall.partitions).toBeCloseTo(porch.w, 6)
+  })
+
+  it('под камнем остаётся армирующий слой и клей', () => {
+    const q = computeQuantities({ ...p, stoneFacadePct: 100 })
+    const line = (k: string) => q.lines.filter((l) => l.key === k).reduce((a, l) => a + l.quantity, 0)
+    expect(line('facade')).toBe(0)
+    expect(line('stone_base')).toBeCloseTo(line('facade_travertine'), 6)
   })
 })

@@ -234,6 +234,15 @@ export function planTakeoff(plan: FloorPlan): {
     return null
   }
   const opposite = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' } as const
+  const leafOnWall = (a: Room, b: Room) =>
+    plan.doors.some((d) => {
+      if (d.kind !== 'interior') return false
+      const onV = d.orient === 'v' && (Math.abs(d.pos - (a.x + a.w)) < e && Math.abs(d.pos - b.x) < e || Math.abs(d.pos - a.x) < e && Math.abs(d.pos - (b.x + b.w)) < e)
+      const onH = d.orient === 'h' && (Math.abs(d.pos - (a.y + a.h)) < e && Math.abs(d.pos - b.y) < e || Math.abs(d.pos - a.y) < e && Math.abs(d.pos - (b.y + b.h)) < e)
+      if (!onV && !onH) return false
+      const [from, to] = onV ? [Math.max(a.y, b.y), Math.min(a.y + a.h, b.y + b.h)] : [Math.max(a.x, b.x), Math.min(a.x + a.w, b.x + b.w)]
+      return d.start >= from - e && d.start + d.w <= to + e
+    })
   let partitions = 0
   let glass = 0
   let railing = 0
@@ -250,7 +259,9 @@ export function planTakeoff(plan: FloorPlan): {
         else partitions += s.len
       } else if (a.glassSide === s.side || (s.side && b.glassSide === opposite[s.side])) {
         glass += s.len
-      } else if (!(circulation(a.type) && circulation(b.type))) {
+      } else if (!(circulation(a.type) && circulation(b.type)) || leafOnWall(a, b)) {
+        // circulation spaces are open to each other, unless a door with a
+        // leaf (a vestibule) shows there is a wall between them
         partitions += s.len
       }
     }
@@ -314,6 +325,29 @@ export function planTakeoff(plan: FloorPlan): {
   }
 }
 
+// The inside of the house the plans are drawn in: the main facade at the
+// bottom, inside the same external wall as the estimate.
+function planFrame(p: HouseParams) {
+  const swap = p.frontSide === 'width'
+  const L = Math.max(1, swap ? p.width : p.length)
+  const W = Math.max(1, swap ? p.length : p.width)
+  const extWall = p.eng?.extWall != null && p.eng.extWall > 0 ? p.eng.extWall / 100 : p.wallThickness
+  const wall = Math.max(0.1, Math.min(extWall, (Math.min(L, W) - 2) / 2))
+  return { L, W, wall, inner: { x: wall, y: wall, w: L - 2 * wall, h: W - 2 * wall } }
+}
+
+// Whether the house takes the real-project template: two storeys, a
+// double-height hall, and a size the template stretches to without breaking
+// its rooms — within 90–130% of its 12.4 × 13.4 m inside each way. Smaller or
+// larger houses, or a visitor who asks for it, get the generated plan.
+export function usesTemplate(p: HouseParams): boolean {
+  if (p.planLayout === 'auto' || p.floors !== 2 || !p.doubleHeightHall) return false
+  const { inner } = planFrame(p)
+  const fits = (a: number, b: number) => a / b >= 0.9 && a / b <= 1.3
+  // the template may also stand turned, its 13.4 m depth across the front
+  return (fits(inner.w, TEMPLATE_W) && fits(inner.h, TEMPLATE_H)) || (fits(inner.w, TEMPLATE_H) && fits(inner.h, TEMPLATE_W))
+}
+
 export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], labels: PlanLabels = {}): FloorPlan {
   const voidLabel = labels.voidLabel ?? 'Второй свет'
   const corridorLabel = labels.corridorLabel ?? 'Коридор'
@@ -335,10 +369,7 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
 
   // A two-storey house with a double-height hall takes the plan of a real
   // project (see templatePlan) unless the visitor asks for the generated one.
-  const template =
-    !(custom && custom.length > 0) && p.planLayout !== 'auto' && p.floors === 2 && p.doubleHeightHall && floorIndex <= 1
-      ? templatePlan(inner, floorIndex, labels)
-      : null
+  const template = !(custom && custom.length > 0) && usesTemplate(p) && floorIndex <= 1 ? templatePlan(inner, floorIndex, labels) : null
 
   const specs: Spec[] = custom && custom.length > 0 ? custom : autoProgram(p, floorIndex)
 
@@ -596,10 +627,10 @@ type Rect = { x: number; y: number; w: number; h: number }
 // a two-storey cube with a double-height living-dining room, a gallery on the
 // upper floor and the bedrooms upstairs — fitted to a 13 × 14 m house without
 // its garage, whose place takes a ground-floor bedroom with an ensuite and a
-// wardrobe. Drawn on the 12.4 × 13.4 m inside of the default house, with the
-// main facade at the bottom, and scaled to other sizes. Its rooms follow the
-// catalogues' proportions: a living room of ~52 m² (7.2 × 7.2, both sides
-// above its 6 m height), a stair box of 2.6 × 4.3 m that takes a straight
+// wardrobe. Drawn on a 12.4 × 13.4 m inside with the main facade at the
+// bottom and stretched to the house (the default 14 m front makes the hall
+// 7.8 × 6.7 m). Its rooms follow the catalogues' proportions: a living room
+// of ~52 m² (both sides above its 6 m height), a stair box of 2.6 × 4.3 m that takes a straight
 // flight of 16 risers (3.8 m) as well as a two-flight stair, a 1.6 m gallery
 // along the void.
 const TEMPLATE_W = 12.4
@@ -659,7 +690,7 @@ function templatePlan(
       room(hall.x, hall.y, hall.w, hall.h, 'living', T('living'), { doubleHeight: true }),
       room(0, 2.6, 4.6, 3.6, 'kitchen', T('kitchen'), { glassSide: 'bottom' }),
       room(0, 0, 2.6, 2.6, 'utility', T('boiler')),
-      room(2.6, 0, 2.0, 2.6, 'utility', T('pantry')),
+      room(2.6, 0, 2.0, 2.6, 'wardrobe', T('pantry')), // storage: no water, no radiator
       room(4.6, 0, 2.6, 4.3, 'stair', T('stair')),
       room(4.6, 4.3, 2.6, 1.9, 'hall', T('hall')),
       room(7.2, 11.6, 1.8, 1.8, 'hall', T('porch')),

@@ -5,7 +5,7 @@ import { t } from '../i18n'
 import type { HouseParams } from '../model/house'
 import { buildPlan } from '../engine/plan'
 import { downloadDxf } from '../engine/dxf'
-import { autoProgram, buildFloorPlan, roomClear } from '../engine/floorplan'
+import { autoProgram, buildFloorPlan, roomClear, usesTemplate } from '../engine/floorplan'
 import type { RoomType } from '../engine/floorplan'
 import { FloorPlanSvg } from './FloorPlan'
 import { auditPlan, issueText } from '../engine/planAudit'
@@ -26,7 +26,7 @@ const TYPE_LABEL: Record<RoomType, { ru: string; hy: string; en: string }> = {
 }
 
 export function Plan2D() {
-  const { house, lang, editRooms, setEditRooms, updateRoom, addRoom, removeRoom } = useProject()
+  const { house, setHouse, lang, editRooms, setEditRooms, updateRoom, addRoom, removeRoom } = useProject()
   const [floor, setFloor] = useState(0)
   const activeFloor = Math.max(0, Math.min(floor, house.floors - 1))
 
@@ -42,7 +42,7 @@ export function Plan2D() {
   const editing = activeFloor === 0 && editRooms !== null
   // always feed the plan localized specs (labels follow the UI language)
   // the plan of a real project needs no generated program
-  const template = house.planLayout !== 'auto' && house.floors === 2 && house.doubleHeightHall
+  const template = usesTemplate(house)
   const custom = editing
     ? editRooms!.map((r) => ({ type: r.type, label: r.label, weight: r.weight }))
     : template
@@ -68,8 +68,11 @@ export function Plan2D() {
         })
       })()
 
-  const startEditing = () =>
+  // editing rooms builds the plan from a room list, so it leaves the template
+  const startEditing = () => {
+    if (template) setHouse({ planLayout: 'auto' })
     setEditRooms(autoProgram(house, 0).map((s) => ({ id: newRoomId(), label: s.label, type: s.type, weight: s.weight })))
+  }
 
   const planLabels = {
     voidLabel: lang === 'hy' ? 'Բաց սրահ · երկրորդ լույս' : lang === 'en' ? 'Open to below · double height' : 'Второй свет · открыто вниз',

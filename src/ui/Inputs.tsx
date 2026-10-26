@@ -5,7 +5,8 @@ import type { HouseParams, StoneType } from '../model/house'
 import { defaultWallThickness, BUILD_PRESETS } from '../model/house'
 import { REGIONS } from '../data/regions'
 import { COEFF as C } from '../data/coefficients'
-import { planTake } from '../engine/quantities'
+import { planTake, computeQuantities } from '../engine/quantities'
+import { usesTemplate } from '../engine/floorplan'
 
 function Num({
   label,
@@ -103,7 +104,8 @@ export function Inputs() {
   // --- окна по норме освещения (ՀՀՇՆ 31-01-2014): ≥ 1/8 пола, ≤ 40% стен ---
   const wallT = eng.extWall != null && eng.extWall > 0 ? eng.extWall / 100 : house.wallThickness
   const internalPerFloor = Math.max(0, house.length - 2 * wallT) * Math.max(0, house.width - 2 * wallT)
-  const hallV = house.doubleHeightHall && house.floors >= 2 ? Math.min(house.hallArea, house.length * house.width) : 0
+  // the void the estimate removes, as the plans draw it
+  const hallV = computeQuantities(house).geometry.hallVoid
   const netA = Math.max(0, internalPerFloor * house.floors - hallV)
   const usableA = netA * 0.8
   const outerWallArea = P * house.floors * house.floorHeight
@@ -325,7 +327,7 @@ export function Inputs() {
           </label>
         )}
         {/* the template has its own rooms and a 52 m² hall; the generator takes these */}
-        {(house.planLayout === 'auto' || !house.doubleHeightHall || house.floors !== 2) && (
+        {!usesTemplate(house) && (
           <>
             <Num label={t(lang, 'roomsPerFloor')} value={house.roomsPerFloor} onChange={(n) => set({ roomsPerFloor: n })} />
             <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
