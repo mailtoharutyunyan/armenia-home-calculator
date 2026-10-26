@@ -542,7 +542,10 @@ export function computeQuantities(p: HouseParams): Quantities {
   // Facade (outer walls and the parapet) + facade insulation
   const parapetFace = p.roof === 'flat' ? P * C.parapetHeight : 0
   const facadeArea = Math.max(0, P * H + parapetFace + gableFacade - p.windowAreaTotal)
-  add('facade', 'facade', 'turnkey', facadeArea)
+  // the share clad in stone replaces the render there
+  const stoneArea = facadeArea * Math.min(100, Math.max(0, p.stoneFacadePct ?? 0)) / 100
+  add('facade', 'facade', 'turnkey', facadeArea - stoneArea)
+  add(`facade_${p.stoneType ?? 'travertine'}`, 'facade', 'turnkey', stoneArea)
   add('insulation', 'facade', 'turnkey', Math.max(0, P * H + gableFacade - p.windowAreaTotal) * (insulT / C.insulationBaseThickness))
 
   // Engineering networks, counted the way installers charge for them: per

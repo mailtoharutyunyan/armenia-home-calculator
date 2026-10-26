@@ -104,6 +104,7 @@ const Q = {
   vent: ['https://domus.am/category/vents', 'https://onlineshinanyut.am/product/view/odapokhich-vents-100d', 'https://lanka.am/9001/06401'],
   facadeSystem: ['https://shinshin.am/construction-materials/dry-construction-mixes/frontal-mixtures/', 'https://shinshin.am/construction-materials/', 'https://domus.am/product/shen-facade-paint-f-10l-152kg'],
   psrc: ['https://psrc.am/content/electricity/connections1'],
+  stone: ['https://www.list.am/en/item/20510608', 'https://www.list.am/en/item/21499931', 'https://www.list.am/en/item/21669983', 'https://newhome.am/gnacucak'],
   // second market pass, 26.10.2026
   concreteOct: ['https://www.waelcon.am/', 'https://hska.am/hy', 'https://mmleader.am/betoni-artadrowtyown'],
   rebarOct: ['https://rmsgroup.am/product/poghpatya-amran-a-3-500c-12-mm', 'https://mikmetal.am/am/steel-bars-wire-rod', 'https://erkatproff.am/'],
@@ -343,6 +344,19 @@ const items: PriceItem[] = [
   // 3 500, tile 10 000 ֏/m² — ~20% of the floor is tiled.
   { ...quoted('floor_finish', 'Напольное покрытие', 'Հատակածածկ', 'м²', { min: 5100, typical: 5600, max: 9800 }, 4800, [...Q.floorsOct, ...Q.points],
     'Domus: ламинат 8 мм Kastamonu 4 290, Egger 4 690 ֏/м² + подложка и плинтус ~1 300; керамогранит 60×60 4 100 ֏/м²; укладка ламината 3 500, плитки 10 000 ֏/м² (FastModernHouse), плитка ~20% пола'), verifiedAt: OCT },
+  // Stone cladding on part of the facade, plates 2–3 cm on adhesive. list.am,
+  // October 2026: tuff 3 cm and basalt 2 cm 6 500, travertine 2 cm 7 000 and
+  // 3 cm 8 000 ֏/m² (one supplier, VAT included); Ararat travertine 2.5 cm
+  // 8 500. Fixing from 15 000 ֏/m² (NewHome/Varpet, an independent list.am
+  // ad); one new ad asks 7 000. The adhesive (Ceresit CM 16, 8 500 ֏ a bag)
+  // is not counted.
+  { ...quoted('facade_tuff', 'Облицовка фасада туфом', 'Ֆասադի երեսպատում տուֆով', 'м²', { min: 6500, typical: 6500, max: 8000 }, 15000, Q.stone,
+    'list.am: туф 3 см — 6 500 ֏/м², чёрный туф Ани 2,5 см — 6 500, Ленинакан 2–3 см — 8 000 (окт. 2026); монтаж от 15 000 ֏/м² (NewHome/Varpet, list.am), одно объявление — 7 000; клей CM 16 (8 500 ֏ за мешок) не учтён'), verifiedAt: OCT },
+  { ...quoted('facade_travertine', 'Облицовка фасада травертином', 'Ֆասադի երեսպատում տրավերտինով', 'м²', { min: 7000, typical: 7000, max: 12500 }, 15000, Q.stone,
+    'list.am: травертин 2 см — 7 000, 3 см — 8 000 ֏/м² (с НДС), араратский 2,5 см — 8 500, до 12 500 ֏/м² (окт. 2026); монтаж от 15 000 ֏/м²; клей CM 16 (8 500 ֏ за мешок) не учтён'), verifiedAt: OCT },
+  { ...quoted('facade_basalt', 'Облицовка фасада базальтом', 'Ֆասադի երեսպատում բազալտով', 'м²', { min: 6500, typical: 6500, max: 12700 }, 15000, Q.stone,
+    'list.am: базальт 2 см — 6 500, 3 см — 7 000 ֏/м² (окт. 2026); flagma.am — 25–35 $/м²; монтаж от 15 000 ֏/м²; клей CM 16 (8 500 ֏ за мешок) не учтён'), verifiedAt: OCT },
+
   // Thin-coat facade over the insulation, from ShinShin and Domus prices and
   // Ceresit consumption: adhesive and base coat CT85 ~9 kg/m² (9 900 ֏ per
   // 25 kg), mesh ×1.1 (Knauf 21 800 ֏ per 50 m²), CT35 "bark" 2.0 kg/m² at
@@ -575,6 +589,9 @@ const EN_LABELS: Record<string, string> = {
   opt_battery: 'LiFePO4 battery',
   opt_ev_charger: 'EV charger (wallbox)',
   opt_kitchen: 'Kitchen furniture (no appliances)',
+  facade_tuff: 'Facade cladding, tuff',
+  facade_travertine: 'Facade cladding, travertine',
+  facade_basalt: 'Facade cladding, basalt',
   opt_hybrid_inverter: 'Hybrid inverter (for the battery)',
   electrical_panel: 'Distribution board with breakers and RCDs',
   sewer_points: 'Sewer point',

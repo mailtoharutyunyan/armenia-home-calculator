@@ -19,6 +19,7 @@ export const DICT: Dict = {
     ru: 'Калькулятор',
     hy: 'Հաշվիչ',
   },
+  nav_facts: { ru: 'Факты', hy: 'Փաստեր' },
   nav_prices: {
     ru: 'Цены',
     hy: 'Գներ',
@@ -684,6 +685,7 @@ const EN: Record<string, string> = {
   start: 'Calculate',
   nav_calc: 'Calculator',
   nav_prices: 'Prices',
+  nav_facts: 'Facts',
   nav_norms: 'Codes',
   nav_permit: 'Permit',
   nav_compare: 'Comparison',

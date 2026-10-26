@@ -7,6 +7,7 @@ const TABS = [
   { id: 'analysis', key: 'tab_analysis' as const },
   { id: 'docs', key: 'tab_docs' as const },
   { id: 'prices', key: 'nav_prices' as const },
+  { id: 'facts', key: 'nav_facts' as const },
 ]
 
 export function Header() {

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useProject } from '../store/useProject'
 import { t } from '../i18n'
-import type { HouseParams } from '../model/house'
+import type { HouseParams, StoneType } from '../model/house'
 import { defaultWallThickness, BUILD_PRESETS } from '../model/house'
 import { REGIONS } from '../data/regions'
 import { COEFF as C } from '../data/coefficients'
@@ -338,6 +338,22 @@ export function Inputs() {
             </button>
           </div>
         </label>
+        <Num
+          label={lang === 'hy' ? 'Ֆասադի քարե երեսպատում, %' : lang === 'en' ? 'Facade clad in stone, %' : 'Облицовка фасада камнем, %'}
+          value={house.stoneFacadePct ?? 0}
+          step={10}
+          onChange={(n) => set({ stoneFacadePct: Math.min(100, Math.max(0, n)) })}
+        />
+        {(house.stoneFacadePct ?? 0) > 0 && (
+          <label className="field">
+            <span>{lang === 'hy' ? 'Քար' : lang === 'en' ? 'Stone' : 'Камень'}</span>
+            <select className="input" value={house.stoneType ?? 'travertine'} onChange={(e) => set({ stoneType: e.target.value as StoneType })}>
+              <option value="travertine">{lang === 'hy' ? 'Տրավերտին' : lang === 'en' ? 'Travertine' : 'Травертин'}</option>
+              <option value="tuff">{lang === 'hy' ? 'Տուֆ' : lang === 'en' ? 'Tuff' : 'Туф'}</option>
+              <option value="basalt">{lang === 'hy' ? 'Բազալտ' : lang === 'en' ? 'Basalt' : 'Базальт'}</option>
+            </select>
+          </label>
+        )}
         <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input type="checkbox" checked={house.vatIncluded} onChange={(e) => set({ vatIncluded: e.target.checked })} />
           <span style={{ marginBottom: 0 }}>{t(lang, 'vat')}</span>

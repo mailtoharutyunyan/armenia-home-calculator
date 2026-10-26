@@ -11,6 +11,7 @@ export type InfillMaterial = 'tuff' | 'aerated' | 'brick'
 export type FoundationType = 'strip' | 'slab' | 'pile' | 'column'
 export type RoofType = 'flat' | 'pitched' | 'hip' | 'mansard'
 export type FinishLevel = 'economy' | 'standard' | 'premium'
+export type StoneType = 'tuff' | 'travertine' | 'basalt'
 export type Currency = 'AMD' | 'USD'
 export type PriceMode = 'min' | 'typical' | 'max'
 // Кто строит: сам хозяин (бригады напрямую) или генподрядчик по договору.
@@ -63,6 +64,8 @@ export interface HouseParams {
   exteriorDoors: number
   interiorDoors: number | null // null => auto estimate
   finishLevel: FinishLevel
+  stoneFacadePct: number // доля фасада, облицованная камнем, % (0 = только штукатурка)
+  stoneType: StoneType // какой камень
   currency: Currency
   region: RegionKey
   vatIncluded: boolean
@@ -206,6 +209,8 @@ export const DEFAULT_HOUSE: HouseParams = {
   exteriorDoors: 1,
   interiorDoors: null,
   finishLevel: 'standard',
+  stoneFacadePct: 0,
+  stoneType: 'travertine',
   currency: 'AMD',
   region: 'yerevan',
   vatIncluded: false, // opt-in: prices are shown without VAT unless the checkbox is ticked

@@ -14,6 +14,7 @@ import { NormsRef } from './ui/NormsRef'
 import { Permit } from './ui/Permit'
 import { PriceEditor } from './ui/PriceEditor'
 import { Suppliers } from './ui/Suppliers'
+import { Facts } from './ui/Facts'
 import { useProject } from './store/useProject'
 import { loadRates } from './data/rates'
 import { t } from './i18n'
@@ -89,6 +90,7 @@ export default function App() {
             <Permit />
           </div>
         )}
+        {tab === 'facts' && <Facts />}
         {tab === 'prices' && (
           <>
             <PriceEditor />

@@ -851,3 +851,15 @@ describe('коробка не платит за подключения', () => {
     expect(Math.round(e.act.total)).toBe(37640958)
   })
 })
+
+describe('облицовка фасада камнем', () => {
+  it('камень заменяет штукатурку на своей доле фасада', () => {
+    const plain = qty(house(), 'facade')
+    const half = house({ stoneFacadePct: 50, stoneType: 'travertine' })
+    expect(qty(half, 'facade')).toBeCloseTo(plain / 2, 6)
+    expect(qty(half, 'facade_travertine')).toBeCloseTo(plain / 2, 6)
+    expect(qty(house({ stoneFacadePct: 100, stoneType: 'tuff' }), 'facade_tuff')).toBeCloseTo(plain, 6)
+    expect(qty(house(), 'facade_travertine')).toBe(0)
+    expect(computeEstimate(computeQuantities(half), SEED_PRICES, half, 'typical').missing).toEqual([])
+  })
+})
