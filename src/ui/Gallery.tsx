@@ -11,18 +11,28 @@ const modules = import.meta.glob('../assets/gallery/*.{jpg,jpeg,png,webp,JPG,JPE
 
 // Caption + display order per file base name (без расширения).
 const CAPTIONS: Record<string, { ru: string; hy: string; en: string; order: number }> = {
-  exterior: { ru: 'Экстерьер · вид на Арарат', hy: 'Էքստերիեր · Արարատի տեսարան', en: 'Exterior · Ararat view', order: 1 },
-  'exterior-dusk': { ru: 'Вечерняя подсветка', hy: 'Երեկոյան լուսավորում', en: 'Evening lighting', order: 2 },
-  facade: { ru: 'Фасад', hy: 'Ֆասադ', en: 'Facade', order: 3 },
-  'facade-day': { ru: 'Фасад днём', hy: 'Ֆասադ ցերեկը', en: 'Facade by day', order: 4 },
-  'living-room': { ru: 'Гостиная', hy: 'Հյուրասենյակ', en: 'Living room', order: 5 },
-  'high-ceiling': { ru: 'Двусветный зал', hy: 'Երկլույս սրահ', en: 'Double-height hall', order: 6 },
-  studio: { ru: 'Кухня-гостиная (студия)', hy: 'Խոհանոց-հյուրասենյակ', en: 'Kitchen-living studio', order: 7 },
-  kitchen: { ru: 'Кухня', hy: 'Խոհանոց', en: 'Kitchen', order: 8 },
-  mezzanine: { ru: 'Второй свет и антресоль', hy: 'Երկրորդ լույս և միջհարկ', en: 'Mezzanine', order: 9 },
-  staircase: { ru: 'Лестница', hy: 'Աստիճան', en: 'Staircase', order: 10 },
-  bedroom: { ru: 'Спальня', hy: 'Ննջասենյակ', en: 'Bedroom', order: 11 },
-  construction: { ru: 'Строительство · каркас', hy: 'Շինարարություն · կմախք', en: 'Construction · frame', order: 12 },
+  // Concept of the current plan (Z500 Zx85 fitted to 14 × 13 m): facade in
+  // render and Ararat travertine, basalt plinth, double-height living-dining.
+  'concept-facade': { ru: 'Главный фасад · травертин и штукатурка', hy: 'Գլխավոր ֆասադ · տրավերտին և սվաղ', en: 'Main facade · travertine and render', order: 1 },
+  'concept-view-left': { ru: 'Вид слева', hy: 'Տեսք ձախից', en: 'From the left', order: 2 },
+  'concept-view-side': { ru: 'Боковой фасад', hy: 'Կողային ֆասադ', en: 'Side facade', order: 3 },
+  'concept-view-right': { ru: 'Вид справа · вход с тамбуром', hy: 'Տեսք աջից · մուտք նախամուտքով', en: 'From the right · vestibule entrance', order: 4 },
+  'concept-living': { ru: 'Гостиная-столовая в два света', hy: 'Երկլույս հյուրասենյակ-ճաշասենյակ', en: 'Double-height living-dining', order: 5 },
+  'concept-stair': { ru: 'Прямая лестница', hy: 'Ուղիղ աստիճան', en: 'Straight stair', order: 6 },
+  'concept-gallery': { ru: 'Галерея второго этажа', hy: 'Երկրորդ հարկի պատկերասրահ', en: 'Upper-floor gallery', order: 7 },
+  'concept-bedroom': { ru: 'Спальня', hy: 'Ննջասենյակ', en: 'Bedroom', order: 8 },
+  exterior: { ru: 'Экстерьер · вид на Арарат · ранний концепт', hy: 'Էքստերիեր · Արարատի տեսարան · վաղ գաղափար', en: 'Exterior · Ararat view · early concept', order: 21 },
+  'exterior-dusk': { ru: 'Вечерняя подсветка · ранний концепт', hy: 'Երեկոյան լուսավորում · վաղ գաղափար', en: 'Evening lighting · early concept', order: 22 },
+  facade: { ru: 'Фасад · ранний концепт', hy: 'Ֆասադ · վաղ գաղափար', en: 'Facade · early concept', order: 23 },
+  'facade-day': { ru: 'Фасад днём · ранний концепт', hy: 'Ֆասադ ցերեկը · վաղ գաղափար', en: 'Facade by day · early concept', order: 24 },
+  'living-room': { ru: 'Гостиная · ранний концепт', hy: 'Հյուրասենյակ · վաղ գաղափար', en: 'Living room · early concept', order: 25 },
+  'high-ceiling': { ru: 'Двусветный зал · ранний концепт', hy: 'Երկլույս սրահ · վաղ գաղափար', en: 'Double-height hall · early concept', order: 26 },
+  studio: { ru: 'Кухня-гостиная (студия) · ранний концепт', hy: 'Խոհանոց-հյուրասենյակ · վաղ գաղափար', en: 'Kitchen-living studio · early concept', order: 27 },
+  kitchen: { ru: 'Кухня · ранний концепт', hy: 'Խոհանոց · վաղ գաղափար', en: 'Kitchen · early concept', order: 28 },
+  mezzanine: { ru: 'Второй свет и антресоль · ранний концепт', hy: 'Երկրորդ լույս և միջհարկ · վաղ գաղափար', en: 'Mezzanine · early concept', order: 29 },
+  staircase: { ru: 'Лестница · ранний концепт', hy: 'Աստիճան · վաղ գաղափար', en: 'Staircase · early concept', order: 30 },
+  bedroom: { ru: 'Спальня · ранний концепт', hy: 'Ննջասենյակ · վաղ գաղափար', en: 'Bedroom · early concept', order: 31 },
+  construction: { ru: 'Строительство · каркас', hy: 'Շինարարություն · կմախք', en: 'Construction · frame', order: 32 },
 }
 
 const images = Object.entries(modules)
