@@ -194,7 +194,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   length: 13,
   width: 14,
   frontSide: 'width', // фасад 14 м
-  plotArea: 500,
+  plotArea: 512, // участок владельца
   auxBuildingArea: 0,
   floors: 2,
   floorHeight: 3, // двусветный зал = 2 × 3 = 6 м

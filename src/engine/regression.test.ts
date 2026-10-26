@@ -213,10 +213,10 @@ describe('баг C — внутренние стены не считаются �
 })
 
 describe('нормы — застройка участка считается, а не напоминается', () => {
-  it('182 м² на участке 500 м² это 36.4% — в пределах нормы', () => {
+  it('182 м² на участке владельца 512 м² это 35.5% — в пределах нормы', () => {
     const w = checkNorms(house(), computeQuantities(house()))
     expect(w.some((x) => x.level === 'error' && x.ru.includes('Застройка участка'))).toBe(false)
-    expect(w.some((x) => x.ru.includes('36.4%'))).toBe(true)
+    expect(w.some((x) => x.ru.includes('35.5%'))).toBe(true)
   })
 
   it('тот же дом на участке 300 м² превышает 40% и даёт ошибку', () => {
