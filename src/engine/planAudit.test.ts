@@ -8,7 +8,11 @@ import type { HouseParams } from '../model/house'
 import { auditPlan } from './planAudit'
 import { buildFloorPlan, planTakeoff, roomClear } from './floorplan'
 
-const h = (patch: Partial<HouseParams> = {}): HouseParams => ({ ...DEFAULT_HOUSE, ...patch })
+// These checks were measured by hand on the generated plan with an 80 m² hall;
+// the default house now takes the template plan (see the template suite).
+const GENERATED_HOUSE: HouseParams = { ...DEFAULT_HOUSE, planLayout: 'auto' as const, hallArea: 80 }
+
+const h = (patch: Partial<HouseParams> = {}): HouseParams => ({ ...GENERATED_HOUSE, ...patch })
 const errors = (p: HouseParams) => auditPlan(p).filter((i) => i.level === 'error')
 
 describe('планировка дома по умолчанию', () => {
@@ -41,7 +45,7 @@ describe('планировка дома по умолчанию', () => {
     expect(hall.x).toBeCloseTo(hole.x, 2)
     expect(hall.y).toBeCloseTo(hole.y, 2)
     // the hall area is the clear room area, the same 80 m² the estimate takes out of the slab
-    expect(roomClear(hall, buildFloorPlan(h(), 0)).area).toBeCloseTo(DEFAULT_HOUSE.hallArea, 6)
+    expect(roomClear(hall, buildFloorPlan(h(), 0)).area).toBeCloseTo(GENERATED_HOUSE.hallArea, 6)
   })
 
   it('на втором этаже есть коридор — комнаты не проходные', () => {
@@ -114,7 +118,7 @@ describe('высота потолка и глубина кухни — разн�
   it('двусветный зал близок к квадрату при заданной площади', () => {
     const plan = buildFloorPlan(h(), 0)
     const hall = plan.rooms.find((r) => r.doubleHeight)!
-    expect(roomClear(hall, plan).area).toBeCloseTo(DEFAULT_HOUSE.hallArea, 6)
+    expect(roomClear(hall, plan).area).toBeCloseTo(GENERATED_HOUSE.hallArea, 6)
     expect(Math.max(hall.w, hall.h) / Math.min(hall.w, hall.h)).toBeLessThan(1.5)
   })
 

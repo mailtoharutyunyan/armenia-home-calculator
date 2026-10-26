@@ -10,7 +10,8 @@ import { buildPlan } from './plan'
 import { SEED_PRICES } from '../data/prices'
 import { stageWeeks, STAGES } from '../data/stages'
 
-const house = (patch: Partial<HouseParams> = {}): HouseParams => ({ ...DEFAULT_HOUSE, ...patch })
+// written for the generated plan with an 80 m² hall
+const house = (patch: Partial<HouseParams> = {}): HouseParams => ({ ...DEFAULT_HOUSE, planLayout: 'auto', hallArea: 80, ...patch })
 
 describe('quantities', () => {
   it('computes sane geometry for a 10x10 2-floor house', () => {

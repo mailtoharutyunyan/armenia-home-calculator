@@ -41,9 +41,13 @@ export function Plan2D() {
 
   const editing = activeFloor === 0 && editRooms !== null
   // always feed the plan localized specs (labels follow the UI language)
+  // the plan of a real project needs no generated program
+  const template = house.planLayout !== 'auto' && house.floors === 2 && house.doubleHeightHall
   const custom = editing
     ? editRooms!.map((r) => ({ type: r.type, label: r.label, weight: r.weight }))
-    : (() => {
+    : template
+      ? undefined
+      : (() => {
         let bed = 0
         const ground = activeFloor === 0
         return autoProgram(house, activeFloor).map((s) => {
@@ -77,6 +81,7 @@ export function Plan2D() {
     livingLabel: lang === 'hy' ? 'Հյուրասենյակ' : lang === 'en' ? 'Living room' : 'Гостиная',
     ensuiteLabel: lang === 'hy' ? 'Անձնական ս/հ' : lang === 'en' ? 'Ensuite' : 'Мастер с/у',
     utilityLabel: lang === 'hy' ? 'Տեխնիկական սենյակ' : lang === 'en' ? 'Utility room' : 'Техпомещение',
+    lang: lang as 'ru' | 'hy' | 'en',
   }
   // room-by-room areas for the active floor (same layout the plan renders)
   // areas clear of the partitions; the void is shown in full (it is the slab opening)

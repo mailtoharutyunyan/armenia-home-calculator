@@ -1,0 +1,75 @@
+// The default house takes the plan of a real project (Z500 Zx85, fitted to
+// 13 × 14 m without its garage). Checked by hand on the 12.4 × 13.4 m inside.
+import { describe, it, expect } from 'vitest'
+import { DEFAULT_HOUSE } from '../model/house'
+import { buildFloorPlan, planTakeoff, roomClear } from './floorplan'
+import { computeQuantities } from './quantities'
+import { computeEstimate } from './pricing'
+import { auditPlan } from './planAudit'
+import { checkNorms } from './norms'
+import { SEED_PRICES } from '../data/prices'
+
+const p = DEFAULT_HOUSE
+const plans = [buildFloorPlan(p, 0), buildFloorPlan(p, 1)]
+const area = (r: { w: number; h: number }) => r.w * r.h
+
+describe('шаблон планировки по реальному проекту', () => {
+  it('комнаты каждого этажа заполняют дом внутри стен без щелей', () => {
+    for (const pl of plans) expect(pl.rooms.reduce((a, r) => a + area(r), 0)).toBeCloseTo(12.4 * 13.4, 6)
+  })
+
+  it('второй свет 7.2 × 7.2 м: над гостиной-столовой и в перекрытии', () => {
+    const hall = plans[0].rooms.find((r) => r.doubleHeight)!
+    const voidRoom = plans[1].rooms.find((r) => r.open)!
+    expect(area(hall)).toBeCloseTo(51.84, 6)
+    expect([voidRoom.x, voidRoom.y, voidRoom.w, voidRoom.h]).toEqual([hall.x, hall.y, hall.w, hall.h])
+    const g = computeQuantities(p).geometry
+    expect(g.hallVoid).toBeCloseTo(51.84, 6)
+    // общая площадь 2 × 166.16 − 51.84 = 280.48 м² — в пределах 300 м² порядка N 4.1
+    expect(g.netFloorArea).toBeCloseTo(280.48, 6)
+    expect(g.netFloorArea).toBeLessThanOrEqual(300)
+    // 18.5% площади дома — в практике 12–20%
+    expect(g.hallVoid / g.netFloorArea).toBeLessThan(0.2)
+  })
+
+  it('обе стороны зала больше его высоты 6 м', () => {
+    const hall = plans[0].rooms.find((r) => r.doubleHeight)!
+    expect(Math.min(hall.w, hall.h)).toBeGreaterThan(p.floorHeight * 2)
+  })
+
+  it('жилые комнаты не меньше 8 м², лестница берёт прямой марш 3.8 м', () => {
+    for (const pl of plans) {
+      for (const r of pl.rooms) {
+        if (r.type === 'bedroom' || r.type === 'office' || r.type === 'living') expect(roomClear(r, pl).area, r.label).toBeGreaterThanOrEqual(8)
+      }
+      const stair = pl.rooms.find((r) => r.type === 'stair')!
+      expect(Math.max(roomClear(stair, pl).w, roomClear(stair, pl).h)).toBeGreaterThanOrEqual(3.8)
+    }
+  })
+
+  it('аудит и нормы не находят ошибок и предупреждений', () => {
+    expect(auditPlan(p).filter((i) => i.level !== 'info')).toEqual([])
+    expect(checkNorms(p, computeQuantities(p)).filter((w) => w.level !== 'info')).toEqual([])
+  })
+
+  it('двери по проекту: входная в тамбур, 11 полотен внизу и 7 наверху', () => {
+    const t = plans.map(planTakeoff)
+    expect(plans[0].doors.filter((d) => d.kind === 'entrance')).toHaveLength(1)
+    expect(t[0].leafDoors).toBe(11)
+    expect(t[1].leafDoors).toBe(7)
+    // three bathrooms and an ensuite: guest, ground-floor bedroom, master, shared
+    expect(t[0].baths + t[1].baths).toBe(4)
+    // the gallery and the landing are railed along the void: 7.2 + 2.6 m on the
+    // template, scaled to the house (its 14 m side is the front here)
+    const pl = plans[1]
+    const sx = (pl.L - 2 * pl.wall) / 12.4
+    const sy = (pl.W - 2 * pl.wall) / 13.4
+    expect(t[1].railing).toBeCloseTo(2.6 * sx + 7.2 * sy, 6)
+  })
+
+  it('итог дома по умолчанию закреплён', () => {
+    const e = computeEstimate(computeQuantities(p), SEED_PRICES, p, 'typical')
+    // 280.48 m² of house on the template plan, prices of 26.10.2026
+    expect(Math.round(e.turnkey.total)).toBe(70819049)
+  })
+})

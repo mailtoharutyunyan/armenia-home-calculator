@@ -77,6 +77,7 @@ export interface HouseParams {
   seismicReinforcementDisabled: boolean // "без сейсмоусиления" toggle -> norm error
   doubleHeightHall: boolean // зал двойной высоты (проём в перекрытии 2-го этажа)
   hallArea: number // м², площадь зала двойной высоты
+  planLayout?: 'template' | 'auto' // планировка по реальному проекту или генератором
   includePermitCost: boolean // включать стоимость документов/разрешения в смету
   roomsPerFloor: number // комнат на этаже (для проверки «помещается ли»)
   kitchenLivingCombined: boolean // зал и кухня вместе (студия) или раздельно
@@ -220,7 +221,9 @@ export const DEFAULT_HOUSE: HouseParams = {
   floorSlab: 'monolith',
   seismicReinforcementDisabled: false,
   doubleHeightHall: true, // двусветный зал 6 м
-  hallArea: 80, // проём двусветного зала: 364 − 80 = 284 м² (≤ 300, порядок N 4.1)
+  // Второй свет по реальному проекту Z500 Zx85: 7.2 × 7.2 м внутри стен.
+  hallArea: 52,
+  planLayout: 'template',
   includePermitCost: true,
   roomsPerFloor: 3, // студия (зал+кухня) + гостевой санузел + мастер-комната
   kitchenLivingCombined: true,

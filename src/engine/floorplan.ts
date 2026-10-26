@@ -102,6 +102,7 @@ export interface PlanLabels {
   diningLabel?: string
   livingLabel?: string
   utilityLabel?: string
+  lang?: 'ru' | 'hy' | 'en' // the template plan names its rooms in this language
 }
 
 // Планировочные правила. Это не вкусовщина: каждое взято из практики
@@ -332,6 +333,13 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
   const inset = wall
   const inner = { x: inset, y: inset, w: L - 2 * inset, h: W - 2 * inset }
 
+  // A two-storey house with a double-height hall takes the plan of a real
+  // project (see templatePlan) unless the visitor asks for the generated one.
+  const template =
+    !(custom && custom.length > 0) && p.planLayout !== 'auto' && p.floors === 2 && p.doubleHeightHall && floorIndex <= 1
+      ? templatePlan(inner, floorIndex, labels)
+      : null
+
   const specs: Spec[] = custom && custom.length > 0 ? custom : autoProgram(p, floorIndex)
 
   // The double-height hall opens between the ground floor and the floor directly
@@ -341,7 +349,7 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
   let openVoid: Room | null = null
   let corridor: Room | null = null
   let upperVoid: Rect | null = null
-  if (floorIndex === 1 && p.doubleHeightHall && p.hallArea > 0) {
+  if (!template && floorIndex === 1 && p.doubleHeightHall && p.hallArea > 0) {
     // Проём — ТОТ ЖЕ прямоугольник, что зал на первом этаже. Над кухней и над
     // служебной полосой перекрытие есть, поэтому проём не на всю глубину.
     const vr = voidRect(inner, p.hallArea, partition)
@@ -363,7 +371,7 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
   // Первый этаж с двусветным залом: зал занимает ровно тот же прямоугольник,
   // что и проём наверху, — этажи совпадают по вертикали.
   let doubleHall: Room | null = null
-  if (floorIndex === 0 && p.doubleHeightHall && p.floors >= 2 && p.hallArea > 0) {
+  if (!template && floorIndex === 0 && p.doubleHeightHall && p.floors >= 2 && p.hallArea > 0) {
     const vr = voidRect(inner, p.hallArea, partition)
     // Вырожденный прямоугольник — дом слишком мал: зал не строим,
     // этаж планируется обычной схемой.
@@ -383,7 +391,10 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
   const restSpecs = doubleHall
     ? specs.filter((sp) => sp.type !== 'living' && sp.type !== 'living_kitchen')
     : specs
-  if (upperVoid) {
+  if (template) {
+    rooms.push(...template.rooms)
+    openVoid = template.openVoid
+  } else if (upperVoid) {
     // Второй этаж над проёмом — тоже явной схемой: лестница строго над
     // лестницей первого этажа, комнаты с нормальными пропорциями.
     layoutUpperWithVoid(inner, upperVoid, restSpecs, rooms, {
@@ -435,7 +446,7 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
 
   // doors connect the real rooms only; the void has no door (it is open) and the
   // exterior entrance belongs to the ground floor.
-  const doors = buildDoors(rooms, inset, L, W, floorIndex === 0)
+  const doors = template ? template.doors(W) : buildDoors(rooms, inset, L, W, floorIndex === 0)
   // The entrance door and a window cannot share the same piece of facade: the
   // hall used to get a window centred exactly where its front door is.
   const overlaps = (a: number, al: number, b: number, bl: number) => a < b + bl && b < a + al
@@ -580,6 +591,130 @@ function buildDoors(rooms: Room[], inset: number, L: number, W: number, withEntr
 }
 
 type Rect = { x: number; y: number; w: number; h: number }
+
+// The plan of a real project: Z500 Zx85 (z500.pl, 14.46 m front, 238 m²) —
+// a two-storey cube with a double-height living-dining room, a gallery on the
+// upper floor and the bedrooms upstairs — fitted to a 13 × 14 m house without
+// its garage, whose place takes a ground-floor bedroom with an ensuite and a
+// wardrobe. Drawn on the 12.4 × 13.4 m inside of the default house, with the
+// main facade at the bottom, and scaled to other sizes. Its rooms follow the
+// catalogues' proportions: a living room of ~52 m² (7.2 × 7.2, both sides
+// above its 6 m height), a stair box of 2.6 × 4.3 m that takes a straight
+// flight of 16 risers (3.8 m) as well as a two-flight stair, a 1.6 m gallery
+// along the void.
+const TEMPLATE_W = 12.4
+const TEMPLATE_H = 13.4
+const TEMPLATE_LABEL: Record<string, { ru: string; hy: string; en: string }> = {
+  living: { ru: 'Гостиная-столовая', hy: 'Հյուրասենյակ-ճաշասենյակ', en: 'Living-dining' },
+  kitchen: { ru: 'Кухня', hy: 'Խոհանոց', en: 'Kitchen' },
+  boiler: { ru: 'Котельная', hy: 'Կաթսայատուն', en: 'Boiler room' },
+  pantry: { ru: 'Кладовая', hy: 'Մառան', en: 'Pantry' },
+  stair: { ru: 'Лестница', hy: 'Աստիճան', en: 'Stair' },
+  hall: { ru: 'Холл', hy: 'Սրահ', en: 'Hall' },
+  porch: { ru: 'Тамбур', hy: 'Նախամուտք', en: 'Vestibule' },
+  corridor: { ru: 'Коридор', hy: 'Միջանցք', en: 'Corridor' },
+  wc: { ru: 'Гостевой санузел', hy: 'Հյուրերի ս/հ', en: 'Guest bathroom' },
+  office: { ru: 'Кабинет', hy: 'Աշխատասենյակ', en: 'Home office' },
+  closet: { ru: 'Гардероб', hy: 'Հանդերձարան', en: 'Closet' },
+  ensuite: { ru: 'Санузел спальни', hy: 'Ննջասենյակի ս/հ', en: 'Ensuite' },
+  bedroom: { ru: 'Спальня', hy: 'Ննջասենյակ', en: 'Bedroom' },
+  master: { ru: 'Мастер-спальня', hy: 'Գլխավոր ննջասենյակ', en: 'Master bedroom' },
+  masterBath: { ru: 'Мастер-санузел', hy: 'Գլխավոր ս/հ', en: 'Master bathroom' },
+  wardrobe: { ru: 'Гардеробная', hy: 'Հանդերձարան', en: 'Wardrobe' },
+  landing: { ru: 'Холл', hy: 'Սրահ', en: 'Landing' },
+  gallery: { ru: 'Галерея', hy: 'Պատշգամբ-միջանցք', en: 'Gallery' },
+  bedroom2: { ru: 'Спальня 2', hy: 'Ննջասենյակ 2', en: 'Bedroom 2' },
+  bedroom3: { ru: 'Спальня 3', hy: 'Ննջասենյակ 3', en: 'Bedroom 3' },
+  laundry: { ru: 'Постирочная', hy: 'Լվացքատուն', en: 'Laundry' },
+  bath: { ru: 'Санузел', hy: 'Սանհանգույց', en: 'Bathroom' },
+  void: { ru: 'Второй свет', hy: 'Երկրորդ լույս', en: 'Double height' },
+}
+
+function templatePlan(
+  inner: Rect,
+  floorIndex: number,
+  labels: PlanLabels,
+): { rooms: Room[]; openVoid: Room | null; doors: (W: number) => Door[] } {
+  const sx = inner.w / TEMPLATE_W
+  const sy = inner.h / TEMPLATE_H
+  const X = (x: number) => inner.x + x * sx
+  const Y = (y: number) => inner.y + y * sy
+  const room = (x: number, y: number, w: number, h: number, type: RoomType, label: string, extra: Partial<Room> = {}): Room => ({
+    x: X(x), y: Y(y), w: w * sx, h: h * sy, type, label, ...extra,
+  })
+  // a door in the middle of the shared stretch of a wall
+  const door = (orient: Door['orient'], at: number, from: number, to: number, kind: Door['kind'] = 'interior', swing: 1 | -1 = 1): Door => {
+    const pos = orient === 'v' ? X(at) : Y(at)
+    const a = orient === 'v' ? Y(from) : X(from)
+    const b = orient === 'v' ? Y(to) : X(to)
+    const w = kind === 'opening' ? Math.min(b - a - 0.2, 1.2) : DOOR_W
+    return { orient, pos, start: (a + b) / 2 - w / 2, w, swing, kind }
+  }
+  const hall: Rect = { x: 0, y: 6.2, w: 7.2, h: 7.2 } // the double-height hall and its void
+  const lang = labels.lang ?? 'ru'
+  const T = (k: keyof typeof TEMPLATE_LABEL) => TEMPLATE_LABEL[k][lang]
+
+  if (floorIndex === 0) {
+    const rooms: Room[] = [
+      room(hall.x, hall.y, hall.w, hall.h, 'living', T('living'), { doubleHeight: true }),
+      room(0, 2.6, 4.6, 3.6, 'kitchen', T('kitchen'), { glassSide: 'bottom' }),
+      room(0, 0, 2.6, 2.6, 'utility', T('boiler')),
+      room(2.6, 0, 2.0, 2.6, 'utility', T('pantry')),
+      room(4.6, 0, 2.6, 4.3, 'stair', T('stair')),
+      room(4.6, 4.3, 2.6, 1.9, 'hall', T('hall')),
+      room(7.2, 11.6, 1.8, 1.8, 'hall', T('porch')),
+      room(7.2, 2.6, 1.8, 9.0, 'corridor', T('corridor')),
+      room(7.2, 0, 1.8, 2.6, 'bath', T('wc')),
+      room(9.0, 0, 3.4, 4.6, 'office', T('office')),
+      room(9.0, 4.6, 1.6, 2.6, 'wardrobe', T('closet')),
+      room(10.6, 4.6, 1.8, 2.6, 'bath', T('ensuite')),
+      room(9.0, 7.2, 3.4, 6.2, 'bedroom', T('bedroom')),
+    ]
+    const doors = (W: number): Door[] => [
+      door('h', 11.6, 7.2, 9.0),
+      door('v', 7.2, 6.2, 11.6),
+      door('v', 7.2, 4.3, 6.2, 'opening'),
+      door('h', 4.3, 4.6, 7.2, 'opening'),
+      door('v', 4.6, 4.3, 6.2),
+      door('h', 6.2, 4.6, 7.2),
+      door('h', 2.6, 0, 2.6, 'interior', -1),
+      door('h', 2.6, 2.6, 4.6, 'interior', -1),
+      door('h', 2.6, 7.2, 9.0, 'interior', -1),
+      door('v', 9.0, 2.6, 4.6),
+      door('v', 9.0, 7.2, 11.6),
+      door('h', 7.2, 9.0, 10.6, 'interior', -1),
+      door('h', 7.2, 10.6, 12.4, 'interior', -1),
+      { orient: 'h', pos: W, start: X(8.1) - 0.5, w: 1.0, swing: -1, kind: 'entrance' },
+    ]
+    return { rooms, openVoid: null, doors }
+  }
+
+  const rooms: Room[] = [
+    room(0, 2.6, 4.6, 3.6, 'bedroom', T('master')),
+    room(0, 0, 2.6, 2.6, 'bath', T('masterBath')),
+    room(2.6, 0, 2.0, 2.6, 'wardrobe', T('wardrobe')),
+    room(4.6, 0, 2.6, 4.3, 'stair', T('stair')),
+    room(4.6, 4.3, 2.6, 1.9, 'corridor', T('landing'), { gallery: true }),
+    room(7.2, 4.0, 1.6, 9.4, 'corridor', T('gallery'), { gallery: true }),
+    room(7.2, 0, 5.2, 4.0, 'bedroom', T('bedroom2')),
+    room(8.8, 4.0, 3.6, 2.4, 'utility', T('laundry')),
+    room(8.8, 6.4, 3.6, 2.4, 'bath', T('bath')),
+    room(8.8, 8.8, 3.6, 4.6, 'bedroom', T('bedroom3')),
+  ]
+  const openVoid = room(hall.x, hall.y, hall.w, hall.h, 'living_kitchen', labels.voidLabel ?? T('void'), { open: true })
+  const doors = (): Door[] => [
+    door('h', 4.3, 4.6, 7.2, 'opening'),
+    door('v', 7.2, 4.3, 6.2, 'opening'),
+    door('v', 4.6, 4.3, 6.2),
+    door('h', 2.6, 0, 2.6, 'interior', -1),
+    door('h', 2.6, 2.6, 4.6, 'interior', -1),
+    door('h', 4.0, 7.2, 8.8),
+    door('v', 8.8, 4.0, 6.4, 'interior', -1),
+    door('v', 8.8, 6.4, 8.8, 'interior', -1),
+    door('v', 8.8, 8.8, 13.4),
+  ]
+  return { rooms, openVoid, doors }
+}
 
 // Realistic layout: bath/stair go into a compact service band (real size ~5–7 m²),
 // the living/kitchen keeps the large area, bedrooms are proper rooms.

@@ -24,7 +24,11 @@ import { SEED_PRICES } from '../data/prices'
 import { STAGE_SECTIONS } from '../data/stages'
 import { COEFF as C } from '../data/coefficients'
 
-const house = (patch: Partial<HouseParams> = {}): HouseParams => ({ ...DEFAULT_HOUSE, ...patch })
+// These checks were measured by hand on the generated plan with an 80 m² hall;
+// the default house now takes the template plan (see the template suite).
+const GENERATED_HOUSE: HouseParams = { ...DEFAULT_HOUSE, planLayout: 'auto' as const, hallArea: 80 }
+
+const house = (patch: Partial<HouseParams> = {}): HouseParams => ({ ...GENERATED_HOUSE, ...patch })
 const qty = (p: HouseParams, key: string, section?: SectionId) =>
   computeQuantities(p)
     .lines.filter((l) => l.key === key && (section === undefined || l.section === section))

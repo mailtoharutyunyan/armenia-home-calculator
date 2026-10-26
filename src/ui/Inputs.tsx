@@ -305,17 +305,37 @@ export function Inputs() {
         <details className="group" name="calc-step">
           <summary><span className="eyebrow">06 · {t(lang, 'step_layout')}</span></summary>
           <div className="group-body">
-        <Num label={t(lang, 'roomsPerFloor')} value={house.roomsPerFloor} onChange={(n) => set({ roomsPerFloor: n })} />
-        <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <input type="checkbox" checked={house.kitchenLivingCombined} onChange={(e) => set({ kitchenLivingCombined: e.target.checked })} />
-          <span style={{ marginBottom: 0 }}>{t(lang, 'kitchenLiving')}</span>
-        </label>
         <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input type="checkbox" checked={house.doubleHeightHall} onChange={(e) => set({ doubleHeightHall: e.target.checked })} />
           <span style={{ marginBottom: 0 }}>{t(lang, 'doubleHall')}</span>
         </label>
-        {house.doubleHeightHall && (
-          <Num label={t(lang, 'hallArea')} value={house.hallArea} step={2} onChange={(n) => set({ hallArea: n })} />
+        {house.doubleHeightHall && house.floors === 2 && (
+          <label className="field">
+            <span>{lang === 'hy' ? 'Հատակագիծ' : lang === 'en' ? 'Layout' : 'Планировка'}</span>
+            <select
+              className="input"
+              value={house.planLayout ?? 'template'}
+              onChange={(e) => set({ planLayout: e.target.value as 'template' | 'auto' })}
+            >
+              <option value="template">
+                {lang === 'hy' ? 'Իրական նախագծով (Z500 Zx85)' : lang === 'en' ? 'From a real project (Z500 Zx85)' : 'По реальному проекту (Z500 Zx85)'}
+              </option>
+              <option value="auto">{lang === 'hy' ? 'Ավտոմատ' : lang === 'en' ? 'Generated' : 'Генератор'}</option>
+            </select>
+          </label>
+        )}
+        {/* the template has its own rooms and a 52 m² hall; the generator takes these */}
+        {(house.planLayout === 'auto' || !house.doubleHeightHall || house.floors !== 2) && (
+          <>
+            <Num label={t(lang, 'roomsPerFloor')} value={house.roomsPerFloor} onChange={(n) => set({ roomsPerFloor: n })} />
+            <label className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input type="checkbox" checked={house.kitchenLivingCombined} onChange={(e) => set({ kitchenLivingCombined: e.target.checked })} />
+              <span style={{ marginBottom: 0 }}>{t(lang, 'kitchenLiving')}</span>
+            </label>
+            {house.doubleHeightHall && (
+              <Num label={t(lang, 'hallArea')} value={house.hallArea} step={2} onChange={(n) => set({ hallArea: n })} />
+            )}
+          </>
         )}
 
         {/* Step 6 — finish */}
