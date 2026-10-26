@@ -344,8 +344,8 @@ export function usesTemplate(p: HouseParams): boolean {
   if (p.planLayout === 'auto' || p.floors !== 2 || !p.doubleHeightHall) return false
   const { inner } = planFrame(p)
   const fits = (a: number, b: number) => a / b >= 0.9 && a / b <= 1.3
-  // the template may also stand turned, its 13.4 m depth across the front
-  return (fits(inner.w, TEMPLATE_W) && fits(inner.h, TEMPLATE_H)) || (fits(inner.w, TEMPLATE_H) && fits(inner.h, TEMPLATE_W))
+  // the template is stretched, never turned: front to front, depth to depth
+  return fits(inner.w, TEMPLATE_W) && fits(inner.h, TEMPLATE_H)
 }
 
 export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], labels: PlanLabels = {}): FloorPlan {
