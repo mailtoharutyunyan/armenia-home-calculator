@@ -70,6 +70,6 @@ describe('шаблон планировки по реальному проект
   it('итог дома по умолчанию закреплён', () => {
     const e = computeEstimate(computeQuantities(p), SEED_PRICES, p, 'typical')
     // 280.48 m² of house on the template plan, prices of 26.10.2026
-    expect(Math.round(e.turnkey.total)).toBe(70819049)
+    expect(Math.round(e.turnkey.total)).toBe(70866564)
   })
 })

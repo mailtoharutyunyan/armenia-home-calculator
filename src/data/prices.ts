@@ -79,7 +79,7 @@ const Q = {
   // checked 26.10.2026
   labour: ['https://newhome.am/gnacucak'],
   truck: ['https://www.list.am/en/item/24239515'],
-  scaffold: ['https://www.accurate.am/main/rent/'],
+  scaffold: ['https://accurate.am/'],
   heatPump: ['https://electro.am/ru/category/391-teplovie-nasosi'],
   cylinder: ['https://www.shinshin.am/heating'],
   fanCoil: ['https://mideaarmenia.am/fan-coil'],
@@ -115,7 +115,7 @@ const Q = {
   floorsOct: ['https://domus.am/category/laminate-flooring', 'https://laminat.am/category/46', 'https://domus.am/category/porcelain-stonewares', 'https://domus.am/category/erespatman-salikner'],
   finishOct: ['https://shinshin.am/', 'https://totalarmenia.am/shinanyut/chor-shaghaghner-termogips', 'https://turn.am/ru/article/bnakaranneri-veranorogum-yerevanum-2026-gner'],
   sanitaryOct: ['https://nortun.am/catalog/sanceramics/Toilets/__31/', 'https://domus.am/category/bathroom-furniture', 'https://domus.am/category/shower-cabins-and-vanities', 'https://nortun.am/catalog/sanceramics/Showers_Faucets/__26/'],
-  elecOct: ['https://shinshin.am/electricity/cable-and-wires/hardwire/', 'https://domus.am/product/RE-00091501', 'https://shinmarket.am/catalog/98/168/', 'https://shinshin.am/electricity/panel-equipment/'],
+  elecOct: ['https://shinshin.am/electricity/cable-and-wires/hardwire/', 'https://domus.am/product/RE-00091501', 'http://shinmarket.am/catalog/98/168/', 'https://shinshin.am/electricity/panel-equipment/'],
   heatOct: ['https://shinshin.am/heating/gas-water-heaters/', 'https://santex-house.am/nasosy-grundfos', 'https://santex-house.am/weter-baqer/wrv24', 'https://stalmetural.am/catalog/bimetallicheskie-radiatory/', 'https://domus.am/category/heating-radiator-valves'],
   ufhOct: ['https://vida.am/catalog/', 'https://shinshin.am/engineering-systems/'],
   fansOct: ['https://shinshin.am/', 'https://lanka.am/9001/06401'],
@@ -124,7 +124,7 @@ const Q = {
   fancoilOct: ['https://www.list.am/en/item/995217388', 'https://mideaarmenia.am/fan-coil'],
   earthRates: ['https://armenia-am.gazprom.com/notice/', 'https://www.veolia.am/hy/about-us/iravakan-akter'],
   screedOct: ['https://turn.am/ru/article/bnakaranneri-veranorogum-yerevanum-2026-gner', 'https://newhome.am/gnacucak'],
-  formworkRent: ['https://www.accurate.am/main/rent/', 'https://uyut.am/hy/bmaterial_more/203'],
+  formworkRent: ['https://accurate.am/', 'https://uyut.am/hy/bmaterial_more/203'],
   floorHeating: [
     'https://kelvin.am/ru/products/index?c_id=86',
     'https://santex-house.am/rasprodazha/truby-pex-a-16-kh-2-2c2mm-sanline-2c-universalnye-s-kislorodnoe-zashchitoj-barierom',
@@ -260,8 +260,8 @@ const items: PriceItem[] = [
     'ОЦЕНКА из сверенных цен: 6 мешков цемента (2 550–3 500 ֏) + 1.1 м³ песка (7 000 ֏/м³)'),
   item('glue_aerated', 'Клей для газоблока', 'Գազաբլոկի սոսինձ', 'м³', 120000, 0, S.market),
   // Accurate Group rent list: scaffolding 650 ֏/m² a month (23 ֏ a day)
-  { ...quoted('scaffolding', 'Аренда строительных лесов', 'Շինարարական փայտամածի վարձույթ', 'м²·мес', { min: 650, typical: 650, max: 650 }, 0, Q.scaffold,
-    'Accurate Group: аренда лесов — 650 ֏/м² в месяц (23 ֏/м² в сутки); монтаж — силами бригады'), verifiedAt: OCT },
+  { ...quoted('scaffolding', 'Аренда строительных лесов', 'Շինարարական փայտամածի վարձույթ', 'м²·мес', { min: 650, typical: 690, max: 690 }, 0, Q.scaffold,
+    'Accurate Group: фасадные леса — 23 ֏/м² в сутки, ≈ 690 ֏/м² в месяц (ранее 650 ֏/м² в месяц); монтаж — силами бригады'), verifiedAt: OCT },
   estimate('crane', 'Манипулятор / кран (разгрузка, подача)', 'Մանիպուլյատոր / կռունկ', 'смена', 60000, 0,
     'ОЦЕНКА — 45 000–70 000 ֏ за смену (объявления по Еревану и Арарату); нужен для блока, арматуры и опалубки'),
 
@@ -489,11 +489,12 @@ const items: PriceItem[] = [
 
   // --- Опалубка и подача бетона (ранее отсутствовали как статьи) ---
   // Опалубка считается по площади контакта с бетоном, а не по объёму.
-  // Rent per month, one month per use: slab formwork 4 150, wall and foundation
-  // 5 400 ֏/m² (Accurate Group); metal panels 195 ֏/m² a day (HouseMaster).
-  // The carpenters are in the brigade rate.
-  derived('formwork', 'Опалубка (аренда)', 'Կաղապար (վարձույթ)', 'м²', { min: 4150, typical: 4500, max: 5400 }, 2500, Q.formworkRent,
-    'аренда в месяц: перекрытия 4 150, стены и фундамент 5 400 ֏/м² (Accurate Group), щиты 195 ֏/м² в сутки (HouseMaster, 13.10.2026); один оборот = месяц аренды (допущение); монтаж — в ставке бригады'),
+  // Rent a day (Accurate Group, 26.10.2026): wall and foundation panels
+  // 200–220, Iranian 120, slab formwork 125 ֏/m²; metal panels 195 ֏/m² a day
+  // (HouseMaster). One use is about a month on site: slab ~3 750, walls
+  // ~6 000–6 600 ֏/m². The carpenters are in the brigade rate.
+  derived('formwork', 'Опалубка (аренда)', 'Կաղապար (վարձույթ)', 'м²', { min: 3600, typical: 4500, max: 6600 }, 2500, Q.formworkRent,
+    'аренда в сутки: щиты стен и фундамента 200–220 ֏/м², иранские 120, перекрытия 125 ֏/м² (Accurate Group), металлические щиты 195 ֏/м² (HouseMaster, 13.10.2026); один оборот ≈ месяц аренды (допущение): перекрытия ~3 750, стены ~6 000–6 600 ֏/м²; монтаж — в ставке бригады'),
   // Waelcon: a 22 m pump 80 000 ֏ a call + 3 000 ֏/m³; MM Leader: 37 m,
   // 70 000 ֏ up to 20 m³ + 3 000 ֏/m³ (without VAT).
   { ...quoted('concrete_pump', 'Подача бетона насосом (за м³)', 'Բետոնի մատակարարում պոմպով (խ.մ)', 'м³', { min: 3000, typical: 3000, max: 3600 }, 0, Q.concreteVat,
@@ -539,8 +540,8 @@ const items: PriceItem[] = [
   // --- Permit / documents (AMD, Armenia; per m2 where noted) ---
   permit('permit_apz', 'АПЗ (муниципалитет)', 'ՃՀԱ (համայնք)', 'комплект', 40000),
   // sip.am: sketch, architecture and structure — 5 000 ֏/m²
-  { ...quoted('permit_design', 'Проект (за м²)', 'Նախագիծ (մ²)', 'м²', { min: 5000, typical: 5000, max: 5000 }, 0, Q.design,
-    'sip.am: эскиз, архитектура и конструкции — 5 000 ֏/м²; инженерные разделы (ОВ, ВК, ЭО) — отдельно'), verifiedAt: OCT },
+  { ...quoted('permit_design', 'Проект (за м²)', 'Նախագիծ (մ²)', 'м²', { min: 2500, typical: 5000, max: 5000 }, 0, [...Q.design, 'https://accurate.am/'],
+    'sip.am: эскиз, архитектура и конструкции — 5 000 ֏/м²; Accurate Group: архитектурный проект от 2 500 ֏/м²; инженерные разделы (ОВ, ВК, ЭО) — отдельно'), verifiedAt: OCT },
   permit('permit_geology', 'Геологические изыскания', 'Երկրաբանական հետազոտ.', 'комплект', 150000),
   permit('permit_expertise', 'Экспертиза проекта', 'Փորձաքննություն', 'комплект', 25000),
   permit('permit_fee', 'Разрешение на строительство', 'Շին. թույլտվություն', 'комплект', 70000),

@@ -404,7 +404,8 @@ describe('панель инженера — переопределения ре�
     //               prices (concrete at Waelcon's 01.10.2026 list), excavator
     //               work at the Gazprom/Veolia unit rates, a pump call covers
     //               20 m³, screed labour 3 000 ֏/m²
-    expect(Math.round(a)).toBe(66874603)
+    //   66 922 118  scaffolding at Accurate's day rate, 23 ֏ ≈ 690 ֏/m² a month
+    expect(Math.round(a)).toBe(66922118)
   })
 
   it('армирование по элементам масштабирует тоннаж линейно', () => {
@@ -852,7 +853,7 @@ describe('коробка не платит за подключения', () => {
     expect(e.act.permit).toBeCloseTo(e.sectionTotals['permit'] ?? 0, 6)
     expect(e.turnkey.permit).toBeCloseTo((e.sectionTotals['permit'] ?? 0) + utilities, 6)
     // shell materials and labour + 1% + 10% + documents, without the tariffs
-    expect(Math.round(e.act.total)).toBe(37640958)
+    expect(Math.round(e.act.total)).toBe(37688473)
   })
 })
 

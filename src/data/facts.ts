@@ -208,6 +208,15 @@ export interface Benchmark {
 
 export const BENCHMARKS: Benchmark[] = [
   {
+    ru: 'Accurate Group: каркас / стены и кровля / инженерия и отделка, за м²',
+    hy: 'Accurate Group՝ կարկաս / պատեր և տանիք / ինժեներիա և հարդարում, մ²',
+    en: 'Accurate Group: frame / walls and roof / services and finishes, per m²',
+    value: '60 000–75 000 / от 30 000 / от 50 000 ֏',
+    source: 'accurate.am',
+    url: 'https://accurate.am/',
+    date: '26.10.2026',
+  },
+  {
     ru: 'Подрядчик DEKA: «чёрный каркас» / «без ремонта» / «с ремонтом», за м² внешней площади',
     hy: 'DEKA կապալառու՝ «սև կարկաս» / «առանց վերանորոգման» / «վերանորոգումով», մ²',
     en: 'DEKA contractor: black frame / unfinished / finished, per m² of external area',
