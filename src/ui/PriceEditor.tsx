@@ -179,7 +179,7 @@ export function PriceEditor() {
                       {lang === 'hy' ? badge(it).hy : lang === 'en' ? badge(it).en : badge(it).ru}
                     </span>
                     {it.verifiedAt && <span className="mono" style={{ fontSize: '0.62rem', color: 'var(--color-ink-soft)' }}>{it.verifiedAt}</span>}
-                    {(it.sourceUrls ?? []).map((u) => (
+                    {[...new Set(it.sourceUrls ?? [])].map((u) => (
                       <a key={u} href={u} target="_blank" rel="noreferrer" className="mono" style={{ fontSize: '0.62rem', color: 'var(--color-info)' }}>
                         {host(u)}
                       </a>

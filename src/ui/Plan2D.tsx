@@ -106,7 +106,7 @@ export function Plan2D() {
             ))}
           </div>
         ) : (
-          <span className="sub">1 {lang !== 'hy' ? 'этаж' : 'հարկ'}</span>
+          <span className="sub">1 {lang === 'hy' ? 'հարկ' : lang === 'en' ? 'floor' : 'этаж'}</span>
         )}
       </div>
 
@@ -143,23 +143,23 @@ export function Plan2D() {
           <div style={{ marginTop: '0.9rem' }} className="no-print">
             {!editing ? (
               <button className="btn btn-ghost" onClick={startEditing}>
-                {lang !== 'hy' ? 'Редактировать комнаты' : 'Խմբագրել սենյակները'}
+                {lang === 'hy' ? 'Խմբագրել սենյակները' : lang === 'en' ? 'Edit rooms' : 'Редактировать комнаты'}
               </button>
             ) : (
               <div style={{ border: '1px solid var(--color-border)', borderRadius: 10, padding: '0.7rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <strong style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem' }}>
-                    {lang !== 'hy' ? 'Комнаты' : 'Սենյակներ'}
+                    {lang === 'hy' ? 'Սենյակներ' : lang === 'en' ? 'Rooms' : 'Комнаты'}
                   </strong>
                   <button className="btn btn-ghost" style={{ padding: '0.25rem 0.6rem', fontSize: '0.74rem' }} onClick={() => setEditRooms(null)}>
-                    {lang !== 'hy' ? 'Авто' : 'Ավտո'}
+                    {lang === 'hy' ? 'Ավտո' : lang === 'en' ? 'Auto' : 'Авто'}
                   </button>
                 </div>
                 {editRooms!.map((r) => (
                   <RoomRow key={r.id} room={r} lang={lang} onChange={(p) => updateRoom(r.id, p)} onRemove={() => removeRoom(r.id)} />
                 ))}
                 <button className="btn btn-accent" style={{ marginTop: '0.5rem', padding: '0.4rem 0.9rem', fontSize: '0.8rem' }} onClick={addRoom}>
-                  + {lang !== 'hy' ? 'Добавить комнату' : 'Ավելացնել սենյակ'}
+                  + {lang === 'hy' ? 'Ավելացնել սենյակ' : lang === 'en' ? 'Add room' : 'Добавить комнату'}
                 </button>
               </div>
             )}

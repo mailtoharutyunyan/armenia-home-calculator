@@ -14,7 +14,7 @@ interface Supplier {
 const SUPPLIERS: Supplier[] = [
   {
     name: 'MM Leader',
-    url: 'https://mmlider.am/betoni-artadrowtyown',
+    url: 'https://mmleader.am/betoni-artadrowtyown',
     best: { ru: 'Бетон и подбетонка — цены завода (дешевле всего)', hy: 'Բետոն և ենթաբետոն — գործարանի գին', en: 'Concrete & blinding — factory prices (cheapest)' },
     price: { ru: 'B25 — 34 000 ֏/м³, M100 — 25 000 ֏/м³ (без НДС)', hy: 'B25 — 34 000 ֏/մ³, M100 — 25 000 ֏/մ³ (առանց ԱԱՀ)', en: 'B25 — 34,000 ֏/m³, M100 — 25,000 ֏/m³ (ex-VAT)' },
   },
@@ -22,7 +22,7 @@ const SUPPLIERS: Supplier[] = [
     name: 'Waelcon',
     url: 'https://waelcon.am',
     best: { ru: 'Арматура, бетон, инженерка — комплексно на объект', hy: 'Արմատուր, բետոն, ինժեներիա — համալիր', en: 'Rebar, concrete, engineering — one supplier' },
-    price: { ru: 'Бетон B25 39 500 ֏/м³ (с НДС, с доставкой)', hy: 'Բետոն B25 39 500 ֏/մ³ (ԱԱՀ-ով)', en: 'Concrete B25 39,500 ֏/m³ (incl. VAT, delivered)' },
+    price: { ru: 'Бетон B25 (М350) 45 000 ֏/м³ с НДС и доставкой до 15 км (с 01.10.2026)', hy: 'Բետոն B25 (М350) 45 000 ֏/մ³ ԱԱՀ-ով և առաքմամբ (01.10.2026-ից)', en: 'Concrete B25 (M350) 45,000 ֏/m³ incl. VAT, delivered up to 15 km (from 01.10.2026)' },
   },
   {
     name: 'Stalmetural / Met-Trans',
@@ -77,6 +77,12 @@ const SUPPLIERS: Supplier[] = [
     url: 'https://www.list.am/category/110',
     best: { ru: 'Газоблок, туф, кирпич, песок — маркетплейс (цены договорные)', hy: 'Գազաբլոկ, տուֆ, աղյուս, ավազ', en: 'Aerated block, tuff, brick, sand — marketplace' },
     price: { ru: 'Газоблок D600 ≈ 32 000 ֏/м³, туф ≈ 240 ֏/камень (~16 000 ֏/м³)', hy: 'Գազաբլոկ ≈ 32 000 ֏/մ³, տուֆ ≈ 240 ֏/քար', en: 'Aerated block ≈ 32,000 ֏/m³, tuff ≈ 240 ֏/stone' },
+  },
+  {
+    name: 'Wildberries',
+    url: 'https://www.wildberries.am/catalog/0/search.aspx?search=%D0%BD%D0%B0%D0%BB%D0%B8%D0%B2%D0%BD%D0%BE%D0%B9%20%D0%BF%D0%BE%D0%BB',
+    best: { ru: 'Наливные полы, смолы, лаки, инструмент для заливки — по акциям дешевле всего', hy: 'Լցովի հատակներ, խեժեր, լաքեր, գործիքներ — ակցիաներով ամենաէժան', en: 'Poured floors, resins, lacquers, pouring tools — cheapest on sale' },
+    price: { ru: 'ПУ наливной пол 20 кг 49 800 ֏ (акция, 27.10.2026); запас мал — объём у производителя', hy: 'ՊՈՒ լցովի հատակ 20 կգ 49 800 ֏ (ակցիա, 27.10.2026)', en: 'PU poured floor 20 kg 49,800 ֏ (sale, 27.10.2026); small stock — buy volume from the maker' },
   },
   {
     name: 'Etalon-remont',

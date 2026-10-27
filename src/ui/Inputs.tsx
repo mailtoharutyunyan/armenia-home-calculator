@@ -587,7 +587,7 @@ export function Inputs() {
               </select>
             </label>
             <label className="field">
-              <span>{lang !== 'hy' ? 'Марка арматуры' : 'Արմատուրի դաս'}</span>
+              <span>{lang === 'hy' ? 'Արմատուրի դաս' : lang === 'en' ? 'Rebar grade' : 'Марка арматуры'}</span>
               <select className="input" value={house.rebarGrade} onChange={(e) => set({ rebarGrade: e.target.value })}>
                 <option value="rebar_a500">А500С</option>
                 <option value="rebar_a400">А400 (A-III)</option>

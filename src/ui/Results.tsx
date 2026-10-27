@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useProject } from '../store/useProject'
 import { t } from '../i18n'
 import { computeQuantities } from '../engine/quantities'
-import { computeEstimate } from '../engine/pricing'
+import { computeEstimate, diyLabourShare } from '../engine/pricing'
 import { simplified41Reasons } from '../engine/norms'
 import { NORMS } from '../data/normsReference'
 import { NormLink } from './NormLink'
@@ -274,6 +274,13 @@ export function Results() {
                         <span className="mono" style={{ color: 'var(--color-ink-soft)', marginLeft: '0.4rem', fontSize: '0.72rem' }}>
                           {l.quantity.toFixed(l.unit === 'шт' ? 0 : 1)} {l.unit}
                         </span>
+                        {diyLabourShare(l.key, house.diyWorks ?? []) > 0 && (
+                          <span className="mono" style={{ color: 'var(--color-copper)', marginLeft: '0.4rem', fontSize: '0.72rem' }}>
+                            {diyLabourShare(l.key, house.diyWorks ?? []) < 1
+                              ? lang === 'hy' ? 'մասամբ ինքս' : lang === 'en' ? 'partly DIY' : 'частично сам'
+                              : lang === 'hy' ? 'ինքս' : lang === 'en' ? 'DIY' : 'сам'}
+                          </span>
+                        )}
                       </span>
                       <span className="num">{m(l.total)}</span>
                     </div>

@@ -46,6 +46,16 @@ export function Timeline() {
           {t(lang, 'totalTerm')}: {totalMin}–{totalMax} {t(lang, 'weeks')}
         </span>
       </div>
+      {(house.diyWorks ?? []).length > 0 && (
+        // the stage durations are crew norms; nobody publishes them for one person
+        <p style={{ margin: 0, padding: '0.6rem 1.1rem 0', fontSize: '0.78rem', color: 'var(--color-ink-soft)' }}>
+          {lang === 'hy'
+            ? 'Ժամկետները բրիգադների համար են։ «Անում եմ ինքս» նշված աշխատանքները մեկ մարդով կտևեն զգալիորեն ավելի երկար։'
+            : lang === 'en'
+            ? 'Durations are for crews. Work ticked “I do it myself” takes noticeably longer for one person.'
+            : 'Сроки — для бригад. Работы, отмеченные «делаю сам», в одиночку займут заметно дольше.'}
+        </p>
+      )}
       <div style={{ padding: '0.3rem 0 0.6rem' }}>
         {rows.map(({ s, w, cost }, i) => (
           <div
@@ -77,7 +87,7 @@ export function Timeline() {
               >
                 {i + 1}
               </span>
-              {lang !== 'hy' ? s.ru : s.hy}
+              {lang === 'hy' ? s.hy : lang === 'en' ? s.en : s.ru}
             </span>
             <div>
               <div style={{ background: 'var(--color-surface-2)', height: 8, borderRadius: 4, overflow: 'hidden' }}>

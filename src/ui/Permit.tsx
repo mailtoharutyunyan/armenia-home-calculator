@@ -51,7 +51,7 @@ export function Permit() {
       <div style={{ padding: '0.6rem 1rem 0.2rem' }}>
         {costs.map((c) => (
           <div className="spec-row" key={c.it.key}>
-            <span>{lang !== 'hy' ? c.it.labelRu : c.it.labelHy}</span>
+            <span>{lang === 'hy' ? c.it.labelHy : lang === 'en' ? c.it.labelEn ?? c.it.labelRu : c.it.labelRu}</span>
             <span className="num">{m(c.total)}</span>
           </div>
         ))}
@@ -93,14 +93,14 @@ export function Permit() {
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.8rem', alignItems: 'baseline' }}>
                 <strong style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem' }}>
-                  {lang !== 'hy' ? s.ru : s.hy}
+                  {lang === 'hy' ? s.hy : lang === 'en' ? s.en : s.ru}
                 </strong>
                 <span className="num" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
                   {stepCost(STEP_COST[i], prices, priceMode, area, m, lang)}
                 </span>
               </div>
               <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--color-ink-soft)', lineHeight: 1.45 }}>
-                {lang !== 'hy' ? s.descRu : s.descHy}
+                {lang === 'hy' ? s.descHy : lang === 'en' ? s.descEn : s.descRu}
               </p>
             </div>
           </li>
@@ -123,7 +123,7 @@ function stepCost(
   m: (v: number) => string,
   lang: string,
 ): string {
-  if (sc.inProject) return lang !== 'hy' ? 'в составе проекта' : 'նախագծի կազմում'
+  if (sc.inProject) return lang === 'hy' ? 'նախագծի կազմում' : lang === 'en' ? 'part of the design' : 'в составе проекта'
   if (sc.fixed != null) return m(sc.fixed)
   if (sc.key) {
     const it = prices[sc.key]

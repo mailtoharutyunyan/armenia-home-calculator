@@ -182,6 +182,33 @@ export const QUANTITY_FACTS: Fact[] = [
     en: 'Construction waste per m² of house',
   },
   {
+    id: 'floorTile', kind: 'assumption', value: `${Math.round(C.floorTileShare * 100)}%`,
+    ru: 'Доля пола в плитке (санузлы, кухня, прихожая); остальное — ламинат или наливной пол',
+    hy: 'Հատակի սալիկապատ մասը (սանհանգույց, խոհանոց, նախասենյակ), մնացածը՝ լամինատ կամ լցովի հատակ',
+    en: 'Share of the floor tiled (bathrooms, kitchen, hall); the rest is laminate or a poured floor',
+  },
+  {
+    id: 'layRates', kind: 'derived', value: `${C.laminateLayRate} / ${C.tileLayRate} ֏`,
+    ru: 'Укладка за м²: ламинат и плитка — по ним работа пола делится, когда отмечено «делаю сам»',
+    hy: 'Տեղադրում մ²-ին՝ լամինատ և սալիկ. ըստ դրանց է բաժանվում հատակի աշխատանքը «անում եմ ինքս» նշելիս',
+    en: 'Laying per m²: laminate and tile; the floor labour is split by them when “I do it myself” is ticked',
+    source: { label: 'FastModernHouse, прайс работ', url: 'https://fastmodernhouse.com/%D5%A3%D5%B6%D5%A1%D6%81%D5%B8%D6%82%D6%81%D5%A1%D5%AF' },
+  },
+  {
+    id: 'plasterSplit', kind: 'derived', value: `${Math.round(C.plasterLabourShare * 6500)} / 6 500 ֏`,
+    ru: 'Из работы по стенам за м² штукатурка — 3 000 ֏, шпаклёвка и покраска — 3 500 ֏',
+    hy: 'Պատերի աշխատանքից մ²-ին սվաղը՝ 3 000 ֏, ծեփն ու ներկը՝ 3 500 ֏',
+    en: 'Of the wall labour per m², plastering is 3 000 ֏, filling and painting 3 500 ֏',
+    source: { label: 'NewHome, цены работ 26.10.2026', url: 'https://newhome.am/gnacucak' },
+  },
+  {
+    id: 'pourUse', kind: 'derived', value: '1,25 кг/м²·мм',
+    ru: 'Расход полиуретанового наливного пола на 1 мм слоя; для мрамора-металлика расход смолы 1,1 кг/м²·мм и пигмента 15–20 г/кг — оценка',
+    hy: 'Պոլիուրեթանային լցովի հատակի ծախսը 1 մմ շերտի համար. մարմար-մետալիկի խեժի և պիգմենտի ծախսը գնահատական է',
+    en: 'Use of the polyurethane poured floor per 1 mm; for the metallic marble the resin and pigment use is an estimate',
+    source: { label: 'Wildberries, карточка Ecotermix МОНЕ 720', url: 'https://www.wildberries.am/catalog/455274213/detail.aspx' },
+  },
+  {
     id: 'tiles', kind: 'assumption', value: `${n(C.bathTileHeight)} м`,
     ru: 'Высота плитки на стенах санузлов',
     hy: 'Սանհանգույցի պատերի սալիկի բարձրությունը',

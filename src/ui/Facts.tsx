@@ -195,7 +195,7 @@ export function Facts() {
                       {lang === 'hy' ? 'ձեր նախահաշվում' : lang === 'en' ? 'in your estimate' : 'в вашей смете'} {m(amount)}
                     </span>
                   )}
-                  {(it.sourceUrls ?? []).map((u) => (
+                  {[...new Set(it.sourceUrls ?? [])].map((u) => (
                     <a key={u} href={u} target="_blank" rel="noreferrer">
                       {host(u)}
                     </a>
