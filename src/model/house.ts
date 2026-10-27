@@ -12,6 +12,8 @@ export type FoundationType = 'strip' | 'slab' | 'pile' | 'column'
 export type RoofType = 'flat' | 'pitched' | 'hip' | 'mansard'
 export type FinishLevel = 'economy' | 'standard' | 'premium'
 export type StoneType = 'tuff' | 'travertine' | 'basalt'
+// Floor of the dry rooms; wet rooms and the kitchen stay tiled.
+export type FloorType = 'laminate' | 'polyurethane' | 'metallic'
 export type Currency = 'AMD' | 'USD'
 export type PriceMode = 'min' | 'typical' | 'max'
 // Кто строит: сам хозяин (бригады напрямую) или генподрядчик по договору.
@@ -66,6 +68,7 @@ export interface HouseParams {
   finishLevel: FinishLevel
   stoneFacadePct: number // доля фасада, облицованная камнем, % (0 = только штукатурка)
   stoneType: StoneType // какой камень
+  floorType: FloorType // пол сухих комнат: ламинат или наливной полимерный
   currency: Currency
   region: RegionKey
   vatIncluded: boolean
@@ -212,6 +215,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   finishLevel: 'standard',
   stoneFacadePct: 0,
   stoneType: 'travertine',
+  floorType: 'laminate',
   currency: 'AMD',
   region: 'yerevan',
   vatIncluded: false, // opt-in: prices are shown without VAT unless the checkbox is ticked

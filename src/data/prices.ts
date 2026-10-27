@@ -125,6 +125,18 @@ const Q = {
   earthRates: ['https://armenia-am.gazprom.com/notice/', 'https://www.veolia.am/hy/about-us/iravakan-akter'],
   screedOct: ['https://turn.am/ru/article/bnakaranneri-veranorogum-yerevanum-2026-gner', 'https://newhome.am/gnacucak'],
   formworkRent: ['https://accurate.am/', 'https://uyut.am/hy/bmaterial_more/203'],
+  // Wildberries Armenia, 27.10.2026: polymer floor systems sold for DIY pours
+  polymerFloor: [
+    'https://www.wildberries.am/catalog/455274213/detail.aspx',
+    'https://www.wildberries.am/catalog/1220956159/detail.aspx',
+    'https://www.wildberries.am/catalog/1220956047/detail.aspx',
+  ],
+  metallicFloor: [
+    'https://www.wildberries.am/catalog/1515397161/detail.aspx',
+    'https://www.wildberries.am/catalog/1220956159/detail.aspx',
+    'https://www.wildberries.am/catalog/1244950241/detail.aspx',
+    'https://www.wildberries.am/catalog/1220956206/detail.aspx',
+  ],
   floorHeating: [
     'https://kelvin.am/ru/products/index?c_id=86',
     'https://santex-house.am/rasprodazha/truby-pex-a-16-kh-2-2c2mm-sanline-2c-universalnye-s-kislorodnoe-zashchitoj-barierom',
@@ -344,6 +356,21 @@ const items: PriceItem[] = [
   // 3 500, tile 10 000 ֏/m² — ~20% of the floor is tiled.
   { ...quoted('floor_finish', 'Напольное покрытие', 'Հատակածածկ', 'м²', { min: 5100, typical: 5600, max: 9800 }, 4800, [...Q.floorsOct, ...Q.points],
     'Domus: ламинат 8 мм Kastamonu 4 290, Egger 4 690 ֏/м² + подложка и плинтус ~1 300; керамогранит 60×60 4 100 ֏/м²; укладка ламината 3 500, плитки 10 000 ֏/м² (FastModernHouse), плитка ~20% пола'), verifiedAt: OCT },
+  // With a poured floor in the dry rooms, the wet rooms and the kitchen keep
+  // porcelain 60×60 (4 100 ֏/m² + glue and grout ~1 500), laid at 10 000 ֏/m².
+  derived('floor_tile', 'Керамогранит на полу (санузлы, кухня, прихожая)', 'Կերամոգրանիտ հատակին (սանհանգույց, խոհանոց, նախասենյակ)', 'м²', { min: 5600, typical: 5600, max: 21500 }, 10000, [...Q.floorsOct, ...Q.points],
+    'Domus: керамогранит 60×60 Negin — 4 100 ֏/м² + клей и затирка ~1 500; укладка плитки 10 000 ֏/м² (FastModernHouse)'),
+  // Polyurethane self-levelling floor 1.5 mm over an epoxy primer and a matte
+  // UV-stable lacquer, per m²: primer 0.3 kg × 2 829 + MONE 720 1.875 kg ×
+  // 2 490 + lacquer 0.15 kg × 3 920 ≈ 6 100 ֏ at the sale price; 11 570 at the
+  // list price. Poured by the owner, so no labour.
+  derived('floor_pu', 'Наливной полиуретановый пол 1.5 мм (материалы, заливка своими руками)', 'Լցովի պոլիուրեթանային հատակ 1.5 մմ (նյութեր, ինքնուրույն)', 'м²', { min: 6100, typical: 6100, max: 11570 }, 0, Q.polymerFloor,
+    'Wildberries, 27.10.2026: Ecotermix МОНЕ 720 ПУ 20 кг — 49 800 ֏ (без скидки 94 030), расход 1,25 кг/м² на 1 мм; грунт МОНЕ 810 10 кг — 28 290 ֏, ~0,3 кг/м² (оценка); лак матовый МОНЕ АП 723 4 кг — 15 680 ֏, 0,1–0,15 кг/м², УФ-стойкий (со слов продавца). Нижняя цена — акция 11.11, верхняя — без скидки. Работа своими руками; инструмент (ракля, игольчатые валики, краскоступы, респиратор) ~67 000 ֏ разово. Срок хранения смол обычно 6–12 мес — покупать за 1–2 мес до заливки. Совместимость с тёплым полом уточнить у производителя'),
+  // Metallic "marble" epoxy: light epoxy base 0.5 kg × 2 829 + clear epoxy
+  // 1.5 mm 1.65 kg × 3 347 + pearl pigment ~29 g × 40 + gloss lacquer in two
+  // coats 0.3 kg × 4 675 ≈ 9 500 ֏/m² at the sale price; 18 100 at list price.
+  derived('floor_metallic', 'Наливной пол «мрамор-металлик» 1.5 мм (материалы, заливка своими руками)', 'Լցովի հատակ «մարմար-մետալիկ» 1.5 մմ (նյութեր, ինքնուրույն)', 'м²', { min: 9500, typical: 9500, max: 18100 }, 0, Q.metallicFloor,
+    'Wildberries, 27.10.2026: прозрачная эпоксидная смола Polymerkub DecoFloor 15 кг — 50 200 ֏ (без скидки 72 900), ~1,65 кг/м² на 1,5 мм (оценка, продавец расход не указал); база МОНЕ 810 — 28 290 ֏ за 10 кг, ~0,5 кг/м²; пигмент перламутр «слюда» 500 г — 20 220 ֏, ~15–20 г на кг смолы (оценка); лак глянцевый МОНЕ АП 722 4 кг — 18 700 ֏, 2 слоя. Эпоксид желтеет на солнце, шов стяжки виден на рисунке; залить пробный щит 1–2 м² до пола. Запас смолы на Wildberries мал — объём заказывать у производителя. Работа своими руками'),
   // Stone cladding on part of the facade, plates 2–3 cm on adhesive. list.am,
   // October 2026: tuff 3 cm and basalt 2 cm 6 500, travertine 2 cm 7 000 and
   // 3 cm 8 000 ֏/m² (one supplier, VAT included); Ararat travertine 2.5 cm
@@ -650,6 +677,9 @@ const EN_LABELS: Record<string, string> = {
   permit_fee: 'Building permit',
   permit_address: 'Address assignment',
   permit_supervision: 'Technical supervision (per m²)',
+  floor_tile: 'Porcelain floor tile (bathrooms, kitchen, hall)',
+  floor_pu: 'Poured polyurethane floor 1.5 mm (materials, DIY pour)',
+  floor_metallic: 'Poured “metallic marble” floor 1.5 mm (materials, DIY pour)',
 }
 
 export const SEED_PRICES: Catalog = Object.fromEntries(

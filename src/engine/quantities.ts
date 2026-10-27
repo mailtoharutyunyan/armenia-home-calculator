@@ -540,7 +540,15 @@ export function computeQuantities(p: HouseParams): Quantities {
   const plasterWalls = Math.max(0, innerPerimeter * clearWallH - openingsArea) + intBearingLen * clearWallH * 2
   const plasterArea = plasterWalls + partitionArea * 2 + floorLayerArea
   add('plaster', 'finishing', 'turnkey', plasterArea)
-  add('floor_finish', 'finishing', 'turnkey', floorLayerArea)
+  // A poured polymer floor replaces the laminate in the dry rooms only; the
+  // wet rooms and the kitchen keep their porcelain tile.
+  const floorType = p.floorType ?? 'laminate'
+  if (floorType === 'laminate') {
+    add('floor_finish', 'finishing', 'turnkey', floorLayerArea)
+  } else {
+    add('floor_tile', 'finishing', 'turnkey', floorLayerArea * C.floorTileShare)
+    add(floorType === 'metallic' ? 'floor_metallic' : 'floor_pu', 'finishing', 'turnkey', floorLayerArea * (1 - C.floorTileShare))
+  }
   // bathroom walls tiled to 2.4 m, less the door of each bathroom
   add('wall_tile', 'finishing', 'turnkey', Math.max(0, take.bathPerimeter * C.bathTileHeight - take.baths * DOOR_W * C.doorHeight))
   add('stair_finish', 'finishing', 'turnkey', flights * C.stairFinishPerFlight)

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useProject } from '../store/useProject'
 import { t } from '../i18n'
-import type { HouseParams, StoneType } from '../model/house'
+import type { HouseParams, StoneType, FloorType } from '../model/house'
 import { defaultWallThickness, BUILD_PRESETS } from '../model/house'
 import { REGIONS } from '../data/regions'
 import { COEFF as C } from '../data/coefficients'
@@ -359,6 +359,14 @@ export function Inputs() {
               {t(lang, 'premium')}
             </button>
           </div>
+        </label>
+        <label className="field">
+          <span>{lang === 'hy' ? 'Չոր սենյակների հատակ' : lang === 'en' ? 'Floor of the dry rooms' : 'Пол в жилых комнатах'}</span>
+          <select className="input" value={house.floorType ?? 'laminate'} onChange={(e) => set({ floorType: e.target.value as FloorType })}>
+            <option value="laminate">{lang === 'hy' ? 'Լամինատ' : lang === 'en' ? 'Laminate' : 'Ламинат'}</option>
+            <option value="polyurethane">{lang === 'hy' ? 'Լցովի պոլիուրեթան (ինքնուրույն)' : lang === 'en' ? 'Poured polyurethane (DIY)' : 'Наливной полиуретан (сам)'}</option>
+            <option value="metallic">{lang === 'hy' ? 'Մարմար-մետալիկ (ինքնուրույն)' : lang === 'en' ? 'Metallic marble epoxy (DIY)' : 'Мрамор-металлик (сам)'}</option>
+          </select>
         </label>
         <Num
           label={lang === 'hy' ? 'Ֆասադի քարե երեսպատում, %' : lang === 'en' ? 'Facade clad in stone, %' : 'Облицовка фасада камнем, %'}

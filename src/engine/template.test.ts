@@ -106,4 +106,20 @@ describe('шаблон: границы применения и связка со
     expect(line('facade')).toBe(0)
     expect(line('stone_base')).toBeCloseTo(line('facade_travertine'), 6)
   })
+
+  it('наливной пол заменяет ламинат только в сухих комнатах, плитка остаётся', () => {
+    const line = (q: ReturnType<typeof computeQuantities>, k: string) =>
+      q.lines.filter((l) => l.key === k).reduce((a, l) => a + l.quantity, 0)
+    const base = computeQuantities(p)
+    const floor = line(base, 'floor_finish')
+    for (const [floorType, key] of [['polyurethane', 'floor_pu'], ['metallic', 'floor_metallic']] as const) {
+      const q = computeQuantities({ ...p, floorType })
+      expect(line(q, 'floor_finish')).toBe(0)
+      expect(line(q, 'floor_tile')).toBeCloseTo(floor * 0.2, 6)
+      expect(line(q, key)).toBeCloseTo(floor * 0.8, 6)
+      // poured by the owner: the estimate carries materials only
+      const e = computeEstimate(q, SEED_PRICES, { ...p, floorType })
+      expect(e.lines.find((l) => l.key === key)!.labor).toBe(0)
+    }
+  })
 })
