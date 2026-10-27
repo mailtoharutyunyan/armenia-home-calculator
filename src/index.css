@@ -456,8 +456,8 @@ h1, h2, h3, h4 {
 .btn-ghost:hover { color: var(--color-copper); border-color: var(--color-copper); }
 
 /* form controls */
-label.field { display: block; margin-bottom: 0.9rem; }
-label.field > span {
+label.field, .field-group { display: block; margin-bottom: 0.9rem; }
+label.field > span, .field-group > span {
   display: block;
   font-size: 0.72rem;
   font-weight: 600;

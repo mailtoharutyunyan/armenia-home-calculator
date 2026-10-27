@@ -2,6 +2,7 @@
 // 13 × 14 m without its garage). Checked by hand on the 12.4 × 13.4 m inside.
 import { describe, it, expect } from 'vitest'
 import { DEFAULT_HOUSE } from '../model/house'
+import type { DiyWork } from '../model/house'
 import { buildFloorPlan, planTakeoff, roomClear } from './floorplan'
 import { computeQuantities } from './quantities'
 import { computeEstimate } from './pricing'
@@ -121,5 +122,22 @@ describe('шаблон: границы применения и связка со
       const e = computeEstimate(q, SEED_PRICES, { ...p, floorType })
       expect(e.lines.find((l) => l.key === key)!.labor).toBe(0)
     }
+  })
+
+  it('«делаю сам» убирает только работу выбранных строк, материалы остаются', () => {
+    const q = computeQuantities(p)
+    const base = computeEstimate(q, SEED_PRICES, p)
+    const diy = { ...p, diyWorks: ['electric', 'plumbing', 'paint', 'tile'] as DiyWork[] }
+    const e = computeEstimate(q, SEED_PRICES, diy)
+    const lab = (est: typeof e, k: string) => est.lines.find((l) => l.key === k)!.labor
+    for (const k of ['electrical', 'electrical_panel', 'plumbing', 'sewer_points', 'radiators', 'wall_tile']) expect(lab(e, k)).toBe(0)
+    // licensed work stays paid
+    for (const k of ['heating', 'gas_internal', 'lightning']) expect(lab(e, k)).toBe(lab(base, k))
+    // painting is 3 500 of the 6 500 ֏/m² plaster labour; the tiled fifth of
+    // the floor is 2 000 of its 4 800 ֏/m²
+    expect(lab(e, 'plaster')).toBeCloseTo(lab(base, 'plaster') * (3000 / 6500), 6)
+    expect(lab(e, 'floor_finish')).toBeCloseTo(lab(base, 'floor_finish') * (2800 / 4800), 6)
+    expect(e.turnkey.material).toBeCloseTo(base.turnkey.material, 6)
+    expect(e.turnkey.total).toBeLessThan(base.turnkey.total)
   })
 })

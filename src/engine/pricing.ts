@@ -1,6 +1,6 @@
 import type { Catalog } from '../model/catalog'
 import { materialPrice } from '../model/catalog'
-import type { HouseParams, PriceMode } from '../model/house'
+import type { DiyWork, HouseParams, PriceMode } from '../model/house'
 import { COEFF as C } from '../data/coefficients'
 import { REGIONS } from '../data/regions'
 import type { Quantities, SectionId, Stage } from './quantities'
@@ -14,6 +14,38 @@ const OWN_CREW = new Set(['screed', 'insulation_xps', 'apron'])
 // Fixed payments: documents, state fees and the utilities' connection tariffs.
 // Nobody builds them, so they carry no markups, contingency or VAT.
 export const FEE_SECTIONS = new Set<SectionId>(['permit', 'utilities'])
+
+// Work the owner does himself takes its labour out of the estimate; the
+// materials stay. The boiler, the gas pipe and lightning protection stay with
+// licensed crews, so no box switches them off.
+const DIY_LINES: Record<DiyWork, string[]> = {
+  electric: ['electrical', 'electrical_panel', 'ventilation'],
+  plumbing: ['plumbing', 'sewer_points', 'radiators', 'sanitary_set'],
+  plaster: [],
+  paint: [],
+  tile: ['wall_tile', 'floor_tile', 'stair_finish'],
+  laminate: [],
+  kitchen: ['opt_kitchen'],
+}
+
+// Share of a line's labour the owner takes over. Two lines mix trades: the
+// plaster line is plastering plus filling and painting, and the laminate floor
+// line carries the tiled share of the floor too.
+export function diyLabourShare(key: string, works: readonly DiyWork[]): number {
+  const diy = new Set(works)
+  let share = [...diy].some((w) => DIY_LINES[w].includes(key)) ? 1 : 0
+  if (key === 'plaster') {
+    if (diy.has('plaster')) share += C.plasterLabourShare
+    if (diy.has('paint')) share += 1 - C.plasterLabourShare
+  }
+  if (key === 'floor_finish') {
+    const tile = C.floorTileShare * C.tileLayRate
+    const laminate = (1 - C.floorTileShare) * C.laminateLayRate
+    if (diy.has('tile')) share += tile / (tile + laminate)
+    if (diy.has('laminate')) share += laminate / (tile + laminate)
+  }
+  return Math.min(1, share)
+}
 
 export interface EstimateLine {
   key: string
@@ -136,7 +168,8 @@ function priceAtMode(q: Quantities, catalog: Catalog, p: HouseParams, mode: Pric
     const material = ql.quantity * unitMat * mult
     // shell labour (foundation/walls/frame/floors) is covered by the brigade rate
     // (added below); earthworks/roof/stair and all turnkey work keep per-item labour.
-    const labor = BRIGADE_SECTIONS.has(ql.section) && !OWN_CREW.has(ql.key) ? 0 : ql.quantity * item.labor * mult
+    const diyShare = diyLabourShare(ql.key, p.diyWorks ?? [])
+    const labor = BRIGADE_SECTIONS.has(ql.section) && !OWN_CREW.has(ql.key) ? 0 : ql.quantity * item.labor * mult * (1 - diyShare)
     const total = material + labor
     if (isPermit) permitAmt += total
     if (isPermit && ql.stage === 'act') actFees += total

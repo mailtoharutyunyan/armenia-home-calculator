@@ -1,12 +1,24 @@
 import { useEffect } from 'react'
 import { useProject } from '../store/useProject'
 import { t } from '../i18n'
-import type { HouseParams, StoneType, FloorType } from '../model/house'
+import type { HouseParams, StoneType, FloorType, DiyWork } from '../model/house'
 import { defaultWallThickness, BUILD_PRESETS } from '../model/house'
 import { REGIONS } from '../data/regions'
 import { COEFF as C } from '../data/coefficients'
 import { planTake, computeQuantities } from '../engine/quantities'
 import { usesTemplate } from '../engine/floorplan'
+
+// Work an owner can do himself; the boiler, the gas pipe and lightning
+// protection are left to licensed crews and are not offered.
+const DIY_OPTIONS: { key: DiyWork; ru: string; hy: string; en: string }[] = [
+  { key: 'electric', ru: 'Электрика: проводка, щит, вытяжки', hy: 'Էլեկտրականություն՝ լարեր, վահան, օդահաններ', en: 'Electrics: wiring, panel, extract fans' },
+  { key: 'plumbing', ru: 'Водопровод, канализация, радиаторы, сантехника', hy: 'Ջրմուղ, կոյուղի, ռադիատորներ, սանտեխնիկա', en: 'Water, sewer, radiators, fixtures' },
+  { key: 'plaster', ru: 'Штукатурка стен', hy: 'Պատերի սվաղ', en: 'Wall plastering' },
+  { key: 'paint', ru: 'Шпаклёвка и покраска', hy: 'Ծեփ և ներկ', en: 'Filling and painting' },
+  { key: 'tile', ru: 'Плитка и керамогранит', hy: 'Սալիկ և կերամոգրանիտ', en: 'Tiling' },
+  { key: 'laminate', ru: 'Укладка ламината', hy: 'Լամինատի տեղադրում', en: 'Laying laminate' },
+  { key: 'kitchen', ru: 'Сборка кухни', hy: 'Խոհանոցի հավաքում', en: 'Kitchen assembly' },
+]
 
 function Num({
   label,
@@ -368,6 +380,23 @@ export function Inputs() {
             <option value="metallic">{lang === 'hy' ? 'Մարմար-մետալիկ (ինքնուրույն)' : lang === 'en' ? 'Metallic marble epoxy (DIY)' : 'Мрамор-металлик (сам)'}</option>
           </select>
         </label>
+        <div className="field-group">
+          <span>{lang === 'hy' ? 'Անում եմ ինքս (առանց աշխատանքի վճարի)' : lang === 'en' ? 'I do it myself (no labour cost)' : 'Делаю сам (без оплаты работы)'}</span>
+          {DIY_OPTIONS.map((o) => {
+            const works = house.diyWorks ?? []
+            const on = works.includes(o.key)
+            return (
+              <label key={o.key} className="field" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                <input
+                  type="checkbox"
+                  checked={on}
+                  onChange={() => set({ diyWorks: on ? works.filter((w) => w !== o.key) : [...works, o.key] })}
+                />
+                <span style={{ marginBottom: 0 }}>{o[lang] ?? o.ru}</span>
+              </label>
+            )
+          })}
+        </div>
         <Num
           label={lang === 'hy' ? 'Ֆասադի քարե երեսպատում, %' : lang === 'en' ? 'Facade clad in stone, %' : 'Облицовка фасада камнем, %'}
           value={house.stoneFacadePct ?? 0}
