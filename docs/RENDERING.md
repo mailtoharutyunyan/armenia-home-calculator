@@ -221,8 +221,26 @@ poly_wool_herringbone 0.18, cotton_jersey 0.43, laminate_floor_03 0.19).
   более старых версий. Поставить **Show all projects**, выбрать BrickHouse,
   внизу **Select Version** — самую новую из списка (Megascans: 5.6,
   Mediterranean Pack I: 5.4); контент старой версии открывается в 5.8.
-- Деревья Megascans в формате UE огромные (European Hornbeam 11,1 ГБ), при
-  скорости 0,5–1,5 МБ/с это часы. ⚠ Они сделаны под Nanite; на M1 будет
+- **Медленные загрузки Launcher** (было 0,7–1,8 МБ/с при канале 145+ Мбит/с):
+  создать `~/Library/Application Support/Epic/EpicGamesLauncher/Saved/Config/MacEditor/Engine.ini`
+  (на Mac конфиг Launcher-а лежит в `MacEditor`, рядом с `GameUserSettings.ini`):
+  ```ini
+  [HTTP]
+  HttpTimeout=10
+  HttpConnectionTimeout=10
+  HttpReceiveTimeout=10
+  HttpSendTimeout=10
+
+  [Portal.BuildPatch]
+  ChunkDownloads=8
+  ChunkRetries=20
+  RetryTime=0.5
+  ```
+  и перезапустить Launcher (загрузки продолжатся с места). Стало ~40 МБ/с
+  (~320 Мбит/с, 30.10.2026). Epic советует `ChunkDownloads=3`; 8 — по числу ядер
+  M1 Max. Скорость проверять по росту папки
+  `/Users/Shared/UnrealEngine/Launcher/VaultCache/<ассет>` (`/usr/bin/du -sk`).
+- Деревья Megascans в формате UE огромные (European Hornbeam 11,1 ГБ). ⚠ Они сделаны под Nanite; на M1 будет
   упрощённая замена — сначала проверить одно дерево, потом качать остальные.
 - У многих ассетов (кусты и травы Megascans, часть мебели) на вкладке **Fab
   → My Library** вместо «+» стоит «↓»: это файлы FBX/glTF/GLB, качаются за
