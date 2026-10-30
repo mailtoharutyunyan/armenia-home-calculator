@@ -3,7 +3,7 @@ read from the scripts themselves, for docs/RENDERING.md:
 
   python3 tools/render/list_materials.py
 
-Sources: PBR / FLAT / PLANT_MODELS in unreal/Scripts/build_scene.py (what
+Sources: PBR / FLAT / PLANT_MODELS / TUFTS in unreal/Scripts/build_scene.py (what
 Unreal draws), MATERIALS and asset(...) calls in blender/build_brick.py (every
 slot in the model and the Poly Haven models placed in it).
 """
@@ -52,10 +52,12 @@ def main():
           + ", ".join(f"`{s}`" for s in rest) + ".")
 
     models = sorted(set(re.findall(r'asset\("([a-z0-9_]+)"', open(BL).read())))
-    plants = sorted({m[0] for m in ue["PLANT_MODELS"].values() if m})
+    plants = sorted({n for names, _ in ue["PLANT_MODELS"].values() for n in names} | set(tables(UE, ("TUFTS",))["TUFTS"]))
     print("\nМодели Poly Haven (CC0, glTF 1k):")
     print("- мебель и декор: " + ", ".join(f"[{m}](https://polyhaven.com/a/{m})" for m in models))
-    print("- растения на участке: " + ", ".join(f"[{m}](https://polyhaven.com/a/{m})" for m in plants))
+    print("\nРастения на участке (Fab: Megascans Common Hazel, Mediterranean Plant Pack I/II): "
+          + ", ".join(f"`{m}`" for m in plants))
+    print("\nДеревья и мебель Fab в props.json: см. `fab(...)` в build_brick.py.")
 
 
 if __name__ == "__main__":
