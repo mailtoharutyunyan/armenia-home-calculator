@@ -542,6 +542,38 @@ class BrickFurnisher(Furnisher):
         self.light((ix0 + ix1) / 2, (iy0 + iy1) / 2, self.ceil[0] - 1.0, 10)
         # sofa facing the garden glazing, coffee table, armchairs, rug
         sx0_, sx1_, sy = x0 + 1.0, x0 + 3.7, y0 + 5.0
+        cx = (sx0_ + sx1_) / 2
+        if UE:  # Fab "Modern Luxury Sofa 1" set instead of the boxes (see FAB)
+            f0 = self.ffl[0]
+            fab("SM_SOFA_1", cx, sy + 0.72, f0, (0, 1))
+            fab("SM_TABLE_CENTER_1", cx, sy + 1.85, f0, (0, 1))
+            fab("SM_SIDE_TABLE_1", sx1_ + 0.4, sy + 0.35, f0, (0, 1))
+            fab("SM_LAMP_1", sx0_ - 0.35, sy + 0.25, f0, (0, 1))
+            fab("SM_LYRATA_6", x0 + 0.45, y1 - 0.55, f0, (0, 1))
+            fab("SM_DECO_SCULPTURE_4", cx - 0.15, sy + 1.85, f0 + 0.24, (0, 1))
+            fab("SM_DECO_SCULPTURE_1", cx + 0.2, sy + 1.8, f0 + 0.24, (0, 1))
+            self.box(0, soft, "Rug_Wool", sx0_ - 0.2, sx1_ + 0.2, sy + 0.7, sy + 3.0, 0, 0.012)
+            self.asset("modern_arm_chair_01", x1 - 1.2, sy + 1.1, self.ffl[0], (-1, 0.4))
+        else:
+            self.sofa_boxes(sx0_, sx1_, sy, soft)
+        # oak slat accent wall with a low cabinet on the terrace side
+        for i in range(24):
+            yy = sy - 0.6 + i * 0.13
+            self.box(0, "Furniture_F1", "Wood_Oak", x0, x0 + 0.04, yy, yy + 0.07, 0, self.ceil[0] - self.ffl[0])
+        self.asset("modern_wooden_cabinet", x0 + 0.3, sy + 0.9, self.ffl[0], (1, 0))
+        top = self.ffl[0] + 0.68  # the cabinet's top
+        self.asset("potted_plant_04", x0 + 0.3, sy + 0.25, top, (0, 1))
+        self.asset("standing_picture_frame_01", x0 + 0.25, sy + 0.75, top, (1, 0))
+        self.asset("book_encyclopedia_set_01", x0 + 0.3, sy + 1.25, top, (1, 0))
+        self.asset("ceramic_vase_01", x0 + 0.3, sy + 1.75, top, (0, 1))
+        self.asset("ceramic_vase_02", (ix0 + ix1) / 2 - 0.5, (iy0 + iy1) / 2, self.ffl[0] + 0.91, (0, 1))
+        self.asset("potted_plant_01", x0 + 0.4, y1 - 0.5, self.ffl[0], (0, 1))
+        self.asset("potted_plant_02", x1 - 0.5, y0 + 1.1, self.ffl[0], (0, 1))
+        self.curtains(0, "bottom", y1, x0, x0 + 4.7)
+
+    def sofa_boxes(self, sx0_, sx1_, sy, soft):
+        """The built-in sofa, its cushions and throw, rug, coffee table set."""
+        x1 = rect(F0, "Kitchen-living")[1]
         self.box(0, "Furniture_F1", "Metal_Dark", sx0_, sx1_, sy, sy + 0.95, 0, 0.08)
         self.box(0, soft, "Fabric_Sofa", sx0_, sx1_, sy, sy + 0.95, 0.08, 0.42)
         self.box(0, soft, "Fabric_Sofa", sx0_, sx1_, sy, sy + 0.25, 0.42, 0.85)
@@ -561,20 +593,6 @@ class BrickFurnisher(Furnisher):
         self.asset("side_table_01", sx1_ + 0.4, sy + 0.3, self.ffl[0], (0, 1))
         self.asset("ceramic_vase_02", sx1_ + 0.4, sy + 0.3, self.ffl[0] + 0.55, (0, 1))
         self.asset("modern_arm_chair_01", x1 - 1.2, sy + 1.1, self.ffl[0], (-1, 0.4))
-        # oak slat accent wall with a low cabinet on the terrace side
-        for i in range(24):
-            yy = sy - 0.6 + i * 0.13
-            self.box(0, "Furniture_F1", "Wood_Oak", x0, x0 + 0.04, yy, yy + 0.07, 0, self.ceil[0] - self.ffl[0])
-        self.asset("modern_wooden_cabinet", x0 + 0.3, sy + 0.9, self.ffl[0], (1, 0))
-        top = self.ffl[0] + 0.68  # the cabinet's top
-        self.asset("potted_plant_04", x0 + 0.3, sy + 0.25, top, (0, 1))
-        self.asset("standing_picture_frame_01", x0 + 0.25, sy + 0.75, top, (1, 0))
-        self.asset("book_encyclopedia_set_01", x0 + 0.3, sy + 1.25, top, (1, 0))
-        self.asset("ceramic_vase_01", x0 + 0.3, sy + 1.75, top, (0, 1))
-        self.asset("ceramic_vase_02", (ix0 + ix1) / 2 - 0.5, (iy0 + iy1) / 2, self.ffl[0] + 0.91, (0, 1))
-        self.asset("potted_plant_01", x0 + 0.4, y1 - 0.5, self.ffl[0], (0, 1))
-        self.asset("potted_plant_02", x1 - 0.5, y0 + 1.1, self.ffl[0], (0, 1))
-        self.curtains(0, "bottom", y1, x0, x0 + 4.7)
 
     def curtains(self, f, side, line, a, b):
         """At both ends of a glazed wall: a pleated sheer by the glass and a
@@ -674,6 +692,11 @@ class BrickFurnisher(Furnisher):
 
 
 CURTAINS = []  # (material, plan x from, x to, plan y, z bottom, z top): pleated panels along x
+FAB = []  # (mesh name, plan x, y, z, facing (dx, dy) in plan, scale): Fab models; Unreal finds them by name
+
+
+def fab(path, x, y, z, face, scale=1.0):
+    FAB.append((path, x, y, z, face, scale))
 
 
 def furnish():
@@ -1310,6 +1333,22 @@ def export_ue(root):
     lights = [{"kind": k, "location": v((x, y, z)), "watts": round(w, 1), "kelvin": 2900} for k, x, y, z, w in LIGHTS]
     json.dump({"frame": "same as cameras.json", "windows": windows, "lights": lights},
               open(os.path.join(OUT, "lights.json"), "w"), indent=1, ensure_ascii=False)
+    # Fab trees (Megascans, scaled from their 12-17 m forest size to garden
+    # trees; the full-crowned field hazels in the garden): one at the street
+    # corner, one in the back corner, one over the roof from the back,
+    # and the neighbours' gardens either side
+    for path, x, y, scale in (
+            ("SM_CommonHazel_Field_03", -2.0, 16.4, 0.75),
+            ("SM_CommonHazel_Field_02", 19.6, -0.2, 0.7),
+            ("SM_EuropeanHornbeam_Forest_03", 13.5, -1.0, 0.75),
+            ("SM_NorwayMaple_Forest_04", -8.0, 4.0, 0.8),
+            ("SM_EuropeanHornbeam_Forest_04", 26.0, 7.0, 0.8)):
+        fab(path, x, y, 0, ((x * 37) % 7 - 3, 1), scale)
+    json.dump({"frame": "same as cameras.json; location is where the model's bounds sit: centre in x/y, bottom in z",
+               "props": [{"asset": a, "location": v((x, y, z)),
+                          "facing": [round(c, 3) for c in (plan_to_blender(x + fx, y + fy, z) - plan_to_blender(x, y, z))],
+                          "scale": sc} for a, x, y, z, (fx, fy), sc in FAB]},
+              open(os.path.join(OUT, "props.json"), "w"), indent=1, ensure_ascii=False)
     # where the planting goes (Unreal places its own vegetation), and the plot
     px0, px1, py0, py1 = PLOT
     corners = [v((px0, py0, 0)), v((px1, py1, 0))]
