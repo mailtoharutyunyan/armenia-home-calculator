@@ -599,13 +599,60 @@ def interior_lights(frame):
             set_any(c, names, value)
 
 
+# plants.json kind -> Fab meshes (by name) to cycle through, and how to size them:
+# a height in metres scales the model to the asked height, None keeps its own size
 PLANT_MODELS = {
-    # kind -> Poly Haven model, its native height (m) to scale to the asked height
-    # no cypress: the CC0 fir reads as bare sticks at garden scale
-    "cypress": None,
-    "shrub": ("wild_rooibos_bush", None),
-    "tree": ("jacaranda_tree", None),
+    # the fence screen: Megascans hazel (4-4.4 m) brought down to hedge height
+    "cypress": (["SM_CommonHazel_Forest_03", "SM_CommonHazel_Forest_04"], "height"),
+    # planting beds: Mediterranean pack bushes, grasses and agaves at their size
+    "shrub": (["bush_02_03", "bush_01_04", "grass_02_03", "agave_04", "flower_05", "grass_01_03",
+               "bush_01_03", "agave_03"], None),
 }
+TUFTS = ["grass_02_01", "grass_02_02", "grass_01_01", "flower_04"]  # around each bed plant
+# the Fab models' own front, as a yaw in degrees from Unreal +X (checked on renders)
+FRONT_YAW = {"SM_SOFA_1": 90.0}  # the sofa set faces +Y
+DEFAULT_FRONT_YAW = -90.0  # -Y
+
+
+def fab_mesh(name, cache={}):
+    """A Fab static mesh found by its asset name anywhere under /Game."""
+    if not cache:
+        reg = unreal.AssetRegistryHelpers.get_asset_registry()
+        flt = unreal.ARFilter(class_paths=[unreal.TopLevelAssetPath("/Script/Engine", "StaticMesh")],
+                              package_paths=["/Game"], recursive_paths=True)
+        for d in reg.get_assets(flt):
+            if not str(d.package_name).startswith(ROOT):
+                cache.setdefault(str(d.asset_name), f"{d.package_name}.{d.asset_name}")
+        log("fab meshes indexed", len(cache))
+    path = cache.get(name)
+    return eal.load_asset(path) if path else None
+
+
+def place(mesh, loc, yaw=0.0, scale=1.0):
+    """The mesh with its bounds' centre at loc in x/y and its bottom at loc.z."""
+    a = actors.spawn_actor_from_object(mesh, loc, unreal.Rotator(roll=0, pitch=0, yaw=yaw))
+    a.set_actor_scale3d(unreal.Vector(scale, scale, scale))
+    origin, ext = a.get_actor_bounds(False)
+    shift = unreal.Vector(loc.x - origin.x, loc.y - origin.y, loc.z - (origin.z - ext.z))
+    a.set_actor_location(a.get_actor_location() + shift, False, False)
+    return a
+
+
+def props(frame):
+    """Fab furniture and trees from props.json (written by build_brick.py --ue)."""
+    path = os.path.join(BRICK, "props.json")
+    if not os.path.exists(path):
+        return
+    missing = []
+    for p in json.load(open(path))["props"]:
+        mesh = fab_mesh(p["asset"])
+        if not mesh:
+            missing.append(p["asset"])
+            continue
+        d = frame.v(p["facing"]) - frame.v((0, 0, 0))
+        yaw = math.degrees(math.atan2(d.y, d.x)) - FRONT_YAW.get(p["asset"], DEFAULT_FRONT_YAW)
+        place(mesh, frame.v(p["location"]), yaw, p.get("scale", 1.0))
+    log("props placed", len(json.load(open(path))["props"]) - len(missing), "missing", missing)
 
 
 def foliage_masked(mesh):
@@ -630,32 +677,28 @@ def foliage_masked(mesh):
 
 
 def plants(frame):
+    """Garden planting from plants.json with Fab meshes (see PLANT_MODELS)."""
     data = json.load(open(os.path.join(BRICK, "plants.json")))
-    meshes = {}
-    for kind, model in PLANT_MODELS.items():
-        if not model:
-            continue
-        name = model[0]
-        folder = f"{ROOT}/Plants/{name}"
-        if eal.does_directory_exist(folder) and eal.list_assets(folder):
-            assets = [eal.load_asset(p) for p in eal.list_assets(folder)]  # imported on an earlier run
-        else:
-            assets = import_files([os.path.join(PH, name, f"{name}_1k.gltf")], folder)
-        meshes[kind] = [a for a in assets if isinstance(a, unreal.StaticMesh)]
-        for m in meshes[kind]:
-            foliage_masked(m)
+    count = {}
     for i, p in enumerate(data["plants"]):
-        if p["kind"] not in meshes:
+        names, sizing = PLANT_MODELS.get(p["kind"], ([], None))
+        meshes = [m for m in (fab_mesh(n) for n in names) if m]
+        if not meshes:
             continue
-        parts = meshes[p["kind"]]
-        if not parts:
-            continue
+        mesh = meshes[i % len(meshes)]
+        scale = 1.0
+        if sizing == "height":
+            scale = p["height_m"] / max(mesh.get_bounds().box_extent.z * 2 / 100, 0.1)
         loc = frame.v(p["location"])
-        top = max(m.get_bounds().box_extent.z * 2 for m in parts) / 100 or 1
-        scale = p["height_m"] / top
-        for m in parts:
-            a = actors.spawn_actor_from_object(m, loc, unreal.Rotator(roll=0, pitch=0, yaw=(i * 47) % 360))
-            a.set_actor_scale3d(unreal.Vector(scale, scale, scale))
+        place(mesh, loc, (i * 47) % 360, scale)
+        count[p["kind"]] = count.get(p["kind"], 0) + 1
+        if p["kind"] == "shrub":  # a few grass tufts around each bed plant
+            for k in range(3):
+                tuft = fab_mesh(TUFTS[(i + k) % len(TUFTS)])
+                if tuft:
+                    ang = math.radians(i * 61 + k * 120)
+                    place(tuft, loc + unreal.Vector(45 * math.cos(ang), 45 * math.sin(ang), 0), (i * 29 + k * 90) % 360)
+    log("plants placed", count)
 
 
 def cameras(frame):
@@ -697,6 +740,7 @@ def main():
     ground()
     interior_lights(frame)
     plants(frame)
+    props(frame)
     cameras(frame)
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     unreal.EditorLoadingAndSavingUtils.save_map(world, MAP)

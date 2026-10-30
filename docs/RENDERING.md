@@ -375,6 +375,32 @@ bash scripts/house-3d-assets.sh
 - `unreal.Rotator(roll, pitch, yaw)`: порядок аргументов не тот, к которому
   привыкаешь.
 
+### Ассеты Fab в сцене (30.10.2026)
+
+В проекте: European Hornbeam, Norway Maple, Common Hazel (Megascans, Nanite + 6–7
+LOD), Mediterranean Plant Pack I/II, Modern Luxury Sofa 1, 50+ Interior Props,
+Twinmotion Materials. Опись мешей (размер, полигоны, LOD, Nanite):
+`Scripts/inventory.py` → `~/Desktop/home-3d/brick/inventory.json`.
+
+- **Megascans на M1 работают**: Nanite не поддерживается, Unreal рисует их
+  упрощённые версии (fallback 2–16 тыс. треугольников). Деревья большие
+  (Hornbeam 15–17 м, Maple до 25 м) — на участок 25×20 брать Hazel Field (густая
+  крона) с масштабом 0.7–0.75; «Forest»-варианты с редкой кроной — только у соседей.
+- **Расстановка**: Blender (`build_brick.py --ue`) пишет `props.json` — имя меша,
+  точка в плане, направление «лицом к», масштаб (функция `fab(...)`); Unreal
+  (`props()` в `build_scene.py`) находит меш по имени в реестре ассетов и ставит
+  его по габаритам (центр по x/y, низ по z), поэтому точка привязки модели не
+  важна. Собственный «перёд» моделей — `FRONT_YAW` (у Sofa 1 это +Y).
+- **Растения участка** (`plants.json`): изгородь вдоль забора — Hazel
+  Forest_03/04 под высоту 1.9–3 м; клумбы — кусты, травы, агавы и цветы
+  Mediterranean в натуральном размере и по 3 пучка травы вокруг (`PLANT_MODELS`, `TUFTS`).
+- **Гостиная**: в Unreal коробочный диван заменён набором Sofa 1 (диван, столики,
+  торшер, фикус, декор); в Blender-превью остаются коробки.
+- **Launcher может зависнуть на копировании в проект** («0.0 B / 0.0 B», в логе
+  `Timed out waiting for startup ack from EpicWebHelper`). Скачанное уже лежит в
+  `/Users/Shared/UnrealEngine/Launcher/VaultCache/<пак>/data/Content/` — скопировать
+  папку пака в `Content` проекта (`cp -R`), а `MSPresets` — с `cp -Rn`, не затирая.
+
 ## 8. Какие ещё плагины стоят того (исследование 30.10.2026)
 
 Проверено по файлам `.uplugin` в `/Users/Shared/Epic Games/UE_5.8/Engine/Plugins`
@@ -480,7 +506,10 @@ kloppenheim_06_puresky только для превью в Blender.
 
 Модели Poly Haven (CC0, glTF 1k):
 - мебель и декор: [book_encyclopedia_set_01](https://polyhaven.com/a/book_encyclopedia_set_01), [ceramic_vase_01](https://polyhaven.com/a/ceramic_vase_01), [ceramic_vase_02](https://polyhaven.com/a/ceramic_vase_02), [ceramic_vase_03](https://polyhaven.com/a/ceramic_vase_03), [modern_arm_chair_01](https://polyhaven.com/a/modern_arm_chair_01), [modern_ceiling_lamp_01](https://polyhaven.com/a/modern_ceiling_lamp_01), [modern_coffee_table_01](https://polyhaven.com/a/modern_coffee_table_01), [modern_wooden_cabinet](https://polyhaven.com/a/modern_wooden_cabinet), [outdoor_table_chair_set_01](https://polyhaven.com/a/outdoor_table_chair_set_01), [potted_plant_01](https://polyhaven.com/a/potted_plant_01), [potted_plant_02](https://polyhaven.com/a/potted_plant_02), [potted_plant_04](https://polyhaven.com/a/potted_plant_04), [side_table_01](https://polyhaven.com/a/side_table_01), [standing_picture_frame_01](https://polyhaven.com/a/standing_picture_frame_01), [wooden_bowl_01](https://polyhaven.com/a/wooden_bowl_01)
-- растения на участке: [jacaranda_tree](https://polyhaven.com/a/jacaranda_tree), [wild_rooibos_bush](https://polyhaven.com/a/wild_rooibos_bush)
+
+Растения на участке (Fab: Megascans Common Hazel, Mediterranean Plant Pack I/II): `SM_CommonHazel_Forest_03`, `SM_CommonHazel_Forest_04`, `agave_03`, `agave_04`, `bush_01_03`, `bush_01_04`, `bush_02_03`, `flower_04`, `flower_05`, `grass_01_01`, `grass_01_03`, `grass_02_01`, `grass_02_02`, `grass_02_03`
+
+Деревья и мебель Fab в props.json: см. `fab(...)` в build_brick.py.
 <!-- materials:end -->
 
 ## Источники
