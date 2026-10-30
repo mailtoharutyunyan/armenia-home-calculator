@@ -51,6 +51,12 @@ npm run build    # продакшн-сборка в dist/
 отдельным чанком). Модель, текстуры Poly Haven (CC0) и небо лежат в `public/models/`;
 пересобрать их из `~/Desktop/home-3d`: `scripts/house-3d-assets.sh`.
 
+## Фото-рендеры (Unreal Engine 5)
+
+Как получить кадры для галереи: Blender → Unreal Engine 5.8 → Movie Render Queue. Программы,
+плагины, материалы, ассеты Fab, настройки света и камеры — в **[docs/RENDERING.md](docs/RENDERING.md)**.
+Скрипты лежат в `tools/render/` (`blender/` и `unreal/`).
+
 ## Деплой
 
 Развёртывание на **GitHub Pages** автоматическое через GitHub Actions
