@@ -13,7 +13,7 @@
 //   Lb = 1.5 × P = 81 м (несущие оси)
 
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_HOUSE, BUILD_PRESETS } from '../model/house'
+import { ZX85_HOUSE, BUILD_PRESETS } from '../model/house'
 import type { HouseParams } from '../model/house'
 import { computeQuantities, planTake } from './quantities'
 import type { SectionId } from './quantities'
@@ -26,7 +26,7 @@ import { COEFF as C } from '../data/coefficients'
 
 // These checks were measured by hand on the generated plan with an 80 m² hall;
 // the default house now takes the template plan (see the template suite).
-const GENERATED_HOUSE: HouseParams = { ...DEFAULT_HOUSE, planLayout: 'auto' as const, hallArea: 80 }
+const GENERATED_HOUSE: HouseParams = { ...ZX85_HOUSE, planLayout: 'auto' as const, hallArea: 80 }
 
 const house = (patch: Partial<HouseParams> = {}): HouseParams => ({ ...GENERATED_HOUSE, ...patch })
 const qty = (p: HouseParams, key: string, section?: SectionId) =>
@@ -46,7 +46,7 @@ describe('геометрия по умолчанию', () => {
   })
 
   it('входная дверь по умолчанию одна', () => {
-    expect(DEFAULT_HOUSE.exteriorDoors).toBe(1)
+    expect(ZX85_HOUSE.exteriorDoors).toBe(1)
     // проёмы = окна 40 + дверь 1 × 2 м²
     expect(computeQuantities(house()).geometry.openingsArea).toBeCloseTo(42, 6)
   })
@@ -549,9 +549,9 @@ describe('согласованность значений по умолчани�
   it('регион по умолчанию и канализация не противоречат друг другу', () => {
     // Ереван — есть центральная канализация, значит септик по умолчанию не нужен.
     // Иначе смета по умолчанию платит за локальное очистное там, где есть сеть.
-    expect(DEFAULT_HOUSE.region).toBe('yerevan')
-    expect(DEFAULT_HOUSE.connectSewer).toBe(true)
-    expect(DEFAULT_HOUSE.septic).toBe(false)
+    expect(ZX85_HOUSE.region).toBe('yerevan')
+    expect(ZX85_HOUSE.connectSewer).toBe(true)
+    expect(ZX85_HOUSE.septic).toBe(false)
     expect(qty(house(), 'septic')).toBe(0)
     expect(qty(house(), 'conn_sewer')).toBe(1)
   })
@@ -569,28 +569,28 @@ describe('согласованность значений по умолчани�
   })
 
   it('self-build is the default, with the self-build percentages', () => {
-    expect(DEFAULT_HOUSE.buildMode).toBe('self')
+    expect(ZX85_HOUSE.buildMode).toBe('self')
     const { vatIncluded: _vat, ...markups } = BUILD_PRESETS.self
-    expect(DEFAULT_HOUSE).toMatchObject(markups)
+    expect(ZX85_HOUSE).toMatchObject(markups)
     const e = computeEstimate(computeQuantities(house()), SEED_PRICES, house(), 'typical').turnkey
     expect(e.overhead).toBe(0)
     expect(e.profit).toBe(0)
   })
 
   it('VAT is opt-in: off by default and in both build presets', () => {
-    expect(DEFAULT_HOUSE.vatIncluded).toBe(false)
+    expect(ZX85_HOUSE.vatIncluded).toBe(false)
     expect(BUILD_PRESETS.self.vatIncluded).toBe(false)
     expect(BUILD_PRESETS.contractor.vatIncluded).toBe(false)
     expect(computeEstimate(computeQuantities(house()), SEED_PRICES, house(), 'typical').turnkey.vat).toBe(0)
   })
 
   it('класс бетона по умолчанию проходит сейсмический минимум', () => {
-    expect(DEFAULT_HOUSE.concreteGrade).toBe('concrete_b25')
+    expect(ZX85_HOUSE.concreteGrade).toBe('concrete_b25')
   })
 
   it('стена по умолчанию проходит по теплозащите без утепления', () => {
     // газоблок 300 мм: R = 0.3 / 0.14 = 2.14 ≥ 2.0 м²·К/Вт
-    const R = DEFAULT_HOUSE.wallThickness / C.thermalLambda.aerated
+    const R = ZX85_HOUSE.wallThickness / C.thermalLambda.aerated
     expect(R).toBeGreaterThanOrEqual(C.norms.wallThermalRReq)
   })
 })
@@ -627,8 +627,8 @@ describe('сметная развёртка — от затрат к цене д
 
   it('непредвиденные считаются от СМР и не равны нулю по умолчанию', () => {
     const e = computeEstimate(computeQuantities(house()), SEED_PRICES, house(), 'typical')
-    expect(DEFAULT_HOUSE.contingencyPct).toBeGreaterThan(0)
-    expect(e.turnkey.contingency).toBeCloseTo(e.turnkey.works * (DEFAULT_HOUSE.contingencyPct / 100), 4)
+    expect(ZX85_HOUSE.contingencyPct).toBeGreaterThan(0)
+    expect(e.turnkey.contingency).toBeCloseTo(e.turnkey.works * (ZX85_HOUSE.contingencyPct / 100), 4)
   })
 
   it('нулевые проценты дают ровно прямые затраты плюс документы', () => {

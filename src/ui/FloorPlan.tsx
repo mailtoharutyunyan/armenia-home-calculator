@@ -1,6 +1,6 @@
 import type { HouseParams } from '../model/house'
 import type { Door, Room, Spec } from '../engine/floorplan'
-import { buildFloorPlan, roomClear } from '../engine/floorplan'
+import { buildFloorPlan, roomClear, sameSpace } from '../engine/floorplan'
 import { useProject } from '../store/useProject'
 
 type Pal = { sheet: string; wall: string; room: string; furn: string; txt: string; grid: string; hatch: string; voidFill: string; furnFill: string }
@@ -12,6 +12,10 @@ let PAL: Pal = LIGHT
 // это принятая иерархия: толстое и залитое = несущее, тонкое = перегородка.
 const PART = 0.12
 
+// Margin around the drawing, m. Exported so an overlay (the 3D tab's view
+// points) can share the plan's viewBox.
+export const PLAN_PAD = 1.6
+
 
 export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: HouseParams; floorIndex: number; custom?: Spec[]; labels?: import('../engine/floorplan').PlanLabels }) {
   PAL = useProject((st) => st.theme) === 'dark' ? DARK : LIGHT
@@ -19,7 +23,7 @@ export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: Hou
   const { L, W, wall, rooms, windows, doors } = plan
   const ceil = plan.ceilingH ?? 0
   const hallCeil = plan.hallCeilingH ?? ceil
-  const pad = 1.6
+  const pad = PLAN_PAD
   const wc = wall * 1.15 // opening cover width
   // room sizes are labelled clear of the partitions, as on an architect's plan;
   // the double-height void is the slab opening and keeps its full size
@@ -42,6 +46,9 @@ export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: Hou
         <pattern id="grid" width="0.5" height="0.5" patternUnits="userSpaceOnUse">
           <path d="M0.5 0 L0 0 0 0.5" fill="none" stroke={PAL.grid} strokeWidth="0.012" />
         </pattern>
+        <pattern id="paving" width="0.6" height="0.6" patternUnits="userSpaceOnUse">
+          <path d="M0.6 0 L0 0 0 0.6" fill="none" stroke={PAL.hatch} strokeWidth="0.02" />
+        </pattern>
         <pattern id="voidhatch" width="0.7" height="0.7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <line x1="0" y1="0" x2="0" y2="0.7" stroke={PAL.hatch} strokeWidth="0.05" />
         </pattern>
@@ -51,7 +58,69 @@ export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: Hou
           Комнаты рисуются врезанными внутрь на половину толщины перегородки,
           поэтому промежутки между ними читаются как настоящие стены нужной
           толщины, а не как пунктирная линия. */}
-      <rect x={0} y={0} width={L} height={W} fill={PAL.wall} />
+      {plan.outline ? (
+        plan.outline.map((o, i) => <rect key={i} x={o.x} y={o.y} width={o.w} height={o.h} fill={PAL.wall} />)
+      ) : (
+        <rect x={0} y={0} width={L} height={W} fill={PAL.wall} />
+      )}
+
+      {/* Открытая терраса у дома: мощение без стен, подпись по центру. */}
+      {plan.terraces?.rects.map((r, i) => (
+        <g key={`t${i}`}>
+          <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={PAL.voidFill} />
+          <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="url(#paving)" />
+          <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={PAL.wall} strokeWidth={0.05} strokeDasharray="0.3 0.2" />
+          {i === 0 && (
+            <text
+              x={r.x + r.w / 2}
+              y={r.y + r.h * 0.35}
+              textAnchor="middle"
+              fontSize={Math.min(0.42, (r.w - 0.5) / (plan.terraces!.label.length * 0.68))}
+              fill={PAL.txt}
+              stroke={PAL.voidFill}
+              strokeWidth={0.1}
+              paintOrder="stroke"
+              fontFamily="Inter, sans-serif"
+              fontWeight={600}
+            >
+              {plan.terraces!.label}
+            </text>
+          )}
+        </g>
+      ))}
+
+      {/* Кровля нижнего этажа рядом с неполным верхним: штриховка, без
+          комнат; подпись — на самом большом скате. */}
+      {plan.roofs && (
+        <g>
+          {plan.roofs.rects.map((r, i) => (
+            <g key={i}>
+              <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={PAL.voidFill} />
+              <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="url(#voidhatch)" />
+              <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={PAL.hatch} strokeWidth={0.04} />
+            </g>
+          ))}
+          {(() => {
+            const big = plan.roofs.rects.reduce((a, b) => (b.w * b.h > a.w * a.h ? b : a))
+            return (
+              <text
+                x={big.x + big.w / 2}
+                y={big.y + big.h / 2}
+                textAnchor="middle"
+                fontSize={Math.min(0.5, big.w / 7, big.h / 2)}
+                fill={PAL.txt}
+                stroke={PAL.voidFill}
+                strokeWidth={0.12}
+                paintOrder="stroke"
+                fontFamily="Inter, sans-serif"
+                fontWeight={600}
+              >
+                {plan.roofs.label}
+              </text>
+            )
+          })()}
+        </g>
+      )}
 
       {/* room fills + partitions + furniture + labels */}
       {rooms.map((r, i) =>
@@ -81,9 +150,13 @@ export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: Hou
             // (ширина > 2.8 и глубина > 2.6 м) отсекал прихожую 4.7×2.3 и
             // гостевой санузел 4.7×2.0 — именно те, где площадь и хочется
             // видеть. Для тесных комнат формат сокращаем, чтобы строка влезла.
-            const showDims = r.w > 1.5 && r.h > 1.0
+            // a part of a room drawn in several pieces has no label or size of its own
+            const showDims = !!r.label && r.w > 1.5 && r.h > 1.0
             const compact = r.h < 2.4 || r.w < 2.4
-            const dimFs = Math.max(0.13, Math.min(compact ? 0.24 : 0.32, fs * 0.72, r.h / 6))
+            // the dimensions line fits the room width too: in a 2.5–3.5 m room
+            // the full line ran over the walls into the next room
+            const dimText = `${clearLabel(r)}${ceil > 0 && !compact ? ` · h ${r.doubleHeight ? hallCeil : ceil} м` : ''}`
+            const dimFs = Math.max(0.1, Math.min(compact ? 0.24 : 0.32, fs * 0.72, r.h / 6, (r.w - 0.3) / (dimText.length * 0.56)))
             const cx = r.x + r.w / 2
             const cy = r.y + r.h / 2
             return (
@@ -137,11 +210,10 @@ export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: Hou
                     strokeLinejoin="round"
                     fontFamily="Inter, sans-serif"
                   >
-                    {clearLabel(r)}
                     {/* Высота потолка: у двусветного зала она вдвое больше,
                         и на плане это иначе никак не видно. В тесных комнатах
                         высоту не пишем — строка не помещается. */}
-                    {ceil > 0 && !compact && ` · h ${r.doubleHeight ? hallCeil : ceil} м`}
+                    {dimText}
                   </text>
                 )}
               </g>
@@ -151,13 +223,15 @@ export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: Hou
       )}
 
       {/* outer wall */}
-      <rect x={0} y={0} width={L} height={W} fill="none" stroke={PAL.wall} strokeWidth={wall * 2} />
+      {!plan.outline && <rect x={0} y={0} width={L} height={W} fill="none" stroke={PAL.wall} strokeWidth={wall * 2} />}
 
       {/* windows: cut opening + double frame line */}
       {windows.map((wn, i) => {
         const horiz = wn.side === 'top' || wn.side === 'bottom'
-        const cx = horiz ? wn.x : wn.side === 'left' ? 0 : L
-        const cy = horiz ? (wn.side === 'top' ? 0 : W) : wn.y
+        // the wall line comes with the window: 0, L or W, or the step wall of
+        // a partial top floor
+        const cx = wn.x
+        const cy = wn.y
         if (horiz) {
           return (
             <g key={i}>
@@ -177,9 +251,31 @@ export function FloorPlanSvg({ house, floorIndex, custom, labels }: { house: Hou
       })}
 
       {/* doors: cut opening + leaf + swing arc */}
-      {doors.map((d, i) => (
-        <DoorSymbol key={i} door={d} wc={wc} />
-      ))}
+      {doors
+        .filter((d) => !(d.kind === 'opening' && onSameSpaceEdge(d, rooms)))
+        .map((d, i) => (
+          <DoorSymbol key={i} door={d} wc={wc} />
+        ))}
+
+      {/* Части одного помещения (холл, лестница из нескольких прямоугольников)
+          без стены между ними: закрываем зазор цветом пола. */}
+      {rooms.flatMap((a, i) =>
+        rooms.slice(i + 1).map((b, j) => {
+          if (!sameSpace(a, b)) return null
+          const e = 0.02
+          const oy = [Math.max(a.y, b.y), Math.min(a.y + a.h, b.y + b.h)]
+          const ox = [Math.max(a.x, b.x), Math.min(a.x + a.w, b.x + b.w)]
+          const v = oy[1] - oy[0] > e && (Math.abs(a.x + a.w - b.x) < e || Math.abs(b.x + b.w - a.x) < e)
+          const hz = ox[1] - ox[0] > e && (Math.abs(a.y + a.h - b.y) < e || Math.abs(b.y + b.h - a.y) < e)
+          if (!v && !hz) return null
+          const line = v ? (Math.abs(a.x + a.w - b.x) < e ? b.x : a.x) : Math.abs(a.y + a.h - b.y) < e ? b.y : a.y
+          return v ? (
+            <rect key={`j${i}-${j}`} x={line - PART / 2 - 0.01} y={oy[0] + PART / 2} width={PART + 0.02} height={oy[1] - oy[0] - PART} fill={PAL.room} />
+          ) : (
+            <rect key={`j${i}-${j}`} x={ox[0] + PART / 2} y={line - PART / 2 - 0.01} width={ox[1] - ox[0] - PART} height={PART + 0.02} fill={PAL.room} />
+          )
+        }),
+      )}
 
       {/* dimensions */}
       <DimLine L={L} W={W} pad={pad} />
@@ -295,10 +391,22 @@ function DimLine({ L, W, pad }: { L: number; W: number; pad: number }) {
   )
 }
 
+// a doorway between two parts of one room: nothing to draw there
+function onSameSpaceEdge(d: Door, rooms: Room[]): boolean {
+  const e = 0.02
+  const touching = rooms.filter((r) =>
+    d.orient === 'v'
+      ? (Math.abs(r.x - d.pos) < e || Math.abs(r.x + r.w - d.pos) < e) && d.start < r.y + r.h && d.start + d.w > r.y
+      : (Math.abs(r.y - d.pos) < e || Math.abs(r.y + r.h - d.pos) < e) && d.start < r.x + r.w && d.start + d.w > r.x,
+  )
+  return touching.length === 2 && sameSpace(touching[0], touching[1])
+}
+
 function Furniture({ room }: { room: Room }) {
   const { x, y, w, h, type } = room
-  if (w < 1.6 || h < 1.6) return null // too small to furnish cleanly
-  const m = 0.4
+  // too small to furnish cleanly; a stair drawn in parts keeps its treads
+  if (type === 'stair' ? w < 0.8 || h < 0.8 : w < 1.6 || h < 1.6) return null
+  const m = type === 'stair' && (w < 1.6 || h < 1.6) ? 0.1 : 0.4
   const s = { stroke: PAL.furn, strokeWidth: 0.032, fill: 'none' } as const
   const fill = { stroke: PAL.furn, strokeWidth: 0.032, fill: PAL.furnFill } as const
 
@@ -376,14 +484,20 @@ function Furniture({ room }: { room: Room }) {
       )
     }
     case 'stair': {
-      const n = 7
-      const gap = (h - 2 * m) / n
+      // treads across the long side, ~0.28 m apart
+      const along = Math.max(w, h) - 2 * m
+      const n = Math.max(2, Math.round(along / 0.28))
+      const gap = along / n
       return (
         <g>
           <rect x={x + m} y={y + m} width={w - 2 * m} height={h - 2 * m} {...s} />
-          {Array.from({ length: n - 1 }, (_, k) => (
-            <line key={k} x1={x + m} y1={y + m + (k + 1) * gap} x2={x + w - m} y2={y + m + (k + 1) * gap} {...s} />
-          ))}
+          {Array.from({ length: n - 1 }, (_, k) =>
+            h >= w ? (
+              <line key={k} x1={x + m} y1={y + m + (k + 1) * gap} x2={x + w - m} y2={y + m + (k + 1) * gap} {...s} />
+            ) : (
+              <line key={k} x1={x + m + (k + 1) * gap} y1={y + m} x2={x + m + (k + 1) * gap} y2={y + h - m} {...s} />
+            ),
+          )}
         </g>
       )
     }

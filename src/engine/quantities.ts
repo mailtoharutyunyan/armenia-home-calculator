@@ -1,8 +1,10 @@
 import type { HouseParams, InfillMaterial } from '../model/house'
+import { topShare } from '../model/house'
 import { COEFF as C } from '../data/coefficients'
 import { REGIONS } from '../data/regions'
 import { buildFloorPlan, planTakeoff, usesTemplate, DOOR_W } from './floorplan'
 import { simplified41Reasons } from './norms'
+import { footprintGeom, innerArea, innerPerimeter as outlineInnerPerimeter, scaleFootprint } from './footprint'
 
 export type Stage = 'act' | 'turnkey'
 
@@ -40,6 +42,7 @@ export interface Geometry {
   finishedFloorArea: number // A_общ − проём зала: реальный пол, база для работ «на м² пола»
   netFloorArea: number // нормативная общая площадь: внутр. поверхности − проём зала (ՀՀՇՆ 31-01-2014, Прил.2 п.4)
   internalPerFloor: number // площадь одного этажа по внутренним поверхностям наружных стен
+  facadeWallArea: number // наружная поверхность стен всех этажей, м²
   hallVoid: number // площадь двусветного проёма
   wallGross: number
   openingsArea: number
@@ -96,10 +99,33 @@ export function computeQuantities(p: HouseParams): Quantities {
   const W0 = Math.max(0, p.width)
   const floors0 = Math.max(0, p.floors)
   const fh0 = Math.max(0, p.floorHeight)
-  const A = L0 * W0
-  const P = 2 * (L0 + W0)
+  // A project drawn off real plans brings its outline (footprint.ts): the
+  // ground floor and the top floor as unions of rectangles. Any other house
+  // is the L × W rectangle.
+  const turned = p.frontSide === 'width'
+  const fp = p.footprint ? scaleFootprint(p.footprint, turned ? W0 : L0, turned ? L0 : W0) : null
+  const fpg = fp ? footprintGeom(fp.ground, floors0 >= 2 ? fp.top : fp.ground) : null
+  const A = fpg ? fpg.ground.area : L0 * W0
+  const P = fpg ? fpg.ground.perimeter : 2 * (L0 + W0)
   const H = floors0 * fh0
-  const totalFloorArea = A * floors0
+  // A top storey over part of the house ("полуторный" дом) counts by its
+  // share: floor-area items by the share of the footprint it covers, wall
+  // items by its outer contour. Without an outline it keeps a share of the
+  // length and the full width.
+  const share = topShare(p)
+  const partial = !fpg && floors0 >= 2 && share < 1
+  const topA = fpg ? fpg.top.area : partial ? A * share : A
+  const topP = fpg ? fpg.top.perimeter : partial ? 2 * (L0 * share + W0) : P
+  const storeysA = floors0 >= 2 && A > 0 ? floors0 - 1 + topA / A : floors0
+  const storeysP = floors0 >= 2 && P > 0 ? floors0 - 1 + topP / P : floors0
+  // wall height over the whole contour that gives the same wall area
+  const Hw = fh0 * storeysP
+  // Roof edges: the ground floor's outline where no wall of the top floor
+  // stands on it, and the top floor's own. For a rectangle with a partial top
+  // that is the outline plus the step.
+  const sharedEdge = fpg ? fpg.shared : partial ? W0 + 2 * L0 * share : P
+  const roofEdge = floors0 >= 2 ? P - sharedEdge + topP : P
+  const totalFloorArea = A * storeysA
   // доля внутренних несущих осей задаётся инженером; по умолчанию 50% периметра
   const internalBearing = p.eng.internalBearingPct != null && p.eng.internalBearingPct >= 0
     ? p.eng.internalBearingPct / 100
@@ -202,7 +228,11 @@ export function computeQuantities(p: HouseParams): Quantities {
   // нормативная общая площадь по внутренним поверхностям наружных стен (Прил.2 п.4)
   const netArea = Math.max(
     0,
-    Math.max(0, p.length - 2 * wallT) * Math.max(0, p.width - 2 * wallT) * p.floors - hallVoid,
+    (fpg
+      ? innerArea(fpg.ground, wallT) * (floors0 >= 2 ? floors0 - 1 : floors0) + (floors0 >= 2 ? innerArea(fpg.top, wallT) : 0)
+      : Math.max(0, p.length - 2 * wallT) * Math.max(0, p.width - 2 * wallT) * (partial ? floors0 - 1 : p.floors) +
+        (partial ? Math.max(0, p.length * share - 2 * wallT) * Math.max(0, p.width - 2 * wallT) : 0)) -
+      hallVoid,
   )
 
   // In a frame the infill fills the outer contour only; load-bearing masonry
@@ -218,7 +248,7 @@ export function computeQuantities(p: HouseParams): Quantities {
   // внутренних несущих стен: под стеной пола нет.
   const floorLayerArea = Math.max(
     0,
-    houseArea - Math.max(0, take.partitions - intBearingLen * floors0) * partitionT - intBearingLen * wallT * floors0,
+    houseArea - Math.max(0, take.partitions - intBearingLen * storeysA) * partitionT - intBearingLen * wallT * storeysA,
   )
 
   // structural concrete + rebar accumulators, per estimate section
@@ -373,24 +403,24 @@ export function computeQuantities(p: HouseParams): Quantities {
   // В каркасе вертикаль несут колонны: кладка заполняет только наружный контур,
   // внутренние деления — это перегородки (учтены отдельно, 0.1 м). В несущей
   // кладке и полном монолите внутренние несущие стены реальны → полные оси.
-  const wallGross = structLen * H
+  const wallGross = structLen * Hw
   const doorsArea = p.exteriorDoors * 2.0
   const openingsArea =
     e.openingsPct != null ? wallGross * (e.openingsPct / 100) : p.windowAreaTotal + doorsArea
   const wallNet = Math.max(0, wallGross - openingsArea)
 
   // ring beam (masonry) — per floor
-  const ringBeamVol = isMasonry ? Lb * ringBeamW * ringBeamH * p.floors : 0
+  const ringBeamVol = isMasonry ? Lb * ringBeamW * ringBeamH * storeysP : 0
   // seismic cores (tuff/brick only) — full height
   const coreCount = Math.ceil(Lb / coreStep)
   const coresActive = isMasonry && (wallMat === 'tuff' || wallMat === 'brick') && !p.seismicReinforcementDisabled
-  const coreVol = coresActive ? coreCount * coreSize * coreSize * H : 0
+  const coreVol = coresActive ? coreCount * coreSize * coreSize * Hw : 0
 
   if (isMasonry) {
     addStruct('walls', ringBeamVol, reb.ringBeam)
     if (coreVol > 0) addStruct('walls', coreVol, reb.seismicCore)
     // masonry volume minus embedded RC and the slab bearing on the walls (avoid double count)
-    let masonryVol = wallNet * wallT - ringBeamVol - coreVol - Lb * wallT * slabOverBeams * p.floors
+    let masonryVol = wallNet * wallT - ringBeamVol - coreVol - Lb * wallT * slabOverBeams * storeysP
     masonryVol = Math.max(0, masonryVol) * waste
     add(masonryKey(wallMat), 'walls', 'act', masonryVol)
     // mortar / glue
@@ -399,23 +429,25 @@ export function computeQuantities(p: HouseParams): Quantities {
   } else if (isMonolith) {
     // полный монолит: несущие ж/б стены (бетон + арматура), без кладки и заполнения
     // the slab over each storey is counted with the slab, not the wall below it
-    const wallVol = Math.max(0, (wallNet - Lb * slabOverBeams * p.floors) * wallT) * waste
+    const wallVol = Math.max(0, (wallNet - Lb * slabOverBeams * storeysP) * wallT) * waste
     addStruct('walls', wallVol, reb.monolithWall, Math.max(0, wallNet * wallT) * waste, true, false)
     // a wall is formed on both faces, between the slab bands
-    formDirect.walls = (formDirect.walls ?? 0) + 2 * Math.max(0, wallNet - Lb * slabOverBeams * p.floors)
+    formDirect.walls = (formDirect.walls ?? 0) + 2 * Math.max(0, wallNet - Lb * slabOverBeams * storeysP)
   } else {
     // frame: columns + beams + infill
     const nx = Math.floor(p.length / gridStep) + 1
     const ny = Math.floor(p.width / gridStep) + 1
-    const nCol = ov(e.columns) ?? nx * ny
-    const beamsLen = ov(e.beamsLen) ?? Lb * p.floors
+    // an outline that is not a rectangle stands on its share of the grid
+    const nCol = ov(e.columns) ?? (fpg && L0 * W0 > 0 ? Math.round((nx * ny * A) / (L0 * W0)) : nx * ny)
+    const beamsLen = ov(e.beamsLen) ?? Lb * storeysP
     const beamDepth = colSize > 0 ? beamSectionArea / colSize : 0
     // Poured concrete as ГЭСН 81-02-06 (2.2-2.3) counts it, so no node is paid
     // twice: columns up to the underside of each slab, beams between column
     // faces and, under a monolithic slab, only the part below it.
-    const colConcrete = nCol * colSize * colSize * Math.max(0, H - p.floors * slabOverBeams)
-    addStruct('frame', colConcrete, reb.column, nCol * colSize * colSize * H)
-    const beamClearLen = Math.max(0, beamsLen - nCol * colSize * p.floors)
+    // a partial top storey stands on its share of the columns
+    const colConcrete = nCol * colSize * colSize * Math.max(0, fh0 - slabOverBeams) * storeysA
+    addStruct('frame', colConcrete, reb.column, nCol * colSize * colSize * fh0 * storeysA)
+    const beamClearLen = Math.max(0, beamsLen - nCol * colSize * storeysA)
     const beamConcrete = beamClearLen * colSize * Math.max(0, beamDepth - slabOverBeams)
     addStruct('frame', beamConcrete, reb.ringBeam, beamsLen * beamSectionArea)
     // Columns and beams on the outer contour sit in the wall plane, so the
@@ -425,10 +457,10 @@ export function computeQuantities(p: HouseParams): Quantities {
     const gridCols = nx * ny
     const edgeCols = nx === 1 || ny === 1 ? gridCols : 2 * (nx + ny) - 4
     const colsInWall = gridCols > 0 ? nCol * (edgeCols / gridCols) : 0
-    const beamsInWall = Math.min(beamsLen, P * p.floors)
+    const beamsInWall = Math.min(beamsLen, P * storeysP)
     const frameInWall = Math.max(
       0,
-      colsInWall * colSize * H + beamsInWall * beamDepth - colsInWall * colSize * beamDepth * p.floors,
+      colsInWall * colSize * Hw + beamsInWall * beamDepth - colsInWall * colSize * beamDepth * storeysP,
     )
     const infillVol = Math.max(0, (wallNet - frameInWall) * wallT) * waste
     add(masonryKey(wallMat), 'walls', 'act', infillVol)
@@ -442,14 +474,16 @@ export function computeQuantities(p: HouseParams): Quantities {
   addStruct('walls', lintelLen * lintelW * lintelH, reb.lintel)
   // scaffolding on the facade from the masonry to the facade finish
   const parapetH = p.roof === 'flat' ? C.parapetHeight : 0
-  add('scaffolding', 'walls', 'act', P * (H + parapetH) * C.scaffoldMonths)
+  add('scaffolding', 'walls', 'act', (P * Hw + roofEdge * parapetH) * C.scaffoldMonths)
   add('crane', 'frame', 'act', A > 0 ? C.craneShifts : 0)
 
   // ---- Floors / ceilings ----
   // One slab over every storey. A basement adds the slab over it, i.e. the
   // ground floor itself (the basement floor is counted with the foundation).
   const slabLevels = p.floors + (p.basement ? 1 : 0)
-  const slabArea = Math.max(0, A * slabLevels - hallVoid)
+  // the slab over a partial top storey covers its share; the one under it
+  // is the roof of the rest of the floor below
+  const slabArea = Math.max(0, A * (slabLevels - floors0 + storeysA) - hallVoid)
   if (p.floorSlab === 'monolith') {
     addStruct('floors', slabArea * floorSlabT, reb.floor, slabArea * floorSlabT, false)
   } else {
@@ -481,11 +515,11 @@ export function computeQuantities(p: HouseParams): Quantities {
     add('insulation_xps', 'roof', 'act', A * (insulT / C.insulationBaseThickness))
     // Parapet along the roof edge: the membrane turns up onto it and it guards
     // the edge. Laid of the wall block, capped with a steel coping.
-    const parapetVol = P * C.parapetHeight * wallT * waste
+    const parapetVol = roofEdge * C.parapetHeight * wallT * waste
     add(masonryKey(wallMat), 'roof', 'act', parapetVol)
     if (wallMat === 'aerated') add('glue_aerated', 'roof', 'act', parapetVol * glueShare)
     else add('mortar', 'roof', 'act', parapetVol * mortarShare)
-    add('parapet_coping', 'roof', 'act', P)
+    add('parapet_coping', 'roof', 'act', roofEdge)
   } else {
     // real slope: footprint / cos(angle) + eaves overhang, ×shape factor
     const rad = (Math.min(Math.max(p.roofPitchDeg, 5), 75) * Math.PI) / 180
@@ -523,7 +557,7 @@ export function computeQuantities(p: HouseParams): Quantities {
   const clearH = Math.max(0, p.floorHeight - floorSlabT)
   // load-bearing masonry and monolith build some room walls as bearing walls
   // (counted with the walls); the plan draws them all as partitions
-  const partitionLen = Math.max(0, take.partitions - intBearingLen * floors0)
+  const partitionLen = Math.max(0, take.partitions - intBearingLen * storeysA)
   const partitionArea = Math.max(0, partitionLen * clearH - take.leafDoors * DOOR_W * C.doorHeight)
   add('aerated_partition', 'partitions', 'turnkey', partitionArea * partitionT)
   // aerated blocks are laid on thin-joint glue, as in the walls
@@ -535,8 +569,10 @@ export function computeQuantities(p: HouseParams): Quantities {
   // Штукатурка: внутренняя грань наружных стен (одна сторона) + внутренние
   // несущие стены (две стороны) + перегородки (две стороны) + потолки.
   // Стены — по внутреннему периметру и в чистоте, без толщины перекрытий.
-  const innerPerimeter = 2 * (Math.max(0, L0 - 2 * wallT) + Math.max(0, W0 - 2 * wallT))
-  const clearWallH = Math.max(0, H - floors0 * floorSlabT)
+  const innerPerimeter = fpg
+    ? outlineInnerPerimeter(fpg.ground, wallT)
+    : 2 * (Math.max(0, L0 - 2 * wallT) + Math.max(0, W0 - 2 * wallT))
+  const clearWallH = Math.max(0, Hw - storeysP * floorSlabT)
   const plasterWalls = Math.max(0, innerPerimeter * clearWallH - openingsArea) + intBearingLen * clearWallH * 2
   const plasterArea = plasterWalls + partitionArea * 2 + floorLayerArea
   add('plaster', 'finishing', 'turnkey', plasterArea)
@@ -554,8 +590,8 @@ export function computeQuantities(p: HouseParams): Quantities {
   add('stair_finish', 'finishing', 'turnkey', flights * C.stairFinishPerFlight)
 
   // Facade (outer walls and the parapet) + facade insulation
-  const parapetFace = p.roof === 'flat' ? P * C.parapetHeight : 0
-  const facadeArea = Math.max(0, P * H + parapetFace + gableFacade - p.windowAreaTotal)
+  const parapetFace = p.roof === 'flat' ? roofEdge * C.parapetHeight : 0
+  const facadeArea = Math.max(0, P * Hw + parapetFace + gableFacade - p.windowAreaTotal)
   // the share clad in stone replaces the render there
   const stoneArea = facadeArea * Math.min(100, Math.max(0, p.stoneFacadePct ?? 0)) / 100
   add('facade', 'facade', 'turnkey', facadeArea - stoneArea)
@@ -563,7 +599,7 @@ export function computeQuantities(p: HouseParams): Quantities {
   // stone is fixed on the reinforced base coat over the insulation, with its
   // own adhesive — the render's finish layers are what it replaces
   add('stone_base', 'facade', 'turnkey', stoneArea)
-  add('insulation', 'facade', 'turnkey', Math.max(0, P * H + gableFacade - p.windowAreaTotal) * (insulT / C.insulationBaseThickness))
+  add('insulation', 'facade', 'turnkey', Math.max(0, P * Hw + gableFacade - p.windowAreaTotal) * (insulT / C.insulationBaseThickness))
 
   // Engineering networks, counted the way installers charge for them: per
   // point drawn on the plans (planTakeoff), the boiler room and the panel as
@@ -709,7 +745,9 @@ export function computeQuantities(p: HouseParams): Quantities {
     finishedFloorArea: finishedArea,
     // нормативная общая площадь — по внутренним поверхностям наружных стен (Прил.2 п.4)
     netFloorArea: netArea,
-    internalPerFloor: Math.max(0, p.length - 2 * wallT) * Math.max(0, p.width - 2 * wallT),
+    internalPerFloor: fpg ? innerArea(fpg.ground, wallT) : Math.max(0, p.length - 2 * wallT) * Math.max(0, p.width - 2 * wallT),
+    // outer wall face, every storey (the window norm takes 40% of it)
+    facadeWallArea: P * Hw,
     hallVoid,
     wallGross,
     openingsArea,

@@ -162,7 +162,7 @@ export function Results() {
             <AreaRow label={t(lang, 'ab_builtup')} v={geo.footprint} />
             <AreaRow label={t(lang, 'ab_floor1')} v={geo.internalPerFloor} />
             {/* upper floors in full: the hall void is subtracted by its own row below */}
-            {house.floors > 1 && <AreaRow label={t(lang, 'ab_upper')} v={geo.internalPerFloor * (house.floors - 1)} />}
+            {house.floors > 1 && <AreaRow label={t(lang, 'ab_upper')} v={geo.netFloorArea + geo.hallVoid - geo.internalPerFloor} />}
             {geo.hallVoid > 0 && <AreaRow label={t(lang, 'ab_hall')} v={geo.hallVoid} minus />}
             <div className="spec-row" style={{ fontWeight: 700, borderBottom: 'none' }}>
               <span>{t(lang, 'ab_total')}</span>

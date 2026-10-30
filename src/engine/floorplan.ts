@@ -1,4 +1,7 @@
 import type { HouseParams } from '../model/house'
+import { topShare } from '../model/house'
+import { scaleFootprint, subtractRects } from './footprint'
+import type { FRect } from './footprint'
 import { COEFF as C } from '../data/coefficients'
 
 export type RoomType =
@@ -48,8 +51,17 @@ export interface FloorPlan {
   wall: number
   partition: number // interior partition thickness, m
   rooms: Room[]
+  // x/y: the wall line the window sits in (0, L or W for the outer walls)
   windows: { x: number; y: number; len: number; side: 'top' | 'bottom' | 'left' | 'right' }[]
   doors: Door[]
+  // The floor's outer outline when the house is not one rectangle (outer
+  // faces of the walls); without it the outline is the L × W sheet.
+  outline?: FRect[]
+  // A top storey over part of the house: the roof of the floor below beside
+  // the built part.
+  roofs?: { rects: FRect[]; label: string }
+  // open terraces beside the house, as the drawings show them
+  terraces?: { rects: FRect[]; label: string }
 }
 
 export interface Spec {
@@ -206,6 +218,12 @@ export function roomClear(r: Room, plan: Pick<FloorPlan, 'L' | 'W' | 'wall' | 'p
 // partition, railings along the void, and doors with a leaf. Hall, corridor and
 // stair run into each other through open doorways, so no wall is counted between
 // them; a gallery or landing is railed along the void; any other room is walled.
+// Parts of one room: a hall or a stair drawn as several rectangles, its
+// extra parts carrying no label. No wall stands between them.
+export function sameSpace(a: Room, b: Room): boolean {
+  return a.type === b.type && (!a.label || !b.label)
+}
+
 export function planTakeoff(plan: FloorPlan): {
   partitions: number
   glass: number
@@ -243,6 +261,18 @@ export function planTakeoff(plan: FloorPlan): {
       const [from, to] = onV ? [Math.max(a.y, b.y), Math.min(a.y + a.h, b.y + b.h)] : [Math.max(a.x, b.x), Math.min(a.x + a.w, b.x + b.w)]
       return d.start >= from - e && d.start + d.w <= to + e
     })
+  // length of the doorways without a leaf on the wall between a and b
+  const openingOnWall = (a: Room, b: Room) =>
+    plan.doors
+      .filter((d) => d.kind === 'opening')
+      .filter((d) => {
+        const onV = d.orient === 'v' && (Math.abs(d.pos - (a.x + a.w)) < e && Math.abs(d.pos - b.x) < e || Math.abs(d.pos - a.x) < e && Math.abs(d.pos - (b.x + b.w)) < e)
+        const onH = d.orient === 'h' && (Math.abs(d.pos - (a.y + a.h)) < e && Math.abs(d.pos - b.y) < e || Math.abs(d.pos - a.y) < e && Math.abs(d.pos - (b.y + b.h)) < e)
+        if (!onV && !onH) return false
+        const [from, to] = onV ? [Math.max(a.y, b.y), Math.min(a.y + a.h, b.y + b.h)] : [Math.max(a.x, b.x), Math.min(a.x + a.w, b.x + b.w)]
+        return d.start >= from - e && d.start + d.w <= to + e
+      })
+      .reduce((sum, d) => sum + d.w, 0)
   let partitions = 0
   let glass = 0
   let railing = 0
@@ -252,7 +282,7 @@ export function planTakeoff(plan: FloorPlan): {
       const a = rooms[i]
       const b = rooms[j]
       const s = shared(a, b)
-      if (!s || (a.open && b.open)) continue
+      if (!s || (a.open && b.open) || sameSpace(a, b)) continue
       if (a.open || b.open) {
         const room = a.open ? b : a
         if (room.type === 'hall' || room.type === 'corridor') railing += s.len
@@ -261,8 +291,9 @@ export function planTakeoff(plan: FloorPlan): {
         glass += s.len
       } else if (!(circulation(a.type) && circulation(b.type)) || leafOnWall(a, b)) {
         // circulation spaces are open to each other, unless a door with a
-        // leaf (a vestibule) shows there is a wall between them
-        partitions += s.len
+        // leaf (a vestibule) shows there is a wall between them; a room open
+        // to its neighbour across a wide doorway has no wall there
+        partitions += Math.max(0, s.len - openingOnWall(a, b))
       }
     }
   }
@@ -341,11 +372,50 @@ function planFrame(p: HouseParams) {
 // its rooms — within 90–130% of its 12.4 × 13.4 m inside each way. Smaller or
 // larger houses, or a visitor who asks for it, get the generated plan.
 export function usesTemplate(p: HouseParams): boolean {
-  if (p.planLayout === 'auto' || p.floors !== 2 || !p.doubleHeightHall) return false
+  return templateKind(p) !== null
+}
+
+// Which real-project plan the house takes, if any. The brick house is drawn
+// for the layouts that name it, with a full or partial top floor; the Zx85
+// for the default layout, a full top floor and a double-height hall.
+export function templateKind(p: HouseParams): 'zx85' | 'brick' | null {
+  if (p.planLayout === 'auto' || p.floors !== 2) return null
   const { inner } = planFrame(p)
   const fits = (a: number, b: number) => a / b >= 0.9 && a / b <= 1.3
-  // the template is stretched, never turned: front to front, depth to depth
-  return fits(inner.w, TEMPLATE_W) && fits(inner.h, TEMPLATE_H)
+  // a template is stretched, never turned: front to front, depth to depth
+  if (p.planLayout === 'brick193' || p.planLayout === 'brickFull') {
+    // drawn on its own outline, which it needs, front to the bottom
+    const fp = p.footprint
+    if (!fp || p.doubleHeightHall || p.frontSide === 'width') return null
+    return fits(p.length, fp.L) && fits(p.width, fp.W) ? 'brick' : null
+  }
+  if (!p.doubleHeightHall || topShare(p) < 1) return null
+  return fits(inner.w, TEMPLATE_W) && fits(inner.h, TEMPLATE_H) ? 'zx85' : null
+}
+
+// The built part of a top storey that covers only part of the house. The
+// storey keeps the back of the house along its length (the left of the sheet,
+// or its top when the plan is turned) and its own outer wall at the step;
+// the rest of the floor below is a flat roof.
+function topBlock(p: HouseParams, floorIndex: number, L: number, W: number, wall: number) {
+  const s = topShare(p)
+  if (s >= 1 || floorIndex !== p.floors - 1) return null
+  if (p.frontSide !== 'width') {
+    const step = s * L // outer face of the step wall
+    return {
+      built: { x: wall, y: wall, w: Math.max(1, step - 2 * wall), h: W - 2 * wall },
+      roof: { x: step, y: wall, w: Math.max(0, L - wall - step), h: W - 2 * wall },
+      side: 'right' as const,
+      step,
+    }
+  }
+  const step = s * W
+  return {
+    built: { x: wall, y: wall, w: L - 2 * wall, h: Math.max(1, step - 2 * wall) },
+    roof: { x: wall, y: step, w: L - 2 * wall, h: Math.max(0, W - wall - step) },
+    side: 'bottom' as const,
+    step,
+  }
 }
 
 export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], labels: PlanLabels = {}): FloorPlan {
@@ -365,11 +435,20 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
   const partition =
     p.eng?.partitionThickness != null && p.eng.partitionThickness > 0 ? p.eng.partitionThickness / 100 : C.partitionThickness
   const inset = wall
-  const inner = { x: inset, y: inset, w: L - 2 * inset, h: W - 2 * inset }
+  const full = { x: inset, y: inset, w: L - 2 * inset, h: W - 2 * inset }
+  // a partial top storey lays its rooms out in its built part only
+  const top = topBlock(p, floorIndex, L, W, wall)
+  const inner = top ? top.built : full
 
-  // A two-storey house with a double-height hall takes the plan of a real
-  // project (see templatePlan) unless the visitor asks for the generated one.
-  const template = !(custom && custom.length > 0) && usesTemplate(p) && floorIndex <= 1 ? templatePlan(inner, floorIndex, labels) : null
+  // A house that fits a real project takes its plan (see templatePlan and
+  // brickPlan) unless the visitor asks for the generated one.
+  const kind = custom && custom.length > 0 ? null : templateKind(p)
+  const template: TemplatePlan | null =
+    kind === 'zx85' && floorIndex <= 1
+      ? templatePlan(full, floorIndex, labels)
+      : kind === 'brick' && floorIndex <= 1
+        ? brickPlan(p, floorIndex, labels, L, W)
+        : null
 
   const specs: Spec[] = custom && custom.length > 0 ? custom : autoProgram(p, floorIndex)
 
@@ -459,20 +538,26 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
   // Окна: количество пропорционально длине наружной стены комнаты. Раньше
   // комната любой длины получала ровно одно окно — 13-метровая стена гостиной
   // освещалась так же, как двухметровая стена санузла.
-  const windows: FloorPlan['windows'] = []
+  // a plan drawn off real drawings brings its own windows at their sizes
+  const windows: FloorPlan['windows'] = template?.windows ? [...template.windows] : []
   const ww = PLAN.windowWidth
   const place = (from: number, span: number, make: (c: number) => FloorPlan['windows'][number]) => {
     const n = Math.max(1, Math.round(span / PLAN.windowPerMeters))
     if (span < ww + 0.6) return // стена короче окна с простенками — окна нет
     for (let i = 0; i < n; i++) windows.push(make(from + (span * (i + 0.5)) / n))
   }
-  for (const r of openVoid ? [...rooms, openVoid] : rooms) {
+  for (const r of template?.windows ? [] : openVoid ? [...rooms, openVoid] : rooms) {
     // у служебных помещений и коридоров окна не навязываем
     if (r.type === 'stair' || r.type === 'wardrobe' || r.type === 'corridor') continue
     if (Math.abs(r.y - inset) < 1e-6) place(r.x, r.w, (c) => ({ x: c - ww / 2, y: 0, len: ww, side: 'top' }))
     if (Math.abs(r.y + r.h - (W - inset)) < 1e-6) place(r.x, r.w, (c) => ({ x: c - ww / 2, y: W, len: ww, side: 'bottom' }))
     if (Math.abs(r.x - inset) < 1e-6) place(r.y, r.h, (c) => ({ x: 0, y: c - ww / 2, len: ww, side: 'left' }))
     if (Math.abs(r.x + r.w - (L - inset)) < 1e-6) place(r.y, r.h, (c) => ({ x: L, y: c - ww / 2, len: ww, side: 'right' }))
+    // the step wall of a partial top storey is an outer wall too
+    if (top?.side === 'right' && Math.abs(r.x + r.w - (top.step - inset)) < 1e-6)
+      place(r.y, r.h, (c) => ({ x: top.step, y: c - ww / 2, len: ww, side: 'right' }))
+    if (top?.side === 'bottom' && Math.abs(r.y + r.h - (top.step - inset)) < 1e-6)
+      place(r.x, r.w, (c) => ({ x: c - ww / 2, y: top.step, len: ww, side: 'bottom' }))
   }
 
   // doors connect the real rooms only; the void has no door (it is open) and the
@@ -486,9 +571,10 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
       !doors.some(
         (d) =>
           d.kind === 'entrance' &&
+          // same wall line (a window carries its own), overlapping stretch
           (d.orient === 'h'
-            ? wn.side === (d.pos > 0 ? 'bottom' : 'top') && overlaps(wn.x, wn.len, d.start, d.w)
-            : wn.side === (d.pos > 0 ? 'right' : 'left') && overlaps(wn.y, wn.len, d.start, d.w)),
+            ? (wn.side === 'top' || wn.side === 'bottom') && Math.abs(wn.y - d.pos) < 0.05 && overlaps(wn.x, wn.len, d.start, d.w)
+            : (wn.side === 'left' || wn.side === 'right') && Math.abs(wn.x - d.pos) < 0.05 && overlaps(wn.y, wn.len, d.start, d.w)),
       ),
   )
 
@@ -509,6 +595,14 @@ export function buildFloorPlan(p: HouseParams, floorIndex = 0, custom?: Spec[], 
     glassPartitionLen,
     ceilingH: p.floorHeight,
     hallCeilingH: p.doubleHeightHall && p.floors >= 2 ? p.floorHeight * 2 : p.floorHeight,
+    outline: template?.outline,
+    terraces: template?.terraces,
+    roofs:
+      template?.roofs
+        ? template.roofs
+        : top && top.roof.w > 0 && top.roof.h > 0
+          ? { rects: [top.roof], label: BRICK_LABEL.roof[labels.lang ?? 'ru'] }
+          : undefined,
   }
 }
 
@@ -622,6 +716,19 @@ function buildDoors(rooms: Room[], inset: number, L: number, W: number, withEntr
 }
 
 type Rect = { x: number; y: number; w: number; h: number }
+
+// A plan of a real project. One drawn off real drawings also brings its
+// windows, its outline and the roofs beside a partial top floor.
+interface TemplatePlan {
+  rooms: Room[]
+  openVoid: Room | null
+  doors: (W: number) => Door[]
+  windows?: FloorPlan['windows']
+  outline?: FRect[]
+  roofs?: { rects: FRect[]; label: string }
+  // open terraces beside the house, as the drawings show them
+  terraces?: { rects: FRect[]; label: string }
+}
 
 // The plan of a real project: Z500 Zx85 (z500.pl, 14.46 m front, 238 m²) —
 // a two-storey cube with a double-height living-dining room, a gallery on the
@@ -745,6 +852,158 @@ function templatePlan(
     door('v', 8.8, 8.8, 13.4),
   ]
   return { rooms, openVoid, doors }
+}
+
+// The brick house from https://www.youtube.com/watch?v=6kJcesg7oxo, taken off
+// the drawings shown in it (plans at 0.000 and +3.400 with their room
+// schedules), measured against their axes: axes 1–4 at x 3.725 / 9.725 /
+// 12.725 / 17.225, А / Б / В at y 9.085 / 4.085 / 1.085; walls 250 mm.
+//   0.000: 1 hall 25.4 with the U-stair (open to the kitchen-living, with a
+//          wardrobe 650 deep), 2 kitchen-living 54, 3 bedroom 15.5, 4 boiler
+//          and laundry room 13.4 (L-shaped), 5 shower 7.1, 6 storeroom 4.7,
+//          7 terrace (open, under the storeroom, with its barbecue kitchen).
+//   +3.400: 1 hall 9.9, 2 bedroom 21.1, 3 bedroom 15.5, 4 office 12.9,
+//          5 shower 5.2.
+// Rooms drawn inside the walls come within 1 m² of the schedules. Doors and
+// windows (ДН, ДНО, ДГ, ОК-1…ОК-8) stand where the drawings put them. Parts
+// of one room drawn as several rectangles carry no label of their own.
+// brickFull adds two bedrooms over the kitchen-living and the boiler room.
+const BRICK_LABEL: Record<string, { ru: string; hy: string; en: string }> = {
+  livingKitchen: { ru: 'Кухня-гостиная', hy: 'Խոհանոց-հյուրասենյակ', en: 'Kitchen-living' },
+  bedroom: { ru: 'Спальня', hy: 'Ննջասենյակ', en: 'Bedroom' },
+  stair: { ru: 'Лестница', hy: 'Աստիճան', en: 'Stair' },
+  hall: { ru: 'Холл', hy: 'Սրահ', en: 'Hall' },
+  wardrobe: { ru: 'Шкаф', hy: 'Պահարան', en: 'Wardrobe' },
+  shower: { ru: 'Душевая', hy: 'Ցնցուղարան', en: 'Shower room' },
+  boiler: { ru: 'Техпомещение', hy: 'Տեխնիկական սենյակ', en: 'Boiler room' },
+  store: { ru: 'Склад', hy: 'Պահեստ', en: 'Storeroom' },
+  office: { ru: 'Кабинет', hy: 'Աշխատասենյակ', en: 'Home office' },
+  bedroom3: { ru: 'Спальня 3', hy: 'Ննջասենյակ 3', en: 'Bedroom 3' },
+  bedroom4: { ru: 'Спальня 4', hy: 'Ննջասենյակ 4', en: 'Bedroom 4' },
+  roof: { ru: 'Кровля', hy: 'Տանիք', en: 'Roof' },
+  terrace: { ru: 'Терраса · барбекю', hy: 'Պատշգամբ · խորոված', en: 'Terrace · barbecue' },
+}
+
+function brickPlan(
+  p: HouseParams,
+  floorIndex: number,
+  labels: PlanLabels,
+  L: number,
+  W: number,
+): TemplatePlan {
+  const fp = p.footprint!
+  const sx = L / fp.L
+  const sy = W / fp.W
+  const X = (x: number) => x * sx
+  const Y = (y: number) => y * sy
+  const lang = labels.lang ?? 'ru'
+  const T = (k: keyof typeof BRICK_LABEL) => BRICK_LABEL[k][lang]
+  // a room by its corners
+  const room = (x0: number, y0: number, x1: number, y1: number, type: RoomType, label: string): Room => ({
+    x: X(x0), y: Y(y0), w: (x1 - x0) * sx, h: (y1 - y0) * sy, type, label,
+  })
+  // a doorway across a whole shared stretch (open plan, the stair)
+  const open = (orient: Door['orient'], at: number, from: number, to: number): Door => {
+    const k = orient === 'v' ? sy : sx
+    return { orient, pos: orient === 'v' ? X(at) : Y(at), start: from * k + 0.1, w: (to - from) * k - 0.2, swing: 1, kind: 'opening' }
+  }
+  // a door leaf where the drawing puts it
+  const leaf = (orient: Door['orient'], at: number, start: number, width: number, kind: Door['kind'] = 'interior', swing: 1 | -1 = 1): Door => ({
+    orient, pos: orient === 'v' ? X(at) : Y(at), start: orient === 'v' ? Y(start) : X(start),
+    w: width * (orient === 'v' ? sy : sx), swing, kind,
+  })
+  const win = (side: FloorPlan['windows'][number]['side'], at: number, start: number, len: number) =>
+    side === 'top' || side === 'bottom'
+      ? { side, x: X(start), y: Y(at), len: len * sx }
+      : { side, x: X(at), y: Y(start), len: len * sy }
+  const scaled = scaleFootprint(fp, L, W)
+  const full = p.planLayout === 'brickFull'
+
+  if (floorIndex === 0) {
+    const rooms: Room[] = [
+      room(0.25, 0.25, 3.6, 1.525, 'wardrobe', T('store')), // 6
+      room(3.85, 1.21, 9.725, 10.585, 'living_kitchen', T('livingKitchen')), // 2
+      room(9.82, 0.25, 12.575, 1.725, 'stair', T('stair')), // the turn at the back
+      room(9.725, 1.725, 11.225, 3.985, 'stair', ''), // its flight up from the hall
+      room(9.725, 3.985, 14.275, 5.515, 'hall', T('hall')), // 1
+      room(11.225, 1.725, 12.575, 3.985, 'hall', ''), // 1, beside the flight
+      room(9.725, 5.515, 12.575, 6.545, 'hall', ''), // 1
+      room(9.725, 6.545, 11.855, 8.96, 'hall', ''), // 1, to the entrance
+      room(11.855, 6.545, 12.575, 8.96, 'wardrobe', T('wardrobe')), // 650 deep
+      room(12.575, 0.25, 17.1, 2.825, 'utility', T('boiler')), // 4
+      room(12.575, 2.825, 14.275, 3.985, 'utility', ''), // 4, the washer bay
+      room(14.275, 2.825, 17.1, 5.515, 'bath', T('shower')), // 5
+      room(12.575, 5.515, 17.1, 8.96, 'bedroom', T('bedroom')), // 3
+    ]
+    const doors = (): Door[] => [
+      open('v', 9.725, 1.21, 3.985), // the stair open to the kitchen-living
+      open('v', 9.725, 3.985, 6.545), // hall to the kitchen-living
+      open('h', 1.725, 9.82, 12.575),
+      open('h', 3.985, 9.725, 12.575),
+      open('h', 5.515, 9.725, 12.575),
+      open('h', 6.545, 9.725, 11.855),
+      open('h', 2.825, 12.575, 14.275),
+      leaf('v', 11.855, 7.0, 1.5, 'interior', -1), // wardrobe
+      leaf('v', 12.575, 2.185, 0.8, 'interior', -1), // ДГ-2, 1 100 behind axis Б
+      leaf('v', 14.275, 4.3, 0.8), // ДГ-2
+      leaf('h', 5.515, 13.285, 0.8), // ДГ-1
+      leaf('h', 9.21, 9.925, 1.5, 'entrance', -1), // ДН-1, 200 past axis 2
+      leaf('v', 3.6, 4.485, 0.8, 'entrance'), // ДНО-2, 400 past axis Б
+      leaf('v', 0, 0.55, 0.9, 'entrance'), // ДН-2, storeroom, 550 from its corner
+      leaf('v', 17.35, 1.36, 0.9, 'entrance', -1), // ДН-2, boiler room
+    ]
+    const windows = [
+      win('bottom', 10.835, 3.725, 4.7), // ОК-1, from axis 1
+      win('left', 3.6, 9.325, 1.2), // ОК-2
+      win('bottom', 9.21, 13.225, 3.6), // ОК-3, 3 500 past axis 2
+      win('right', 17.35, 4.6, 0.6), // ОК-4
+      win('top', 0, 10.67, 1.2), // ОК-5, 1 100 into the stair tower
+    ]
+    // 7: between the wing's axes, from the storeroom to axis А
+    const terrace = [{ x: X(0.125), y: Y(1.775), w: 3.475 * sx, h: 7.31 * sy }]
+    return { rooms, openVoid: null, doors, windows, outline: scaled.ground, terraces: { rects: terrace, label: T('terrace') } }
+  }
+
+  const rooms: Room[] = [
+    room(3.85, 4.21, 8.155, 8.96, 'bedroom', T('bedroom')), // 2
+    room(9.82, 0.25, 11.625, 4.21, 'stair', T('stair')),
+    room(11.625, 0.25, 12.72, 3.145, 'stair', ''), // the turn
+    room(11.625, 3.145, 12.72, 4.21, 'corridor', ''), // 1, the landing
+    room(8.155, 4.21, 14.075, 5.635, 'corridor', T('hall')), // 1
+    room(12.905, 5.635, 14.075, 5.895, 'corridor', ''), // 1, at the office door
+    room(14.075, 4.21, 17.1, 5.895, 'bath', T('shower')), // 5
+    room(8.155, 5.635, 12.905, 8.96, 'bedroom', T('bedroom')), // 3
+    room(12.905, 5.895, 17.1, 8.96, 'office', T('office')), // 4
+  ]
+  if (full) {
+    rooms.push(
+      room(3.85, 1.21, 9.57, 4.21, 'bedroom', T('bedroom3')),
+      room(12.72, 0.25, 17.1, 4.21, 'bedroom', T('bedroom4')),
+    )
+  }
+  const doors = (): Door[] => [
+    open('h', 4.21, 9.82, 12.72),
+    open('v', 11.625, 3.145, 4.21),
+    open('h', 3.145, 11.625, 12.72),
+    open('h', 5.635, 12.905, 14.075),
+    leaf('v', 8.155, 4.5, 0.9), // ДГ-1
+    leaf('h', 5.635, 11.0, 0.8, 'interior', -1), // ДГ-1
+    leaf('h', 5.895, 13.015, 0.8, 'interior', -1), // ДГ-1
+    leaf('v', 14.075, 4.95, 0.8, 'interior', -1), // ДГ-2
+    ...(full ? [leaf('h', 4.21, 8.4, 0.9, 'interior', -1), leaf('h', 4.21, 12.9, 0.9, 'interior', -1)] : []),
+  ]
+  const windows = [
+    win('bottom', 9.21, 3.935, 4.15), // ОК-6
+    win('bottom', 9.21, 9.725, 2.6), // ОК-7, ends 400 short of axis 3
+    win('bottom', 9.21, 12.725, 4.25), // ОК-8, ends 250 short of axis 4
+    win('top', 0, 10.67, 1.2), // ОК-5 over the stair
+    ...(full ? [win('top', 0.96, 5.0, 2.6), win('top', 0, 14.2, 2.0)] : []),
+  ]
+  const roofs = subtractRects(scaled.ground, scaled.top)
+  return {
+    rooms, openVoid: null, doors, windows, outline: scaled.top,
+    roofs: roofs.length ? { rects: roofs, label: T('roof') } : undefined,
+  }
 }
 
 // Realistic layout: bath/stair go into a compact service band (real size ~5–7 m²),

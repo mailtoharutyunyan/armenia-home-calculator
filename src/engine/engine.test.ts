@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_HOUSE } from '../model/house'
+import { ZX85_HOUSE } from '../model/house'
 import type { HouseParams } from '../model/house'
 import { computeQuantities } from './quantities'
 import { computeEstimate } from './pricing'
@@ -11,7 +11,7 @@ import { SEED_PRICES } from '../data/prices'
 import { stageWeeks, STAGES } from '../data/stages'
 
 // written for the generated plan with an 80 m² hall
-const house = (patch: Partial<HouseParams> = {}): HouseParams => ({ ...DEFAULT_HOUSE, planLayout: 'auto', hallArea: 80, ...patch })
+const house = (patch: Partial<HouseParams> = {}): HouseParams => ({ ...ZX85_HOUSE, planLayout: 'auto', hallArea: 80, ...patch })
 
 describe('quantities', () => {
   it('computes sane geometry for a 10x10 2-floor house', () => {
@@ -25,7 +25,7 @@ describe('quantities', () => {
 
   it('produces structural concrete and rebar lines', () => {
     const q = computeQuantities(house())
-    const concrete = q.lines.find((l) => l.key === DEFAULT_HOUSE.concreteGrade)
+    const concrete = q.lines.find((l) => l.key === ZX85_HOUSE.concreteGrade)
     const rebar = q.lines.find((l) => l.key === 'rebar_a500')
     expect(concrete && concrete.quantity).toBeGreaterThan(0)
     expect(rebar && rebar.quantity).toBeGreaterThan(0)

@@ -100,9 +100,26 @@ function doorJoins(d: Door, a: Room, b: Room): boolean {
 }
 
 // Комната, в которую ведёт входная дверь.
+// The stair of a floor. A plan drawn off real drawings may draw one stair as
+// several rectangles (a U-stair's flight and its turn): the stair is the box
+// round them all.
+function stairBox(rooms: Room[]): Room | null {
+  const parts = rooms.filter((r) => r.type === 'stair')
+  if (parts.length === 0) return null
+  const x0 = Math.min(...parts.map((r) => r.x))
+  const y0 = Math.min(...parts.map((r) => r.y))
+  const x1 = Math.max(...parts.map((r) => r.x + r.w))
+  const y1 = Math.max(...parts.map((r) => r.y + r.h))
+  return { ...parts[0], x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
+}
+
 function entranceRoom(plan: FloorPlan): Room | null {
   const d = plan.doors.find((x) => x.kind === 'entrance')
-  if (!d) return null
+  return d ? roomAtDoor(plan, d) : null
+}
+
+// the room an outer door opens into
+function roomAtDoor(plan: FloorPlan, d: FloorPlan['doors'][number]): Room | null {
   const mid = d.start + d.w / 2
   const hit = plan.rooms.filter((r) => {
     if (r.open) return false
@@ -197,12 +214,13 @@ function auditFloor(p: HouseParams, floor: number, issues: PlanIssue[]) {
   for (const r of rooms) {
     if (r.open || !NEEDS_LIGHT.has(r.type)) continue
     const hasWindow = plan.windows.some((wn) => {
+      // a window carries its wall line (an outer wall or the step wall)
       if (wn.side === 'top' || wn.side === 'bottom') {
-        const y = wn.side === 'top' ? 0 : plan.W
+        const y = wn.y
         const onEdge = Math.abs(r.y - y) < 0.4 || Math.abs(r.y + r.h - y) < 0.4
         return onEdge && wn.x + wn.len > r.x - EPS && wn.x < r.x + r.w + EPS
       }
-      const x = wn.side === 'left' ? 0 : plan.L
+      const x = wn.x
       const onEdge = Math.abs(r.x - x) < 0.4 || Math.abs(r.x + r.w - x) < 0.4
       return onEdge && wn.y + wn.len > r.y - EPS && wn.y < r.y + r.h + EPS
     })
@@ -276,7 +294,7 @@ function auditFloor(p: HouseParams, floor: number, issues: PlanIssue[]) {
   // (ступени − 1) × проступь. Если прямой марш не входит — нужна площадка и
   // поворот, а на это требуется ширина минимум в два марша.
   {
-    const st = rooms.find((r) => r.type === 'stair')
+    const st = stairBox(rooms)
     if (st && p.floors > 1) {
       const steps = Math.ceil(p.floorHeight / DIM.stairMaxRiser)
       const run = (steps - 1) * DIM.stairMinTread
@@ -312,6 +330,10 @@ function auditFloor(p: HouseParams, floor: number, issues: PlanIssue[]) {
       const r = rooms[i]
       if (r.open || !r.label) continue
       const path = paths.get(i)
+      // a storeroom or a boiler room with its own door to the yard is
+      // reached from outside, as drawn
+      const ownOuterDoor = plan.doors.some((d) => d.kind === 'entrance' && roomAtDoor(plan, d) === r)
+      if (!path && ownOuterDoor) continue
       if (!path) {
         push('error', 'unreachable', `В «${r.label}» нет двери — помещение изолировано.`, `«${r.label}»-ը դուռ չունի — տարածքը մեկուսացված է։`, `“${r.label}” has no door — the room is isolated.`)
         continue
@@ -340,8 +362,8 @@ export function auditPlan(p: HouseParams): PlanIssue[] {
 
   // --- вертикальные связи между этажами ---
   for (let f = 1; f < plans.length; f++) {
-    const a = plans[f - 1].rooms.find((r) => r.type === 'stair')
-    const b = plans[f].rooms.find((r) => r.type === 'stair')
+    const a = stairBox(plans[f - 1].rooms)
+    const b = stairBox(plans[f].rooms)
     if (!b) {
       issues.push({
         level: 'error',

@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import { useProject } from '../store/useProject'
 import { t } from '../i18n'
 import type { HouseParams, StoneType, FloorType, DiyWork } from '../model/house'
-import { defaultWallThickness, BUILD_PRESETS } from '../model/house'
+import { defaultWallThickness, BUILD_PRESETS, applyProject, topShare } from '../model/house'
+import type { PlanLayout } from '../model/house'
 import { REGIONS } from '../data/regions'
 import { COEFF as C } from '../data/coefficients'
 import { planTake, computeQuantities } from '../engine/quantities'
@@ -109,18 +110,17 @@ export function Inputs() {
   const colDefault = (Math.floor(house.length / gridStep) + 1) * (Math.floor(house.width / gridStep) + 1)
   const colSizeM = eng.columnSize != null && eng.columnSize > 0 ? eng.columnSize / 100 : C.columnSection.w
   // a frame is infilled on the outer contour only; bearing walls run along all axes
-  const wallGross = (house.system === 'frame' ? P : Lb) * house.floors * house.floorHeight
+  // the engine's geometry: a partial top floor or a drawn outline included
+  const geo = computeQuantities(house).geometry
+  const wallGross = geo.wallGross
   const openingsDefault =
     wallGross > 0 ? Math.round(((house.windowAreaTotal + house.exteriorDoors * 2) / wallGross) * 100) : 15
 
   // --- окна по норме освещения (ՀՀՇՆ 31-01-2014): ≥ 1/8 пола, ≤ 40% стен ---
-  const wallT = eng.extWall != null && eng.extWall > 0 ? eng.extWall / 100 : house.wallThickness
-  const internalPerFloor = Math.max(0, house.length - 2 * wallT) * Math.max(0, house.width - 2 * wallT)
-  // the void the estimate removes, as the plans draw it
-  const hallV = computeQuantities(house).geometry.hallVoid
-  const netA = Math.max(0, internalPerFloor * house.floors - hallV)
+  // the area the estimate takes: less the hall void, a partial top storey by its share
+  const netA = Math.max(0, geo.netFloorArea)
   const usableA = netA * 0.8
-  const outerWallArea = P * house.floors * house.floorHeight
+  const outerWallArea = geo.facadeWallArea
   const winMin = usableA / 8 // норма освещения (минимум)
   const winMax = outerWallArea * 0.4 // макс остекление
   const winRec = Math.round(Math.min(Math.max(usableA / 6, winMin), outerWallArea * 0.38))
@@ -140,6 +140,20 @@ export function Inputs() {
         <details className="group" name="calc-step" open>
           <summary><span className="eyebrow">01 · {t(lang, 'step_region')}</span></summary>
           <div className="group-body">
+        {/* a real project loads its whole house; everything stays editable */}
+        <label className="field">
+          <span>{t(lang, 'project')}</span>
+          <select
+            className="input"
+            value={house.planLayout ?? 'template'}
+            onChange={(e) => set(applyProject(house, e.target.value as PlanLayout))}
+          >
+            <option value="brick193">{t(lang, 'project_brick193')}</option>
+            <option value="brickFull">{t(lang, 'project_brickFull')}</option>
+            <option value="template">{t(lang, 'project_zx85')}</option>
+            <option value="auto">{t(lang, 'project_auto')}</option>
+          </select>
+        </label>
         <label className="field">
           <span>{t(lang, 'region')}</span>
           <select
@@ -206,6 +220,16 @@ export function Inputs() {
           <Num label={t(lang, 'floors')} value={house.floors} min={1} onChange={(n) => set({ floors: n })} />
           <Num label={t(lang, 'floorHeight')} value={house.floorHeight} step={0.1} onChange={(n) => set({ floorHeight: n })} />
         </div>
+        {/* a project with a drawn outline sets its own top floor */}
+        {house.floors >= 2 && !house.footprint && (
+          <Num
+            label={t(lang, 'topFloorShare')}
+            value={Math.round(topShare(house) * 100)}
+            step={5}
+            min={30}
+            onChange={(n) => set({ topFloorShare: Math.min(100, Math.max(30, n)) / 100 })}
+          />
+        )}
         <label className="field">
           <span>{t(lang, 'frontSide')}</span>
           <div className="seg" role="group">
@@ -323,21 +347,6 @@ export function Inputs() {
           <input type="checkbox" checked={house.doubleHeightHall} onChange={(e) => set({ doubleHeightHall: e.target.checked })} />
           <span style={{ marginBottom: 0 }}>{t(lang, 'doubleHall')}</span>
         </label>
-        {house.doubleHeightHall && house.floors === 2 && (
-          <label className="field">
-            <span>{lang === 'hy' ? 'Հատակագիծ' : lang === 'en' ? 'Layout' : 'Планировка'}</span>
-            <select
-              className="input"
-              value={house.planLayout ?? 'template'}
-              onChange={(e) => set({ planLayout: e.target.value as 'template' | 'auto' })}
-            >
-              <option value="template">
-                {lang === 'hy' ? 'Իրական նախագծով (Z500 Zx85)' : lang === 'en' ? 'From a real project (Z500 Zx85)' : 'По реальному проекту (Z500 Zx85)'}
-              </option>
-              <option value="auto">{lang === 'hy' ? 'Ավտոմատ' : lang === 'en' ? 'Generated' : 'Генератор'}</option>
-            </select>
-          </label>
-        )}
         {/* the template has its own rooms and a 52 m² hall; the generator takes these */}
         {!usesTemplate(house) && (
           <>

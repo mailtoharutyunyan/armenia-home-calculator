@@ -68,7 +68,12 @@ function priceOverrides(catalog: Catalog): Record<string, PriceOverride> {
   return out
 }
 const LANG_KEY = 'ahc_lang_v1'
-const HOUSE_KEY = 'ahc_house_v6'
+const HOUSE_KEY = 'ahc_house_v7'
+// v7 made the 193.5 m² brick house the default. A house saved under v6 or
+// older is not opened any more: it is kept as the scenario below, so the
+// visitor sees the new default and can load the old house back in one click.
+const HOUSE_V6_KEY = 'ahc_house_v6'
+const OLD_HOUSE_SCENARIO = 'Прежний дом'
 // Saves under older keys are carried over, newest first:
 // - v5 and v4 hold the main-contractor preset, the default until v6 made
 //   self-build the default (see dropOldContractorDefault);
@@ -85,7 +90,16 @@ const LEGACY_SCEN_KEY = 'ahc_scenarios_v1'
 // Saves made before a field existed lack it, so every saved house is merged
 // onto the defaults (a missing percentage priced a whole scenario as NaN).
 function withDefaults(saved: Partial<HouseParams>): HouseParams {
-  return { ...DEFAULT_HOUSE, ...saved, eng: { ...(saved.eng ?? {}) } }
+  // a save from before the partial top floor had a full one, and the layout
+  // it had then was the Zx85 template
+  return {
+    ...DEFAULT_HOUSE,
+    topFloorShare: 1,
+    planLayout: 'template',
+    footprint: undefined,
+    ...saved,
+    eng: { ...(saved.eng ?? {}) },
+  }
 }
 
 function loadScenarios(): Scenario[] {
@@ -136,18 +150,26 @@ function dropOldContractorDefault(saved: Partial<HouseParams>) {
   }
 }
 
+function keepOldHouse(house: HouseParams) {
+  const list = loadScenarios().filter((s) => s.name !== OLD_HOUSE_SCENARIO)
+  persistScenarios([...list, { id: 's_old_house', name: OLD_HOUSE_SCENARIO, house }])
+}
+
 function loadHouse(): HouseParams {
   try {
-    const key = [HOUSE_KEY, HOUSE_V5_KEY, HOUSE_V4_KEY].find((k) => localStorage.getItem(k) != null)
+    const key = [HOUSE_KEY, HOUSE_V6_KEY, HOUSE_V5_KEY, HOUSE_V4_KEY].find((k) => localStorage.getItem(k) != null)
     const raw = key && localStorage.getItem(key)
-    if (!raw) return { ...DEFAULT_HOUSE }
+    if (!raw) return { ...DEFAULT_HOUSE, eng: { ...DEFAULT_HOUSE.eng } }
     const saved = JSON.parse(raw) as Partial<HouseParams>
-    if (key !== HOUSE_KEY) dropOldContractorDefault(saved)
+    if (key === HOUSE_V5_KEY || key === HOUSE_V4_KEY) dropOldContractorDefault(saved)
     if (key === HOUSE_V4_KEY) delete saved.vatIncluded
     // merge onto defaults so new fields always exist
-    return withDefaults(saved)
+    if (key === HOUSE_KEY) return withDefaults(saved)
+    keepOldHouse(withDefaults(saved))
+    localStorage.removeItem(key)
+    return { ...DEFAULT_HOUSE, eng: { ...DEFAULT_HOUSE.eng } }
   } catch {
-    return { ...DEFAULT_HOUSE }
+    return { ...DEFAULT_HOUSE, eng: { ...DEFAULT_HOUSE.eng } }
   }
 }
 
@@ -287,7 +309,7 @@ export const useProject = create<ProjectState>((set, get) => ({
 
   // Заводской сброс: параметры дома, цены и режимы. Язык и тема (настройки вида) не трогаем.
   resetAll: () => {
-    const house = { ...DEFAULT_HOUSE, eng: {} }
+    const house = { ...DEFAULT_HOUSE, eng: { ...DEFAULT_HOUSE.eng } }
     // back to the central-bank rate when one was loaded, not to the built-in fallback
     const cba = get().cbaUsd
     set({

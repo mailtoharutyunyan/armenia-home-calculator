@@ -4,6 +4,7 @@ import { t } from '../i18n'
 const TABS = [
   { id: 'calc', key: 'nav_calc' as const },
   { id: 'gallery', key: 'nav_gallery' as const },
+  { id: '3d', key: 'nav_3d' as const },
   { id: 'analysis', key: 'tab_analysis' as const },
   { id: 'docs', key: 'tab_docs' as const },
   { id: 'prices', key: 'nav_prices' as const },
