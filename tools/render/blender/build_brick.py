@@ -380,7 +380,7 @@ def pylon():
 
 def floors_finish():
     mat = {"bath": "Floor_Tile", "utility": "Floor_Tile", "hall": "Floor_Stone", "corridor": "Floor_Stone",
-           "stair": "Floor_Stone", "wardrobe": "Floor_Tile", "living_kitchen": "Floor_Stone"}
+           "stair": "Floor_Stone", "wardrobe": "Floor_Tile"}
     for f, plan in enumerate((F0, F1)):
         for r in plan["rooms"]:
             x0, x1, y0, y1 = r["x"], r["x"] + r["w"], r["y"], r["y"] + r["h"]
@@ -511,6 +511,11 @@ def rect(plan, label, nth=0, inset=0.05):
 
 
 class BrickFurnisher(Furnisher):
+    def bed(self, f, side, wall, center, width, length=2.1):
+        super().bed(f, side, wall, center, width, length)
+        w = width / 2
+        self.on_wall(f, f"Soft_F{f + 1}", "Rug_Wool", side, wall, center, -w - 0.6, w + 0.6, 0.7, length + 0.8, 0, 0.012)
+
     def kitchen_living(self):
         x0, x1, y0, y1 = rect(F0, "Kitchen-living")
         g, soft = "Kitchen", "Soft_F1"
@@ -544,30 +549,43 @@ class BrickFurnisher(Furnisher):
         self.box(0, soft, "Fabric_Sofa", sx1_ - 0.22, sx1_, sy, sy + 0.95, 0.42, 0.62)
         for px in (sx0_ + 0.5, sx1_ - 0.9):
             self.box(0, soft, "Fabric_Accent", px, px + 0.45, sy + 0.22, sy + 0.36, 0.5, 0.9)
+        self.box(0, soft, "Fabric_Cushion", sx0_ + 1.1, sx0_ + 1.5, sy + 0.24, sy + 0.37, 0.5, 0.86)
+        # knitted throw over the right arm, falling to the seat and the floor side
+        self.box(0, soft, "Fabric_Throw", sx1_ - 0.3, sx1_ + 0.02, sy + 0.3, sy + 0.8, 0.62, 0.65)
+        self.box(0, soft, "Fabric_Throw", sx1_ + 0.0, sx1_ + 0.03, sy + 0.3, sy + 0.8, 0.25, 0.65)
         self.box(0, soft, "Rug_Wool", sx0_ - 0.2, sx1_ + 0.2, sy + 0.7, sy + 3.0, 0, 0.012)
         self.asset("modern_coffee_table_01", (sx0_ + sx1_) / 2, sy + 1.7, self.ffl[0], (0, 1))
+        table_top = self.ffl[0] + 0.39
+        self.asset("wooden_bowl_01", (sx0_ + sx1_) / 2, sy + 1.5, table_top, (0, 1))
+        self.asset("ceramic_vase_03", (sx0_ + sx1_) / 2 + 0.12, sy + 1.95, table_top, (0, 1))
+        self.asset("side_table_01", sx1_ + 0.4, sy + 0.3, self.ffl[0], (0, 1))
+        self.asset("ceramic_vase_02", sx1_ + 0.4, sy + 0.3, self.ffl[0] + 0.55, (0, 1))
         self.asset("modern_arm_chair_01", x1 - 1.2, sy + 1.1, self.ffl[0], (-1, 0.4))
         # oak slat accent wall with a low cabinet on the terrace side
         for i in range(24):
             yy = sy - 0.6 + i * 0.13
             self.box(0, "Furniture_F1", "Wood_Oak", x0, x0 + 0.04, yy, yy + 0.07, 0, self.ceil[0] - self.ffl[0])
         self.asset("modern_wooden_cabinet", x0 + 0.3, sy + 0.9, self.ffl[0], (1, 0))
-        self.asset("potted_plant_04", x0 + 0.3, sy + 0.4, self.ffl[0] + 0.55, (0, 1))
+        top = self.ffl[0] + 0.68  # the cabinet's top
+        self.asset("potted_plant_04", x0 + 0.3, sy + 0.25, top, (0, 1))
+        self.asset("standing_picture_frame_01", x0 + 0.25, sy + 0.75, top, (1, 0))
+        self.asset("book_encyclopedia_set_01", x0 + 0.3, sy + 1.25, top, (1, 0))
+        self.asset("ceramic_vase_01", x0 + 0.3, sy + 1.75, top, (0, 1))
+        self.asset("ceramic_vase_02", (ix0 + ix1) / 2 - 0.5, (iy0 + iy1) / 2, self.ffl[0] + 0.91, (0, 1))
         self.asset("potted_plant_01", x0 + 0.4, y1 - 0.5, self.ffl[0], (0, 1))
         self.asset("potted_plant_02", x1 - 0.5, y0 + 1.1, self.ffl[0], (0, 1))
         self.curtains(0, "bottom", y1, x0, x0 + 4.7)
 
     def curtains(self, f, side, line, a, b):
-        """Sheer curtains stacked at both ends of a glazed wall, a grey track."""
+        """At both ends of a glazed wall: a pleated sheer by the glass and a
+        linen drape in front of it, gathered at the wall; a dark track."""
         top = self.ceil[f] - 0.04
         sgn = -1 if side == "bottom" else 1
-        for c0, c1 in ((a, a + 0.7), (b - 0.7, b)):
-            n = int((c1 - c0) / 0.08)
-            for i in range(n):
-                off = 0.035 if i % 2 else 0
-                y = line + sgn * (0.16 + off)
-                self.S.box("Curtains", "Curtain_Sheer", c0 + i * 0.08, c0 + (i + 1) * 0.08 + 0.01,
-                           min(y, y + sgn * 0.02), max(y, y + sgn * 0.02), self.ffl[f] + 0.01, top)
+        sheer = max(0.3, min(0.9, (b - a) / 2 - 0.55))
+        z0 = self.ffl[f] + 0.01
+        for end, d in ((a, 1), (b, -1)):
+            CURTAINS.append(("Curtain_Sheer", end + d * 0.35, end + d * (0.35 + sheer), line + sgn * 0.15, z0, top))
+            CURTAINS.append(("Curtain_Linen", end, end + d * 0.5, line + sgn * 0.22, z0, top))
         y = line + sgn * 0.12
         self.S.box("Curtains", "Metal_Dark", a, b, min(y, y + sgn * 0.1), max(y, y + sgn * 0.1), top, top + 0.04)
 
@@ -653,6 +671,9 @@ class BrickFurnisher(Furnisher):
         self.asset("outdoor_table_chair_set_01", (x0 + x1) / 2 + 0.2, y0 + 5.0, PLINTH - 0.02, (1, 0))
         self.asset("potted_plant_02", x1 - 0.35, y1 - 0.4, PLINTH - 0.02, (0, 1))
         self.light((x0 + x1) / 2, y0 + 5.0, top - 0.4, 15)
+
+
+CURTAINS = []  # (material, plan x from, x to, plan y, z bottom, z top): pleated panels along x
 
 
 def furnish():
@@ -784,6 +805,9 @@ MATERIALS = {
     "Lamp_Shade": ((0.95, 0.93, 0.88, 1), 0.9, 0, "1f3eb311-3d6a-42fc-906c-6a1c4ecf3454", (245, 240, 228), ()),
     "Rug_Wool": ((0.78, 0.75, 0.70, 1), 1.0, 0, "239c760d-03ca-4534-8242-40234ff9287d", (200, 195, 185), ()),
     "Curtain_Sheer": ((0.94, 0.93, 0.91, 0.7), 0.9, 0, "89d49384-06a5-42fc-82e0-775aefc7064e", (240, 238, 234), ()),
+    "Curtain_Linen": ((0.45, 0.42, 0.38, 1), 0.95, 0, "1f3eb311-3d6a-42fc-906c-6a1c4ecf3454", (120, 112, 102), ()),
+    "Fabric_Throw": ((0.78, 0.72, 0.62, 1), 0.95, 0, "1f3eb311-3d6a-42fc-906c-6a1c4ecf3454", (205, 190, 165), ()),
+    "Fabric_Cushion": ((0.55, 0.33, 0.22, 1), 0.95, 0, "1f3eb311-3d6a-42fc-906c-6a1c4ecf3454", (150, 90, 60), ()),
     "Kitchen_Front": ((0.24, 0.25, 0.26, 1), 0.6, 0, "8956f5ed-c0aa-4bc3-9b4e-2f70510fb76d", (60, 62, 64), ()),
     "Countertop_Marble": ((0.92, 0.91, 0.90, 1), 0.15, 0, "07454bf0-2066-45ee-adc1-2814e496aea5", None, ()),
     "Sanitary_Ceramic": ((0.97, 0.97, 0.97, 1), 0.08, 0, "3ecb0143-568a-4715-81e7-352bb8b83eed", (250, 250, 250), ()),
@@ -967,6 +991,38 @@ def write_mesh(name, boxes, mat, parent):
     return ob
 
 
+def write_curtain(name, mat, x0, x1, y, z0, z1, parent):
+    """A pleated panel: a sine wave in plan y along x, 6 mm thick. Linen
+    hangs in deep, wide pleats; a sheer in shallow, close ones."""
+    amp, period = (0.05, 0.13) if mat == "Curtain_Linen" else (0.025, 0.09)
+    x0, x1 = min(x0, x1), max(x0, x1)
+    n = max(8, int((x1 - x0) / 0.012))
+    bm = bmesh.new()
+    uv = bm.loops.layers.uv.new("UVMap")
+    rows = []
+    for i in range(n + 1):
+        x = x0 + (x1 - x0) * i / n
+        t = (x - x0) / period
+        off = amp * math.sin(2 * math.pi * t) * (0.8 + 0.2 * math.sin(2 * math.pi * t / 3.7))
+        rows.append([bm.verts.new(Vector((x, W - (y + off), z)) + CENTER) for z in (z0, (z0 + z1) / 2, z1)])
+    for i in range(n):
+        for j in range(2):
+            face = bm.faces.new((rows[i][j], rows[i + 1][j], rows[i + 1][j + 1], rows[i][j + 1]))
+            face.smooth = True
+            for loop in face.loops:
+                loop[uv].uv = (loop.vert.co.x, loop.vert.co.z)
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    me.materials.append(material(mat))
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(ob)
+    ob.parent = parent
+    sol = ob.modifiers.new("Solidify", "SOLIDIFY")
+    sol.thickness, sol.offset = 0.006, 0
+    return ob
+
+
 BEVEL = {"Soft": (0.03, 3), "Furniture": (0.006, 2), "Kitchen": (0.004, 2), "Bath": (0.004, 2), "Doors": (0.003, 1)}
 
 
@@ -1121,6 +1177,8 @@ def build_scene():
             e.parent = root
             groups[group] = e
         write_mesh(f"{group}__{mat}", boxes, mat, groups[group])
+    for i, (mat, x0, x1, y, z0, z1) in enumerate(CURTAINS):
+        write_curtain(f"Curtains__{mat}_{i}", mat, x0, x1, y, z0, z1, groups["Curtains"])
     place_assets(assets, root)
     place_lights(lights, root, watts_scale=2.5)
     place_lights([(x, y, z - 0.15, 6) for x, y, z in soffit_lights], root, "Soffit_Lights")

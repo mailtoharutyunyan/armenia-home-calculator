@@ -88,52 +88,135 @@ def texture(name, kind):
 
 # --------------------------------------------------------------------------- materials
 
+def link(a, a_out, b, names):
+    """Connect a's output to the first of b's input names the engine knows."""
+    known = []
+    try:  # the engine's own pin names, when this version can list them
+        known = [str(n) for n in mel.get_material_expression_input_names(b)]
+    except Exception:
+        pass
+    for n in names + [k for k in known if k not in names][:1]:
+        if mel.connect_material_expressions(a, a_out, b, n):
+            return
+    raise RuntimeError(f"no input {names} on {b.get_class().get_name()}, it has {known}")
+
+
 def master_pbr():
-    """M_PBR: base colour x tint, normal, roughness; UVs are metres, scaled by Tiling."""
+    """M_PBR3: base colour x tint, normal, roughness; UVs are metres, scaled by
+    Tiling. On top of the texture:
+      Desat           0..1 grey the texture out, so the tint sets the colour
+      JointSize       panel size (u, v) in metres, JointHalfWidth > 0 draws
+                      the joints, darkened by JointDarken and fully rough
+      PanelVariation  +- tone per panel, as cut stone slabs differ
+    Defaults leave the plain texture (v2 behaviour)."""
     # v2: every sampler carries a default texture of its own type (colour,
     # normal map, linear); with the engine default texture the material did
     # not compile and Unreal drew its checkerboard instead.
-    path = f"{ROOT}/Materials/M_PBR2"
+    path = f"{ROOT}/Materials/M_PBR3"
     if eal.does_asset_exist(path):
         return eal.load_asset(path)
-    m = tools.create_asset("M_PBR2", f"{ROOT}/Materials", unreal.Material, unreal.MaterialFactoryNew())
+    m = tools.create_asset("M_PBR3", f"{ROOT}/Materials", unreal.Material, unreal.MaterialFactoryNew())
+    E = lambda cls, x, y: mel.create_material_expression(m, cls, x, y)
+
+    def param(cls, name, value, x, y):
+        e = E(cls, x, y)
+        e.set_editor_property("parameter_name", name)
+        e.set_editor_property("default_value", value)
+        return e
+
+    def op(cls, a, b, x, y, a_out="", b_out="", const_b=None):
+        e = E(cls, x, y)
+        link(a, a_out, e, ["A"])
+        if b is not None:
+            link(b, b_out, e, ["B"])
+        elif const_b is not None:
+            e.set_editor_property("const_b", const_b)
+        return e
+
+    def mask(src, x, y, *ch):
+        e = E(unreal.MaterialExpressionComponentMask, x, y)
+        for c in "rgba":
+            e.set_editor_property(c, c in ch)
+        link(src, "", e, ["", "Input"])
+        return e
+
+    def one(cls, src, x, y):
+        e = E(cls, x, y)
+        link(src, "", e, ["", "Input"])
+        return e
+
     defaults = {k: texture("concrete_tile_facade", k) for k in ("diff", "nor_gl", "rough")}
-    uv = mel.create_material_expression(m, unreal.MaterialExpressionTextureCoordinate, -1200, 0)
-    tiling = mel.create_material_expression(m, unreal.MaterialExpressionScalarParameter, -1200, 120)
-    tiling.set_editor_property("parameter_name", "Tiling")
-    tiling.set_editor_property("default_value", 1.0)
-    mul = mel.create_material_expression(m, unreal.MaterialExpressionMultiply, -1000, 40)
-    mel.connect_material_expressions(uv, "", mul, "A")
-    mel.connect_material_expressions(tiling, "", mul, "B")
+    uv = E(unreal.MaterialExpressionTextureCoordinate, -2200, 0)
+    tiling = param(unreal.MaterialExpressionScalarParameter, "Tiling", 1.0, -2200, 120)
+    mul = op(unreal.MaterialExpressionMultiply, uv, tiling, -2000, 40)
 
     def sampler(name, y, stype, default):
-        s = mel.create_material_expression(m, unreal.MaterialExpressionTextureSampleParameter2D, -800, y)
+        s = E(unreal.MaterialExpressionTextureSampleParameter2D, -1700, y)
         s.set_editor_property("parameter_name", name)
         s.set_editor_property("texture", default)
         s.set_editor_property("sampler_type", stype)
-        mel.connect_material_expressions(mul, "", s, "UVs")
+        link(mul, "", s, ["UVs"])
         return s
 
     base = sampler("BaseColor", -300, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, defaults["diff"])
     nrm = sampler("Normal", 0, unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, defaults["nor_gl"])
     rough = sampler("Roughness", 300, unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR, defaults["rough"])
-    tint = mel.create_material_expression(m, unreal.MaterialExpressionVectorParameter, -600, -450)
-    tint.set_editor_property("parameter_name", "Tint")
-    tint.set_editor_property("default_value", unreal.LinearColor(1, 1, 1, 1))
-    tinted = mel.create_material_expression(m, unreal.MaterialExpressionMultiply, -400, -300)
-    mel.connect_material_expressions(base, "RGB", tinted, "A")
-    mel.connect_material_expressions(tint, "", tinted, "B")
-    rmul = mel.create_material_expression(m, unreal.MaterialExpressionScalarParameter, -600, 420)
-    rmul.set_editor_property("parameter_name", "RoughnessScale")
-    rmul.set_editor_property("default_value", 1.0)
-    rr = mel.create_material_expression(m, unreal.MaterialExpressionMultiply, -400, 320)
-    mel.connect_material_expressions(rough, "R", rr, "A")
-    mel.connect_material_expressions(rmul, "", rr, "B")
-    metal = mel.create_material_expression(m, unreal.MaterialExpressionScalarParameter, -400, 500)
-    metal.set_editor_property("parameter_name", "Metallic")
-    mel.connect_material_property(tinted, "", unreal.MaterialProperty.MP_BASE_COLOR)
+
+    # colour: desaturate, tint, per-panel tone
+    desat = E(unreal.MaterialExpressionDesaturation, -1400, -300)
+    link(base, "RGB", desat, ["", "Input"])
+    link(param(unreal.MaterialExpressionScalarParameter, "Desat", 0.0, -1600, -420), "", desat, ["Fraction"])
+    tint = param(unreal.MaterialExpressionVectorParameter, "Tint", unreal.LinearColor(1, 1, 1, 1), -1400, -450)
+    tinted = op(unreal.MaterialExpressionMultiply, desat, tint, -1200, -350)
+
+    # joints: distance in metres to the nearest panel edge along u and v
+    size = mask(param(unreal.MaterialExpressionVectorParameter, "JointSize", unreal.LinearColor(1, 1, 0, 0),
+                      -2200, 600), -2000, 600, "r", "g")
+    q = op(unreal.MaterialExpressionDivide, uv, size, -1800, 600)
+    f = one(unreal.MaterialExpressionFrac, q, -1600, 600)
+    near = op(unreal.MaterialExpressionMin, f, one(unreal.MaterialExpressionOneMinus, f, -1600, 700), -1400, 600)
+    dist = op(unreal.MaterialExpressionMultiply, near, size, -1200, 600)
+    edge = op(unreal.MaterialExpressionMin, mask(dist, -1000, 560, "r"), mask(dist, -1000, 660, "g"), -800, 600)
+    half = op(unreal.MaterialExpressionMax, param(unreal.MaterialExpressionScalarParameter, "JointHalfWidth", 0.0,
+                                                  -1000, 760), None, -800, 760, const_b=0.00001)
+    joint = one(unreal.MaterialExpressionSaturate,
+                one(unreal.MaterialExpressionOneMinus, op(unreal.MaterialExpressionDivide, edge, half, -600, 650),
+                    -450, 650), -300, 650)
+
+    # per-panel tone: value noise of the panel index, 1 +- PanelVariation
+    cell = one(unreal.MaterialExpressionFloor, q, -1600, 900)
+    pos = E(unreal.MaterialExpressionAppendVector, -1400, 900)
+    link(cell, "", pos, ["A"])
+    zero = E(unreal.MaterialExpressionConstant, -1600, 1000)
+    link(zero, "", pos, ["B"])
+    noise = E(unreal.MaterialExpressionNoise, -1200, 900)
+    link(pos, "", noise, ["Position", ""])
+    for k, v in (("scale", 0.37), ("output_min", 0.0), ("output_max", 1.0), ("levels", 1), ("quality", 1)):
+        noise.set_editor_property(k, v)
+    spread = op(unreal.MaterialExpressionSubtract, op(unreal.MaterialExpressionMultiply, noise, None, -1000, 900,
+                                                      const_b=2.0), None, -850, 900, const_b=1.0)
+    var = op(unreal.MaterialExpressionMultiply, spread,
+             param(unreal.MaterialExpressionScalarParameter, "PanelVariation", 0.0, -850, 1000), -700, 900)
+    tone = op(unreal.MaterialExpressionAdd, var, None, -550, 900, const_b=1.0)
+    toned = op(unreal.MaterialExpressionMultiply, tinted, tone, -1000, -250)
+
+    dark = op(unreal.MaterialExpressionMultiply, toned,
+              param(unreal.MaterialExpressionScalarParameter, "JointDarken", 0.5, -1000, -100), -800, -150)
+    colour = E(unreal.MaterialExpressionLinearInterpolate, -600, -250)
+    link(toned, "", colour, ["A"])
+    link(dark, "", colour, ["B"])
+    link(joint, "", colour, ["Alpha"])
+
+    rmul = param(unreal.MaterialExpressionScalarParameter, "RoughnessScale", 1.0, -1400, 420)
+    rr = op(unreal.MaterialExpressionMultiply, rough, rmul, -1200, 320, a_out="R")
+    rfinal = E(unreal.MaterialExpressionLinearInterpolate, -600, 320)
+    link(rr, "", rfinal, ["A"])
+    rfinal.set_editor_property("const_b", 1.0)
+    link(joint, "", rfinal, ["Alpha"])
+    metal = param(unreal.MaterialExpressionScalarParameter, "Metallic", 0.0, -400, 500)
+    mel.connect_material_property(colour, "", unreal.MaterialProperty.MP_BASE_COLOR)
     mel.connect_material_property(nrm, "RGB", unreal.MaterialProperty.MP_NORMAL)
-    mel.connect_material_property(rr, "", unreal.MaterialProperty.MP_ROUGHNESS)
+    mel.connect_material_property(rfinal, "", unreal.MaterialProperty.MP_ROUGHNESS)
     mel.connect_material_property(metal, "", unreal.MaterialProperty.MP_METALLIC)
     mel.recompile_material(m)
     eal.save_loaded_asset(m)
@@ -165,6 +248,13 @@ def master_flat(name, translucent=False, emissive=False):
         spec = mel.create_material_expression(m, unreal.MaterialExpressionConstant, -500, 500)
         spec.set_editor_property("r", 1.0)
         mel.connect_material_property(spec, "", unreal.MaterialProperty.MP_SPECULAR)
+    if name == "M_Sheer":  # voile: light passes, both sides lit, no glassy sheen
+        m.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
+        m.set_editor_property("two_sided", True)
+        op = mel.create_material_expression(m, unreal.MaterialExpressionScalarParameter, -500, 400)
+        op.set_editor_property("parameter_name", "Opacity")
+        op.set_editor_property("default_value", 0.55)
+        mel.connect_material_property(op, "", unreal.MaterialProperty.MP_OPACITY)
     if emissive:
         e = mel.create_material_expression(m, unreal.MaterialExpressionScalarParameter, -700, 100)
         e.set_editor_property("parameter_name", "Glow")
@@ -178,20 +268,26 @@ def master_flat(name, translucent=False, emissive=False):
     return m
 
 
-# slot name -> (texture set or None, tiling per metre, tint, roughness scale, metallic)
+# slot name -> (texture set or None, tiling per metre, tint, roughness scale, metallic[, M_PBR3 extras])
 # Texture sets are Poly Haven CC0; their real size sets the tiling (1 / metres per tile).
 PBR = {
     # light beige stone render, as on the project's renders
     # ambientCG CC0: beige travertine, dark wood siding, warm wood soffit
-    "Facade_Travertine": ("acg:Travertine009", 1 / 1.5, (1.0, 0.97, 0.9), 1.0, 0),
-    "Facade_Plinth": ("acg:Travertine009", 1 / 1.5, (0.8, 0.77, 0.72), 1.0, 0),
+    # 1200 x 600 mm slabs with 8 mm joints, as on the drawings' facade
+    "Facade_Travertine": ("acg:Travertine009", 1 / 1.5, (1.0, 0.97, 0.9), 1.0, 0,
+                          {"JointSize": (1.2, 0.6), "JointHalfWidth": 0.004, "JointDarken": 0.3,
+                           "PanelVariation": 0.07}),
+    "Facade_Plinth": ("acg:Travertine009", 1 / 1.5, (0.8, 0.77, 0.72), 1.0, 0,
+                      {"JointSize": (1.2, 0.45), "JointHalfWidth": 0.004, "JointDarken": 0.3,
+                       "PanelVariation": 0.07}),
     "Facade_WoodPanel": ("acg:WoodSiding008", 1 / 2.0, (1.0, 0.95, 0.9), 1.0, 0),
     "Soffit_Wood": ("acg:WoodFloor064", 1 / 2.0, (1.0, 0.92, 0.82), 0.9, 0),
     "Pergola_Wood": ("dark_wooden_planks", 1 / 2.0, (0.7, 0.58, 0.48), 1.0, 0),
     "Fence_Render": ("acg:Plaster001", 1 / 2.0, (0.9, 0.87, 0.82), 1.0, 0),
     "Wall_Paint": ("painted_plaster_wall", 1 / 2.0, (1.0, 0.98, 0.95), 1.0, 0),
     "Ceiling_Paint": ("painted_plaster_wall", 1 / 2.0, (1.0, 1.0, 0.98), 1.0, 0),
-    "Floor_Oak": ("laminate_floor_02", 1 / 2.0, (1.0, 0.95, 0.88), 0.8, 0),
+    # warm oak planks, low roughness so the sun glints on them (mean 0.52 x 0.6)
+    "Floor_Oak": ("laminate_floor_03", 1 / 2.0, (1.0, 0.95, 0.9), 0.6, 0),
     "Stair_Wood": ("oak_veneer_01", 1 / 1.5, (0.9, 0.75, 0.58), 0.8, 0),
     "Paving": ("granite_tile_04", 1 / 2.0, (0.95, 0.95, 0.95), 1.0, 0),
     "Paving_Terrace": ("granite_tile_04", 1 / 2.0, (1.0, 0.98, 0.95), 1.0, 0),
@@ -202,6 +298,15 @@ PBR = {
     "Pool_Shell": ("granite_tile_04", 1 / 1.0, (0.75, 0.85, 0.9), 0.6, 0),
     "Floor_Stone": ("granite_tile_04", 1 / 2.0, (1.0, 0.98, 0.94), 0.6, 0),
     "Floor_Tile": ("granite_tile_04", 1 / 1.2, (1.0, 1.0, 1.0), 0.5, 0),
+    # fabrics: weave in the normal map; greyed textures take the tint as colour
+    # (tints set from each texture's mean luminance to the wanted albedo)
+    "Fabric_Sofa": ("poly_wool_herringbone", 1 / 0.5, (1.05, 1.0, 0.95), 1.0, 0),
+    "Fabric_Accent": ("poly_wool_herringbone", 1 / 0.5, (0.8, 0.95, 0.85), 1.0, 0),
+    "Fabric_Bedding": ("rough_linen", 1 / 0.6, (1.85, 1.82, 1.75), 1.0, 0, {"Desat": 1.0}),
+    "Curtain_Linen": ("rough_linen", 1 / 0.6, (0.76, 0.71, 0.63), 1.0, 0, {"Desat": 1.0}),
+    "Rug_Wool": ("knitted_fleece", 1 / 0.6, (6.0, 5.5, 4.8), 1.2, 0, {"Desat": 1.0}),
+    "Fabric_Throw": ("cotton_jersey", 1 / 0.4, (1.0, 0.97, 0.92), 1.0, 0),
+    "Fabric_Cushion": ("cotton_jersey", 1 / 0.4, (1.15, 0.65, 0.45), 1.0, 0),
 }
 FLAT = {
     "Glass": ("M_Glass", (0.02, 0.03, 0.03), 0.02, 0),
@@ -211,6 +316,7 @@ FLAT = {
     "Metal_Dark": ("M_Flat", (0.03, 0.03, 0.035), 0.4, 0.6),
     "Railing_Steel": ("M_Flat", (0.04, 0.04, 0.045), 0.35, 0.6),
     "Light_Emissive": ("M_Glow", (1.0, 0.78, 0.55), 0.5, 0),
+    "Curtain_Sheer": ("M_Sheer", (0.85, 0.84, 0.82), 0.9, 0),
     "Soil": ("M_Flat", (0.05, 0.035, 0.025), 1.0, 0),
     # dark grey standing seam, as on the project's renders
     "Roof_MetalSeam": ("M_Flat", (0.045, 0.047, 0.05), 0.45, 0.7),
@@ -232,7 +338,9 @@ def material_for(slot, cache={}):
         return cache[slot]
     mi = None
     if slot in PBR:
-        tex, tiling, tint, rscale, metallic = PBR[slot]
+        tex, tiling, tint, rscale, metallic, *rest = PBR[slot]
+        extra = {"Desat": 0.0, "JointSize": (1.0, 1.0), "JointHalfWidth": 0.0, "JointDarken": 0.5,
+                 "PanelVariation": 0.0, **(rest[0] if rest else {})}
         mi = instance(f"MI_{slot}")
         mel.set_material_instance_parent(mi, master_pbr())
         mel.set_material_instance_texture_parameter_value(mi, "BaseColor", texture(tex, "diff"))
@@ -242,6 +350,11 @@ def material_for(slot, cache={}):
         mel.set_material_instance_scalar_parameter_value(mi, "RoughnessScale", rscale)
         mel.set_material_instance_scalar_parameter_value(mi, "Metallic", metallic)
         mel.set_material_instance_vector_parameter_value(mi, "Tint", unreal.LinearColor(*tint, 1))
+        for k, v in extra.items():  # every MI sets all of them: re-runs reset old values
+            if isinstance(v, tuple):
+                mel.set_material_instance_vector_parameter_value(mi, k, unreal.LinearColor(*v, 0, 0))
+            else:
+                mel.set_material_instance_scalar_parameter_value(mi, k, v)
     elif slot in FLAT:
         master, col, rough, metal = FLAT[slot]
         parent = master_flat(master, translucent=master == "M_Glass", emissive=master == "M_Glow")
