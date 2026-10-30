@@ -11,16 +11,27 @@ const modules = import.meta.glob('../assets/gallery/*.{jpg,jpeg,png,webp,JPG,JPE
 
 // Caption + display order per file base name (без расширения).
 const CAPTIONS: Record<string, { ru: string; hy: string; en: string; order: number }> = {
-  // Concept of the current plan (Z500 Zx85 fitted to 14 × 13 m): facade in
+  // The default house, the brick house drawn off its plans: the calculator's
+  // own plan built in 3D (~/Desktop/home-3d/build_brick.py), rendered in
+  // Unreal Engine 5 with Lumen at golden hour (~/Desktop/home-3d/ue), on the
+  // owner's 25 × 20 m plot, its facade after the project's renders.
+  'brick-front': { ru: 'Кирпичный дом · главный фасад', hy: 'Աղյուսե տուն · գլխավոր ֆասադ', en: 'Brick house · main facade', order: 1 },
+  'brick-street': { ru: 'Вид со двора · навес для машины', hy: 'Տեսք բակից · ավտոմեքենայի ծածկ', en: 'From the yard · carport', order: 2 },
+  'brick-aerial': { ru: 'Участок 25 × 20 м сверху', hy: 'Հողամաս 25 × 20 մ վերևից', en: 'The 25 × 20 m plot from above', order: 3 },
+  'brick-terrace': { ru: 'Терраса с барбекю под перголой', hy: 'Բարբեքյուով պատշգամբ պերգոլայի տակ', en: 'Barbecue terrace under the pergola', order: 4 },
+  'brick-living': { ru: 'Кухня-гостиная', hy: 'Խոհանոց-հյուրասենյակ', en: 'Kitchen-living', order: 5 },
+  'brick-hall': { ru: 'Холл и П-образная лестница', hy: 'Սրահ և П-աձև աստիճան', en: 'Hall and the U-shaped stair', order: 6 },
+  'brick-bedroom': { ru: 'Спальня второго этажа', hy: 'Երկրորդ հարկի ննջասենյակ', en: 'Upstairs bedroom', order: 7 },
+  // Concept of the Z500 Zx85 project (fitted to 14 × 13 m): facade in
   // render and Ararat travertine, basalt plinth, double-height living-dining.
-  'concept-facade': { ru: 'Главный фасад · травертин и штукатурка', hy: 'Գլխավոր ֆասադ · տրավերտին և սվաղ', en: 'Main facade · travertine and render', order: 1 },
-  'concept-view-left': { ru: 'Вид слева', hy: 'Տեսք ձախից', en: 'From the left', order: 2 },
-  'concept-view-side': { ru: 'Боковой фасад', hy: 'Կողային ֆասադ', en: 'Side facade', order: 3 },
-  'concept-view-right': { ru: 'Вид справа · вход с тамбуром', hy: 'Տեսք աջից · մուտք նախամուտքով', en: 'From the right · vestibule entrance', order: 4 },
-  'concept-living': { ru: 'Гостиная-столовая в два света', hy: 'Երկլույս հյուրասենյակ-ճաշասենյակ', en: 'Double-height living-dining', order: 5 },
-  'concept-stair': { ru: 'Прямая лестница', hy: 'Ուղիղ աստիճան', en: 'Straight stair', order: 6 },
-  'concept-gallery': { ru: 'Галерея второго этажа', hy: 'Երկրորդ հարկի պատկերասրահ', en: 'Upper-floor gallery', order: 7 },
-  'concept-bedroom': { ru: 'Спальня', hy: 'Ննջասենյակ', en: 'Bedroom', order: 8 },
+  'concept-facade': { ru: 'Z500 Zx85 · Главный фасад · травертин и штукатурка', hy: 'Z500 Zx85 · Գլխավոր ֆասադ · տրավերտին և սվաղ', en: 'Z500 Zx85 · Main facade · travertine and render', order: 11 },
+  'concept-view-left': { ru: 'Z500 Zx85 · Вид слева', hy: 'Z500 Zx85 · Տեսք ձախից', en: 'Z500 Zx85 · From the left', order: 12 },
+  'concept-view-side': { ru: 'Z500 Zx85 · Боковой фасад', hy: 'Z500 Zx85 · Կողային ֆասադ', en: 'Z500 Zx85 · Side facade', order: 13 },
+  'concept-view-right': { ru: 'Z500 Zx85 · Вид справа · вход с тамбуром', hy: 'Z500 Zx85 · Տեսք աջից · մուտք նախամուտքով', en: 'Z500 Zx85 · From the right · vestibule entrance', order: 14 },
+  'concept-living': { ru: 'Z500 Zx85 · Гостиная-столовая в два света', hy: 'Z500 Zx85 · Երկլույս հյուրասենյակ-ճաշասենյակ', en: 'Z500 Zx85 · Double-height living-dining', order: 15 },
+  'concept-stair': { ru: 'Z500 Zx85 · Прямая лестница', hy: 'Z500 Zx85 · Ուղիղ աստիճան', en: 'Z500 Zx85 · Straight stair', order: 16 },
+  'concept-gallery': { ru: 'Z500 Zx85 · Галерея второго этажа', hy: 'Z500 Zx85 · Երկրորդ հարկի պատկերասրահ', en: 'Z500 Zx85 · Upper-floor gallery', order: 17 },
+  'concept-bedroom': { ru: 'Z500 Zx85 · Спальня', hy: 'Z500 Zx85 · Ննջասենյակ', en: 'Z500 Zx85 · Bedroom', order: 18 },
   exterior: { ru: 'Экстерьер · вид на Арарат · ранний концепт', hy: 'Էքստերիեր · Արարատի տեսարան · վաղ գաղափար', en: 'Exterior · Ararat view · early concept', order: 21 },
   'exterior-dusk': { ru: 'Вечерняя подсветка · ранний концепт', hy: 'Երեկոյան լուսավորում · վաղ գաղափար', en: 'Evening lighting · early concept', order: 22 },
   facade: { ru: 'Фасад · ранний концепт', hy: 'Ֆասադ · վաղ գաղափար', en: 'Facade · early concept', order: 23 },

@@ -1,3 +1,5 @@
+import type { FRect, Footprint } from '../engine/footprint'
+
 // Core domain types for the house being estimated.
 
 export type ConstructionSystem = 'frame' | 'monolith' | 'tuff' | 'aerated' | 'brick'
@@ -32,6 +34,8 @@ export const BUILD_PRESETS: Record<BuildMode, {
   self: { overheadPct: 0, profitPct: 0, temporaryPct: 1, contingencyPct: 10, vatIncluded: false },
   contractor: { overheadPct: 15, profitPct: 8, temporaryPct: 1.5, contingencyPct: 10, vatIncluded: false },
 }
+
+export type PlanLayout = 'template' | 'auto' | 'brick193' | 'brickFull'
 
 export type RegionKey =
   | 'yerevan'
@@ -83,7 +87,15 @@ export interface HouseParams {
   seismicReinforcementDisabled: boolean // "без сейсмоусиления" toggle -> norm error
   doubleHeightHall: boolean // зал двойной высоты (проём в перекрытии 2-го этажа)
   hallArea: number // м², площадь зала двойной высоты
-  planLayout?: 'template' | 'auto' // планировка по реальному проекту или генератором
+  // планировка: реальный проект Z500 Zx85, кирпичный дом 193.5 / 260 м² или генератор
+  planLayout?: PlanLayout
+  // Доля пятна, которую занимает верхний этаж (по длине дома, вдоль оси
+  // length). 1 — полный этаж; меньше — «полуторный» дом: над остальной
+  // частью первого этажа плоская кровля.
+  topFloorShare?: number
+  // A house that is not one rectangle: its ground and top floor outlines,
+  // set by a project (see BRICK_FOOTPRINT); it stretches with length/width.
+  footprint?: Footprint
   includePermitCost: boolean // включать стоимость документов/разрешения в смету
   roomsPerFloor: number // комнат на этаже (для проверки «помещается ли»)
   kitchenLivingCombined: boolean // зал и кухня вместе (студия) или раздельно
@@ -194,7 +206,9 @@ export interface EngOverrides {
   insulationThickness?: number // утеплитель, см (базовая цена дана за 100 мм)
 }
 
-export const DEFAULT_HOUSE: HouseParams = {
+// The Z500 Zx85 house the calculator opened with before the brick house
+// became the default; the hand-counted regression tests are built on it.
+export const ZX85_HOUSE: HouseParams = {
   system: 'frame', // ж/б каркас + газоблок-заполнение: тёплые стены, сейсмостойко (рекомендуется)
   infillMaterial: 'aerated', // стены — газоблок
   length: 13,
@@ -232,6 +246,7 @@ export const DEFAULT_HOUSE: HouseParams = {
   // Второй свет по реальному проекту Z500 Zx85: 7.2 × 7.2 м внутри стен.
   hallArea: 52,
   planLayout: 'template',
+  topFloorShare: 1,
   includePermitCost: true,
   roomsPerFloor: 3, // студия (зал+кухня) + гостевой санузел + мастер-комната
   kitchenLivingCombined: true,
@@ -291,4 +306,133 @@ export function defaultWallThickness(p: {
     default:
       return 0.3
   }
+}
+
+// Real projects the layout step offers. Picking one loads its house; every
+// field stays editable afterwards.
+//
+// brick193: the modern brick house of https://www.youtube.com/watch?v=6kJcesg7oxo
+// (Bishkek, 193.5 m² by its room schedule), taken off the drawings shown in it:
+// axes 6.0 + 3.0 + 4.5 = 13.5 m by 5.0 + 3.0 = 8.0 m, the stair tower and the
+// boiler room 1.0 m behind axis В, the living-kitchen's glazed bay 1.5 m in
+// front of axis А, a 3.6 m wing on the left with a storeroom (4.7 m²) and an
+// open terrace (8.8 m²); upstairs one band between axes А and Б plus the stair
+// tower. An RC frame infilled with 240 mm brick, 250 mm walls, the upper floor
+// at +3.400, 3.0 m ceilings upstairs, low hipped metal roofs (6.5–22°), the
+// ground floor clad in light stone and the upper one in wood-look panels.
+// brickFull: the same ground floor with the upper floor over all of it.
+// Plan metres from the wing's outer wall (x) and the back wall (y), measured
+// on the drawings against their axes (13 500 between axes 1 and 4): the wing
+// is 3 600 between its axes plus half a 250 mm wall, the stair tower and the
+// boiler room stand 1.085 m behind axis В, the bay 1.75 m in front of axis А.
+// 17.35 × 10.835 m in all.
+const BRICK_GROUND: FRect[] = [
+  { x: 0, y: 0, w: 3.85, h: 1.775 }, // storeroom
+  { x: 3.6, y: 0.96, w: 6.125, h: 9.875 }, // living-kitchen with its bay
+  { x: 9.57, y: 0, w: 7.78, h: 9.21 }, // stair, hall, boiler room, shower, bedroom
+]
+export const BRICK_FOOTPRINT: Footprint = {
+  L: 17.35,
+  W: 10.835,
+  ground: BRICK_GROUND,
+  top: [
+    { x: 3.6, y: 3.96, w: 13.75, h: 5.25 }, // rooms between axes А and Б
+    { x: 9.57, y: 0, w: 3.4, h: 3.96 }, // stair tower, 250 + 2 900 + 250
+  ],
+}
+export const BRICK_FULL_FOOTPRINT: Footprint = {
+  ...BRICK_FOOTPRINT,
+  // over the main body; the storeroom and the living-kitchen's bay keep a roof
+  top: [
+    { x: 3.6, y: 0.96, w: 6.125, h: 8.25 },
+    { x: 9.57, y: 0, w: 7.78, h: 9.21 },
+  ],
+}
+
+const BRICK_HOUSE: Partial<HouseParams> = {
+  system: 'frame',
+  infillMaterial: 'brick',
+  length: BRICK_FOOTPRINT.L,
+  width: BRICK_FOOTPRINT.W,
+  frontSide: 'length',
+  floors: 2,
+  // storeys of 3.4 m (upper floor at +3.400) and 3.2 m (3.0 m ceiling + slab)
+  floorHeight: 3.3,
+  wallThickness: 0.25,
+  topFloorShare: 1,
+  roof: 'hip',
+  roofPitchDeg: 10,
+  doubleHeightHall: false,
+  windowAuto: false,
+  // ОК-1…ОК-8 at their drawn widths; heights off the facade render (glazing
+  // 2.5 m downstairs, 2.3 m upstairs, the stair window 1.2 m on both floors)
+  windowAreaTotal: 52.5,
+  vitrageShare: 0.46, // ОК-1, ОК-2, ОК-3 run floor to ceiling
+  exteriorDoors: 4, // ДН-1, two ДН-2, ДНО-2 to the terrace
+  // the clad ground floor's share of the facade, in light stone as on the render
+  stoneFacadePct: 58,
+  stoneType: 'travertine',
+  balconyArea: 8.8, // the open terrace of the room schedule
+  kitchenLivingCombined: true,
+}
+
+export const PROJECT_PRESETS: Record<Exclude<PlanLayout, 'auto'>, Partial<HouseParams>> = {
+  template: {
+    system: ZX85_HOUSE.system,
+    infillMaterial: ZX85_HOUSE.infillMaterial,
+    length: ZX85_HOUSE.length,
+    width: ZX85_HOUSE.width,
+    frontSide: ZX85_HOUSE.frontSide,
+    floors: ZX85_HOUSE.floors,
+    floorHeight: ZX85_HOUSE.floorHeight,
+    wallThickness: ZX85_HOUSE.wallThickness,
+    topFloorShare: 1,
+    footprint: undefined,
+    roof: ZX85_HOUSE.roof,
+    roofPitchDeg: ZX85_HOUSE.roofPitchDeg,
+    doubleHeightHall: true,
+    hallArea: ZX85_HOUSE.hallArea,
+    windowAuto: false,
+    windowAreaTotal: ZX85_HOUSE.windowAreaTotal,
+    vitrageShare: ZX85_HOUSE.vitrageShare,
+    exteriorDoors: ZX85_HOUSE.exteriorDoors,
+    stoneFacadePct: ZX85_HOUSE.stoneFacadePct,
+    stoneType: ZX85_HOUSE.stoneType,
+    balconyArea: ZX85_HOUSE.balconyArea,
+    kitchenLivingCombined: true,
+  },
+  brick193: { ...BRICK_HOUSE, footprint: BRICK_FOOTPRINT },
+  // two more storey heights of windows over the living-kitchen and the boiler room
+  brickFull: { ...BRICK_HOUSE, footprint: BRICK_FULL_FOOTPRINT, windowAreaTotal: 62.5 },
+}
+
+// Facade insulation each project specifies, cm (undefined: the catalogue's
+// 100 mm). The brick house takes 150 mm of basalt wool (100–160 mm in the video).
+const PROJECT_INSULATION: Record<Exclude<PlanLayout, 'auto'>, number | undefined> = {
+  template: undefined,
+  brick193: 15,
+  brickFull: 15,
+}
+
+// Load a project into the house: its geometry and its insulation; the other
+// engineer overrides, the region and the prices stay as the visitor set them.
+export function applyProject(house: HouseParams, layout: PlanLayout): HouseParams {
+  if (layout === 'auto') return { ...house, planLayout: 'auto' }
+  const eng = { ...house.eng }
+  delete eng.insulationThickness
+  const insulation = PROJECT_INSULATION[layout]
+  if (insulation != null) eng.insulationThickness = insulation
+  return { ...house, ...PROJECT_PRESETS[layout], planLayout: layout, eng }
+}
+
+// The house the calculator opens with: the 193.5 m² brick house from the video,
+// on the owner's 25 × 20 m plot.
+export const DEFAULT_HOUSE: HouseParams = applyProject({ ...ZX85_HOUSE, plotArea: 500, eng: {} }, 'brick193')
+
+// Share of the footprint the top storey covers, kept within what a plan can
+// hold. One storey has no "top" to cut.
+export function topShare(p: Pick<HouseParams, 'floors' | 'topFloorShare'>): number {
+  if (p.floors < 2) return 1
+  const s = p.topFloorShare ?? 1
+  return Number.isFinite(s) ? Math.min(1, Math.max(0.3, s)) : 1
 }

@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest'
-import { DEFAULT_HOUSE } from '../model/house'
+import { ZX85_HOUSE } from '../model/house'
 import type { HouseParams } from '../model/house'
 import { computeQuantities } from './quantities'
 import { computeEstimate } from './pricing'
@@ -44,7 +44,7 @@ const bad = (n: number) => !Number.isFinite(n) || n < 0
 it('ни одна конфигурация не даёт NaN, Infinity или отрицательных величин', () => {
   const issues: string[] = []
   for (const [name, patch] of cases) {
-    const p: HouseParams = { ...DEFAULT_HOUSE, ...patch }
+    const p: HouseParams = { ...ZX85_HOUSE, ...patch }
     try {
       const q = computeQuantities(p)
       for (const l of q.lines) {

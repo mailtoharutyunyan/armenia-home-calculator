@@ -18,7 +18,11 @@ import { Facts } from './ui/Facts'
 import { useProject } from './store/useProject'
 import { loadRates } from './data/rates'
 import { t } from './i18n'
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
+
+// three.js weighs more than the rest of the app together: the 3D tab is a
+// separate chunk, fetched the first time someone opens it.
+const House3D = lazy(() => import('./ui/house3d/House3D'))
 
 export default function App() {
   const { lang, tab, theme } = useProject()
@@ -44,12 +48,21 @@ export default function App() {
       {/* Итог всегда на экране, пока крутят параметры */}
       {tab === 'calc' && <ResultBar />}
 
+      {/* The 3D tab takes the window under the header edge to edge: the
+          page column and the footer step aside, the scene is the page. */}
+      {tab === '3d' && (
+        <Suspense fallback={<div className="v3d" />}>
+          <House3D />
+        </Suspense>
+      )}
+
       {/* Active tab content */}
       {/* Вкладка калькулятора — во всю ширину: сайдбар прижат к левому краю
           экрана, план получает весь остаток. Остальные вкладки — это текст и
           таблицы, им колонка ограниченной ширины читается лучше. */}
       <main
         className={tab === 'calc' ? 'main-calc' : undefined}
+        hidden={tab === '3d'}
         style={
           tab === 'calc'
             ? { maxWidth: 'none', margin: 0, padding: '1.4rem 1.5rem 1.4rem 0' }
@@ -99,7 +112,7 @@ export default function App() {
         )}
       </main>
 
-      <footer style={{ background: 'var(--color-footer-bg)', borderTop: '1px solid var(--color-border)', color: 'var(--color-footer-fg)', marginTop: '3rem' }}>
+      <footer hidden={tab === '3d'} style={{ background: 'var(--color-footer-bg)', borderTop: '1px solid var(--color-border)', color: 'var(--color-footer-fg)', marginTop: '3rem' }}>
         <div style={{ maxWidth: 'var(--page-w)', margin: '0 auto', padding: '2.4rem 2rem', fontSize: '0.85rem', lineHeight: 1.7 }}>
           <div className="eyebrow">{lang === 'hy' ? 'Կարևոր' : lang === 'en' ? 'Important' : 'Важно'}</div>
           <p style={{ margin: '1rem 0 0', maxWidth: 820 }}>{t(lang, 'disclaimer')}</p>

@@ -3,14 +3,14 @@
 // находились только глазами по скриншотам.
 
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_HOUSE } from '../model/house'
+import { ZX85_HOUSE } from '../model/house'
 import type { HouseParams } from '../model/house'
 import { auditPlan } from './planAudit'
 import { buildFloorPlan, planTakeoff, roomClear } from './floorplan'
 
 // These checks were measured by hand on the generated plan with an 80 m² hall;
 // the default house now takes the template plan (see the template suite).
-const GENERATED_HOUSE: HouseParams = { ...DEFAULT_HOUSE, planLayout: 'auto' as const, hallArea: 80 }
+const GENERATED_HOUSE: HouseParams = { ...ZX85_HOUSE, planLayout: 'auto' as const, hallArea: 80 }
 
 const h = (patch: Partial<HouseParams> = {}): HouseParams => ({ ...GENERATED_HOUSE, ...patch })
 const errors = (p: HouseParams) => auditPlan(p).filter((i) => i.level === 'error')
@@ -104,8 +104,8 @@ describe('расстановка мебели', () => {
 describe('высота потолка и глубина кухни — разные вещи', () => {
   it('высота зала вдвое больше высоты этажа', () => {
     const pl = buildFloorPlan(h(), 0)
-    expect(pl.ceilingH).toBe(DEFAULT_HOUSE.floorHeight)
-    expect(pl.hallCeilingH).toBe(DEFAULT_HOUSE.floorHeight * 2)
+    expect(pl.ceilingH).toBe(ZX85_HOUSE.floorHeight)
+    expect(pl.hallCeilingH).toBe(ZX85_HOUSE.floorHeight * 2)
   })
 
   it('глубина кухни не берётся из высоты этажа', () => {

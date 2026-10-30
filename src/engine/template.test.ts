@@ -1,16 +1,16 @@
-// The default house takes the plan of a real project (Z500 Zx85, fitted to
+// The Zx85 house takes the plan of a real project (Z500 Zx85, fitted to
 // 13 × 14 m without its garage). Checked by hand on the 12.4 × 13.4 m inside.
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_HOUSE } from '../model/house'
-import type { DiyWork } from '../model/house'
-import { buildFloorPlan, planTakeoff, roomClear } from './floorplan'
+import { ZX85_HOUSE, DEFAULT_HOUSE, applyProject } from '../model/house'
+import type { DiyWork, HouseParams } from '../model/house'
+import { buildFloorPlan, planTakeoff, roomClear, templateKind } from './floorplan'
 import { computeQuantities } from './quantities'
 import { computeEstimate } from './pricing'
 import { auditPlan } from './planAudit'
 import { checkNorms } from './norms'
 import { SEED_PRICES } from '../data/prices'
 
-const p = DEFAULT_HOUSE
+const p = ZX85_HOUSE
 const plans = [buildFloorPlan(p, 0), buildFloorPlan(p, 1)]
 const area = (r: { w: number; h: number }) => r.w * r.h
 
@@ -139,5 +139,71 @@ describe('шаблон: границы применения и связка со
     expect(lab(e, 'floor_finish')).toBeCloseTo(lab(base, 'floor_finish') * (2800 / 4800), 6)
     expect(e.turnkey.material).toBeCloseTo(base.turnkey.material, 6)
     expect(e.turnkey.total).toBeLessThan(base.turnkey.total)
+  })
+})
+
+describe('the brick house from its drawings (193.5 m²) and its full variant', () => {
+  const h193: HouseParams = { ...DEFAULT_HOUSE }
+  const hFull: HouseParams = applyProject(DEFAULT_HOUSE, 'brickFull')
+  const geo = (p: HouseParams) => computeQuantities(p).geometry
+  const price = (p: HouseParams) => computeEstimate(computeQuantities(p), SEED_PRICES, p).turnkey.total
+
+  it('the calculator opens the brick house on its drawn outline', () => {
+    expect(DEFAULT_HOUSE.planLayout).toBe('brick193')
+    expect(templateKind(h193)).toBe('brick')
+  })
+
+  it('the outline gives the drawn areas', () => {
+    const g = geo(h193)
+    // storeroom 3.85 × 1.775, kitchen-living 6.125 × 9.875, east block 7.78 × 9.21;
+    // the storeroom overlaps the kitchen-living's wall by 0.25 × 0.815 and the
+    // east block overlaps it by 0.155 × 9.21 − 0.96 … 9.21
+    expect(g.footprint).toBeCloseTo(3.85 * 1.775 + 6.125 * 9.875 + 7.78 * 9.21 - 0.25 * 0.815 - 0.155 * (9.21 - 0.96), 0)
+    // inside the walls: the 128.9 + 64.6 m² of the room schedules less the open
+    // terrace (8.8), plus the partitions and the stair on both floors
+    expect(g.netFloorArea).toBeGreaterThan(193.5 - 8.8)
+    expect(g.netFloorArea).toBeLessThan(193.5 + 5)
+  })
+
+  it('a one-rectangle outline prices exactly like the rectangle', () => {
+    const rect = { ...ZX85_HOUSE, footprint: { L: 14, W: 13, ground: [{ x: 0, y: 0, w: 14, h: 13 }], top: [{ x: 0, y: 0, w: 14, h: 13 }] } }
+    expect(price(rect)).toBeCloseTo(price(ZX85_HOUSE), 0)
+  })
+
+  it('the parapet runs round both roofs: the ground outline off the top floor plus the top outline', () => {
+    const flat = { ...h193, roof: 'flat' as const }
+    const q = computeQuantities(flat)
+    const coping = q.lines.find((l) => l.key === 'parapet_coping')!.quantity
+    expect(coping).toBeGreaterThan(q.geometry.perimeter)
+  })
+
+  it('the full variant is larger and dearer, its rooms over the living-kitchen', () => {
+    expect(geo(hFull).netFloorArea).toBeGreaterThan(geo(h193).netFloorArea + 30)
+    expect(price(hFull)).toBeGreaterThan(price(h193))
+  })
+
+  it('the upper floor of the drawn house leaves roofs and draws ОК-5…ОК-8', () => {
+    const up = buildFloorPlan(h193, 1)
+    expect(up.roofs?.rects.length).toBeGreaterThan(0)
+    expect(up.windows.map((w) => +w.len.toFixed(2)).sort()).toEqual([1.2, 2.6, 4.15, 4.25])
+    expect(buildFloorPlan(h193, 0).windows).toHaveLength(5)
+  })
+
+  it('both plans pass the layout audit without errors', () => {
+    for (const p of [h193, hFull]) expect(auditPlan(p).filter((i) => i.level === 'error')).toEqual([])
+  })
+
+  it('switching back to the Zx85 project prices it exactly as the Zx85 house', () => {
+    const back = applyProject(h193, 'template')
+    expect(back.footprint).toBeUndefined()
+    expect(back.eng.insulationThickness).toBeUndefined()
+    expect(price(back)).toBeCloseTo(price(ZX85_HOUSE), 0)
+  })
+
+  it('a rectangle with a partial top floor keeps the step in its parapet', () => {
+    const p = { ...ZX85_HOUSE, doubleHeightHall: false, roof: 'flat' as const, topFloorShare: 0.5 }
+    const q = computeQuantities(p)
+    const coping = q.lines.find((l) => l.key === 'parapet_coping')!.quantity
+    expect(coping).toBeCloseTo(q.geometry.perimeter + p.width, 6)
   })
 })

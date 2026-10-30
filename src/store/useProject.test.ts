@@ -19,6 +19,36 @@ async function storeWith(seed: Record<string, string>) {
   return useProject.getState()
 }
 
+// A house saved before v7 is kept as the "Прежний дом" scenario; the
+// calculator opens the new default.
+const oldHouse = (s: { scenarios: { name: string; house: import('../model/house').HouseParams }[] }) =>
+  s.scenarios.find((x) => x.name === 'Прежний дом')!.house
+
+describe('the default house and older saves', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('a first visit opens the 193.5 m² brick house', async () => {
+    const s = await storeWith({})
+    expect(s.house.planLayout).toBe('brick193')
+    expect(s.house.footprint?.top.length).toBeGreaterThan(0)
+    expect(s.scenarios).toHaveLength(0)
+  })
+
+  it('a v6 save opens the new default and is kept as a scenario with its full top floor', async () => {
+    const s = await storeWith({ ahc_house_v6: JSON.stringify({ length: 13, width: 14, planLayout: 'template' }) })
+    expect(s.house.planLayout).toBe('brick193')
+    expect(oldHouse(s)).toMatchObject({ length: 13, width: 14, planLayout: 'template', topFloorShare: 1 })
+    expect(oldHouse(s).footprint).toBeUndefined()
+  })
+
+  it('a v7 save opens as saved', async () => {
+    const s = await storeWith({ ahc_house_v7: JSON.stringify({ length: 9, planLayout: 'auto' }) })
+    expect(s.house).toMatchObject({ length: 9, planLayout: 'auto' })
+  })
+})
+
 describe('saved house and the VAT default', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -30,8 +60,8 @@ describe('saved house and the VAT default', () => {
 
   it('v4 inputs are kept, the old VAT default is dropped', async () => {
     const s = await storeWith({ ahc_house_v4: JSON.stringify({ length: 10, vatIncluded: true }) })
-    expect(s.house.length).toBe(10)
-    expect(s.house.vatIncluded).toBe(false)
+    expect(oldHouse(s).length).toBe(10)
+    expect(oldHouse(s).vatIncluded).toBe(false)
   })
 
   it('old scenarios get the fields they lack and lose the old VAT default', async () => {
@@ -47,7 +77,7 @@ describe('saved house and the VAT default', () => {
       ahc_house_v4: JSON.stringify({ vatIncluded: false }),
       ahc_house_v5: JSON.stringify({ vatIncluded: true }),
     })
-    expect(s.house.vatIncluded).toBe(true)
+    expect(oldHouse(s).vatIncluded).toBe(true)
   })
 })
 
@@ -67,23 +97,23 @@ describe('saved house and the self-build default', () => {
 
   it('the untouched contractor default of a v5 save becomes self-build; other inputs are kept', async () => {
     const s = await storeWith({ ahc_house_v5: JSON.stringify({ ...oldDefault, length: 12, contingencyPct: 15 }) })
-    expect(s.house.buildMode).toBe('self')
-    expect(s.house).toMatchObject({ overheadPct: 0, profitPct: 0, temporaryPct: 1 })
-    expect(s.house.length).toBe(12)
-    expect(s.house.contingencyPct).toBe(15)
+    expect(oldHouse(s).buildMode).toBe('self')
+    expect(oldHouse(s)).toMatchObject({ overheadPct: 0, profitPct: 0, temporaryPct: 1 })
+    expect(oldHouse(s).length).toBe(12)
+    expect(oldHouse(s).contingencyPct).toBe(15)
   })
 
   it('a v4 save loses the contractor default and the VAT flag', async () => {
     const s = await storeWith({ ahc_house_v4: JSON.stringify({ ...oldDefault, vatIncluded: true }) })
-    expect(s.house.buildMode).toBe('self')
-    expect(s.house.vatIncluded).toBe(false)
+    expect(oldHouse(s).buildMode).toBe('self')
+    expect(oldHouse(s).vatIncluded).toBe(false)
   })
 
   it('a contractor preset the visitor edited in v5 is kept', async () => {
     const s = await storeWith({ ahc_house_v5: JSON.stringify({ ...oldDefault, overheadPct: 12 }) })
-    expect(s.house.buildMode).toBe('contractor')
-    expect(s.house.overheadPct).toBe(12)
-    expect(s.house.profitPct).toBe(8)
+    expect(oldHouse(s).buildMode).toBe('contractor')
+    expect(oldHouse(s).overheadPct).toBe(12)
+    expect(oldHouse(s).profitPct).toBe(8)
   })
 
   it('contractor chosen after the switch to v6 stays chosen', async () => {
@@ -91,8 +121,8 @@ describe('saved house and the self-build default', () => {
       ahc_house_v5: JSON.stringify({ buildMode: 'self' }),
       ahc_house_v6: JSON.stringify(oldDefault),
     })
-    expect(s.house.buildMode).toBe('contractor')
-    expect(s.house.overheadPct).toBe(15)
+    expect(oldHouse(s).buildMode).toBe('contractor')
+    expect(oldHouse(s).overheadPct).toBe(15)
   })
 
   it('saved scenarios keep their build mode', async () => {
