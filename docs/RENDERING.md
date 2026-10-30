@@ -236,7 +236,9 @@ poly_wool_herringbone 0.18, cotton_jersey 0.43, laminate_floor_03 0.19).
   ChunkRetries=20
   RetryTime=0.5
   ```
-  и перезапустить Launcher (загрузки продолжатся с места). Стало ~40 МБ/с
+  ⚠ Launcher **удаляет этот файл при выходе**, поэтому его надо закрепить:
+  `chflags uchg <файл>` (править: сначала `chflags nouchg <файл>`).
+  Затем перезапустить Launcher (загрузки продолжатся с места). Стало ~40 МБ/с
   (~320 Мбит/с, 30.10.2026). Epic советует `ChunkDownloads=3`; 8 — по числу ядер
   M1 Max. Скорость проверять по росту папки
   `/Users/Shared/UnrealEngine/Launcher/VaultCache/<ассет>` (`/usr/bin/du -sk`).
